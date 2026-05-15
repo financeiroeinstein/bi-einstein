@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ajustes de Caixa — Einstein Palmas</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0d0f14;
+    --surface:  #13161e;
+    --surface2: #1a1e2a;
+    --surface3: #10131b;
+    --border:   #252b3b;
+    --accent:   #00e5a0;
+    --accent2:  #4f8fff;
+    --danger:   #ff4d6a;
+    --warn:     #ffb547;
+    --green:    #4ade80;
+    --red:      #f87171;
+    --text:     #e8eaf0;
+    --muted:    #6b7280;
+    --font-h:   'Syne', sans-serif;
+    --font-m:   'JetBrains Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-h); background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  nav {
+    display: flex; align-items: center; gap: .75rem;
+    padding: .65rem 2rem; background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+  }
+  nav a { color: var(--muted); text-decoration: none; font-size: .74rem; letter-spacing: .07em; text-transform: uppercase; transition: color .15s; }
+  nav a:hover { color: var(--accent); }
+  nav .sep { color: var(--border); }
+  nav .active { color: var(--accent); font-size: .74rem; letter-spacing: .07em; text-transform: uppercase; }
+
+  .page-header {
+    padding: 1.75rem 2rem 1.4rem; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;
+  }
+  .page-title { font-size: 1.55rem; font-weight: 800; letter-spacing: -.02em; }
+  .page-title span { color: var(--accent); }
+  .last-update { font-size: .72rem; color: var(--muted); font-family: var(--font-m); }
+
+  /* FILTERS */
+  .filters {
+    display: grid; grid-template-columns: repeat(4, minmax(140px, 1fr));
+    gap: .75rem; padding: 1rem 2rem;
+    border-bottom: 1px solid var(--border); background: var(--surface);
+  }
+  @media (max-width: 800px) { .filters { grid-template-columns: 1fr 1fr; } }
+  .filter-group label { font-size: .62rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); display: block; margin-bottom: .3rem; }
+  .filter-dropdown { position: relative; }
+  .filter-btn {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); font-family: var(--font-h); font-size: .82rem;
+    padding: .48rem .75rem; border-radius: 7px; cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center; transition: border-color .15s;
+  }
+  .filter-btn:hover, .filter-btn.open { border-color: var(--accent); }
+  .filter-btn .arrow { font-size: .65rem; color: var(--muted); transition: transform .2s; }
+  .filter-btn.open .arrow { transform: rotate(180deg); }
+  .dropdown-menu {
+    display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 7px;
+    z-index: 200; max-height: 240px; overflow-y: auto;
+  }
+  .dropdown-menu.show { display: block; }
+  .dropdown-item { padding: .5rem .75rem; font-size: .8rem; cursor: pointer; display: flex; align-items: center; gap: .5rem; }
+  .dropdown-item:hover { background: var(--surface3); }
+  .dropdown-item input[type=checkbox] { accent-color: var(--accent); width: 13px; height: 13px; cursor: pointer; }
+  .dropdown-item.select-all { border-bottom: 1px solid var(--border); color: var(--accent); font-size: .75rem; }
+
+  /* CONTENT */
+  .content { padding: 1.5rem 2rem 2rem; display: flex; flex-direction: column; gap: 1.25rem; }
+
+  /* KPI STRIP */
+  .kpi-strip {
+    display: grid; grid-template-columns: repeat(6, 1fr);
+    gap: .75rem;
+  }
+  @media (max-width: 1100px) { .kpi-strip { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 600px)  { .kpi-strip { grid-template-columns: repeat(2, 1fr); } }
+
+  .kpi-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: .9rem 1rem; display: flex; flex-direction: column; gap: .25rem;
+  }
+  .kpi-card .kc-label { font-size: .62rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .kpi-card .kc-value { font-family: var(--font-m); font-size: 1rem; font-weight: 600; }
+  .kpi-card .kc-sub   { font-size: .65rem; color: var(--muted); margin-top: .1rem; }
+
+  .kc-green  { border-top: 2px solid var(--green);  }  .kc-green  .kc-value { color: var(--green); }
+  .kc-red    { border-top: 2px solid var(--red);    }  .kc-red    .kc-value { color: var(--red); }
+  .kc-blue   { border-top: 2px solid var(--accent2);}  .kc-blue   .kc-value { color: var(--accent2); }
+  .kc-accent { border-top: 2px solid var(--accent); }  .kc-accent .kc-value { color: var(--accent); }
+  .kc-warn   { border-top: 2px solid var(--warn);   }  .kc-warn   .kc-value { color: var(--warn); }
+  .kc-muted  { border-top: 2px solid var(--border); }  .kc-muted  .kc-value { color: var(--muted); }
+
+  /* CARD */
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 1.25rem 1.5rem; overflow: hidden;
+  }
+  .card-title {
+    font-size: .72rem; text-transform: uppercase; letter-spacing: .1em;
+    color: var(--muted); margin-bottom: 1rem;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem;
+  }
+  .card-title strong { color: var(--text); font-size: .78rem; }
+
+  /* TIPO BADGE FILTER */
+  .tipo-pills {
+    display: flex; gap: .4rem; flex-wrap: wrap;
+  }
+  .pill {
+    font-size: .68rem; padding: .25rem .65rem; border-radius: 20px; cursor: pointer;
+    border: 1px solid var(--border); color: var(--muted); background: var(--surface2);
+    transition: all .15s; font-family: var(--font-h); letter-spacing: .04em;
+    display: flex; align-items: center; gap: .35rem;
+  }
+  .pill.active { color: var(--bg); font-weight: 600; }
+  .pill-op.active    { background: var(--accent2); border-color: var(--accent2); }
+  .pill-ti.active    { background: var(--warn);    border-color: var(--warn); }
+  .pill-ic.active    { background: #a78bfa;        border-color: #a78bfa; }
+  .pill-af.active    { background: var(--green);   border-color: var(--green); }
+  .pill-count {
+    font-size: .6rem; background: rgba(255,255,255,.15);
+    padding: .05rem .3rem; border-radius: 8px;
+  }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+  thead th {
+    padding: .55rem .85rem; text-align: right;
+    font-size: .62rem; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--muted); border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  thead th:first-child, thead th:nth-child(2),
+  thead th:nth-child(3), thead th:nth-child(4),
+  thead th:nth-child(5) { text-align: left; }
+
+  tbody tr { border-bottom: 1px solid rgba(37,43,59,.5); transition: background .1s; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody td { padding: .5rem .85rem; text-align: right; font-family: var(--font-m); font-size: .76rem; white-space: nowrap; }
+  tbody td:first-child { font-family: var(--font-m); color: var(--muted); }
+  tbody td:nth-child(2),
+  tbody td:nth-child(3),
+  tbody td:nth-child(4),
+  tbody td:nth-child(5) { text-align: left; font-family: var(--font-h); }
+
+  tfoot td { padding: .6rem .85rem; text-align: right; font-family: var(--font-m);
+             font-size: .78rem; font-weight: 600; border-top: 1px solid var(--border);
+             color: var(--text); }
+  tfoot td:first-child { font-family: var(--font-h); color: var(--muted); font-size: .72rem; }
+
+  .pos { color: var(--green); }
+  .neg { color: var(--red); }
+  .neu { color: var(--muted); }
+
+  /* TIPO badge inline */
+  .tipo-badge {
+    display: inline-block; font-size: .62rem; padding: .15rem .45rem;
+    border-radius: 5px; font-family: var(--font-h); font-weight: 600;
+    letter-spacing: .04em; white-space: nowrap;
+  }
+  .tb-op { background: rgba(79,143,255,.15); color: var(--accent2); }
+  .tb-ti { background: rgba(255,181,71,.15); color: var(--warn); }
+  .tb-ic { background: rgba(167,139,250,.15); color: #a78bfa; }
+  .tb-af { background: rgba(74,222,128,.15);  color: var(--green); }
+
+  .emp-dot {
+    display: inline-block; width: 7px; height: 7px;
+    border-radius: 50%; margin-right: .35rem; vertical-align: middle;
+  }
+
+  /* PAGINATION */
+  .pagination { display: flex; justify-content: center; align-items: center; gap: .4rem; margin-top: 1rem; flex-wrap: wrap; }
+  .pg-btn {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+    font-family: var(--font-m); font-size: .72rem; padding: .3rem .6rem;
+    border-radius: 5px; cursor: pointer; transition: all .15s;
+  }
+  .pg-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .pg-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
+  .pg-info { font-size: .7rem; color: var(--muted); font-family: var(--font-m); }
+
+  /* SUMÁRIO POR TIPO */
+  .tipo-summary {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: .75rem;
+  }
+  @media (max-width: 900px) { .tipo-summary { grid-template-columns: repeat(2, 1fr); } }
+
+  .ts-card {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: .75rem 1rem; display: flex; flex-direction: column; gap: .2rem;
+  }
+  .ts-label { font-size: .62rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .ts-value { font-family: var(--font-m); font-size: .92rem; font-weight: 600; }
+  .ts-count { font-size: .64rem; color: var(--muted); }
+
+  .loading { text-align: center; padding: 3rem; color: var(--muted); font-size: .85rem; }
+  .error-msg { background: rgba(255,77,106,.1); border: 1px solid rgba(255,77,106,.3);
+               border-radius: 8px; padding: 1rem; color: var(--red); font-size: .85rem; }
+
+  /* SEARCH */
+  .search-input {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    font-family: var(--font-h); font-size: .8rem; padding: .4rem .75rem;
+    border-radius: 7px; outline: none; width: 220px; transition: border-color .15s;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html">Menu</a><span class="sep">›</span>
+  <a href="painel_executivo.html">Painel</a><span class="sep">›</span>
+  <a href="fluxo_caixa.html">Fluxo</a><span class="sep">›</span>
+  <a href="dre.html">DRE</a><span class="sep">›</span>
+  <a href="gastos.html">Gastos</a><span class="sep">›</span>
+  <a href="receitas.html">Receitas</a><span class="sep">›</span>
+  <span class="active">Ajustes</span>
+</nav>
+
+<div class="page-header">
+  <div>
+    <div class="page-title">Ajustes de Caixa e <span>Itens Não Operacionais</span></div>
+    <div style="font-size:.76rem;color:var(--muted);margin-top:.3rem">Conferência de lançamentos classificados por tipo — baseado nos extratos bancários</div>
+  </div>
+  <div class="last-update" id="lastUpdate">—</div>
+</div>
+
+<!-- FILTROS -->
+<div class="filters">
+  <div class="filter-group">
+    <label>Período (Mês/Ano)</label>
+    <div class="filter-dropdown">
+      <button class="filter-btn" onclick="toggleMenu('menuMes',this)">
+        <span id="labelMes">Todos os meses</span><span class="arrow">▼</span>
+      </button>
+      <div class="dropdown-menu" id="menuMes"></div>
+    </div>
+  </div>
+  <div class="filter-group">
+    <label>Empresa</label>
+    <div class="filter-dropdown">
+      <button class="filter-btn" onclick="toggleMenu('menuEmp',this)">
+        <span id="labelEmp">Todos</span><span class="arrow">▼</span>
+      </button>
+      <div class="dropdown-menu" id="menuEmp">
+        <div class="dropdown-item select-all" onclick="toggleAll('emp')">☑ Selecionar todos</div>
+        <div class="dropdown-item"><input type="checkbox" value="MD"    onchange="updateFilter('emp')" checked> MD</div>
+        <div class="dropdown-item"><input type="checkbox" value="SEL"   onchange="updateFilter('emp')" checked> SEL</div>
+        <div class="dropdown-item"><input type="checkbox" value="SIGMA" onchange="updateFilter('emp')" checked> SIGMA</div>
+      </div>
+    </div>
+  </div>
+  <div class="filter-group">
+    <label>Banco</label>
+    <div class="filter-dropdown">
+      <button class="filter-btn" onclick="toggleMenu('menuBanco',this)">
+        <span id="labelBanco">Seleções múltiplas</span><span class="arrow">▼</span>
+      </button>
+      <div class="dropdown-menu" id="menuBanco">
+        <div class="dropdown-item select-all" onclick="toggleAll('banco')">☑ Selecionar todos</div>
+        <div class="dropdown-item"><input type="checkbox" value="CAIXA"  onchange="updateFilter('banco')" checked> Caixa Econômica</div>
+        <div class="dropdown-item"><input type="checkbox" value="SICOOB" onchange="updateFilter('banco')" checked> Sicoob</div>
+      </div>
+    </div>
+  </div>
+  <div class="filter-group">
+    <label>Buscar histórico</label>
+    <input class="search-input" id="searchInput" type="text" placeholder="Filtrar por histórico..." oninput="render()">
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- KPI STRIP -->
+  <div class="kpi-strip" id="kpiStrip">
+    <div class="loading">Carregando…</div>
+  </div>
+
+  <!-- SUMÁRIO POR TIPO -->
+  <div class="card">
+    <div class="card-title">
+      <strong>Resumo por Tipo de Movimento</strong>
+      <span style="font-size:.68rem;color:var(--muted)">Total e quantidade no período filtrado</span>
+    </div>
+    <div class="tipo-summary" id="tipoSummary"></div>
+  </div>
+
+  <!-- DETALHAMENTO -->
+  <div class="card">
+    <div class="card-title">
+      <strong>Detalhamento de Lançamentos</strong>
+      <div class="tipo-pills" id="tipoPills">
+        <div class="pill pill-op active" data-tipo="Operacional"           onclick="toggleTipo(this)"><span>Operacional</span><span class="pill-count" id="cnt-op">0</span></div>
+        <div class="pill pill-ti active" data-tipo="Transferência Interna" onclick="toggleTipo(this)"><span>Transf. Interna</span><span class="pill-count" id="cnt-ti">0</span></div>
+        <div class="pill pill-ic active" data-tipo="Intercompany"          onclick="toggleTipo(this)"><span>Intercompany</span><span class="pill-count" id="cnt-ic">0</span></div>
+        <div class="pill pill-af active" data-tipo="Aplicação Financeira"  onclick="toggleTipo(this)"><span>Aplicação Fin.</span><span class="pill-count" id="cnt-af">0</span></div>
+      </div>
+    </div>
+    <div class="table-wrap" id="tableWrap"><div class="loading">Carregando…</div></div>
+    <div class="pagination" id="tablePag"></div>
+  </div>
+
+</div>
+
+<script>
+const DRIVE_FILE_ID = '1uHgfvF8CU2qJSbYjv_MtmgRxJFJzJR-Z';
+const _TS = Date.now();
+const _BASE = `https://drive.google.com/uc?export=download&id=${DRIVE_FILE_ID}&_=${_TS}`;
+const PROXIES = [
+  `https://api.allorigins.win/raw?url=${encodeURIComponent(_BASE)}`,
+  `https://corsproxy.io/?${encodeURIComponent(_BASE)}`,
+  `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(_BASE)}`
+];
+
+const EMP_COLORS = { MD: '#4f8fff', SEL: '#00e5a0', SIGMA: '#ffb547' };
+const TIPO_CSS   = {
+  'Operacional':           'tb-op',
+  'Transferência Interna': 'tb-ti',
+  'Intercompany':          'tb-ic',
+  'Aplicação Financeira':  'tb-af'
+};
+
+let dadosGlobais = null;
+let filtros = { meses: [], empresas: ['MD','SEL','SIGMA'], bancos: ['CAIXA','SICOOB'] };
+let tiposAtivos = new Set(['Operacional','Transferência Interna','Intercompany','Aplicação Financeira']);
+let page = 0;
+const PAGE_SIZE = 50;
+
+// ── Formatação ────────────────────────────────────────────────────────────
+function fmtBRL(val) {
+  const abs = Math.abs(val);
+  const str = abs >= 1000
+    ? (abs/1000).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+' Mil'
+    : abs.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  return (val<0?'-':'')+'R$ '+str;
+}
+function formatMes(m) {
+  const [ano,mes] = m.split('-');
+  return ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][+mes-1]+'/'+ano;
+}
+function fmtDate(d) {
+  if (!d) return '—';
+  const [y,m,dd] = d.split('-');
+  return `${dd}/${m}/${y}`;
+}
+
+// ── Filtros UI ────────────────────────────────────────────────────────────
+function toggleMenu(id, btn) {
+  const menu = document.getElementById(id);
+  const isOpen = menu.classList.contains('show');
+  document.querySelectorAll('.dropdown-menu').forEach(m=>m.classList.remove('show'));
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('open'));
+  if (!isOpen) { menu.classList.add('show'); btn.classList.add('open'); }
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.filter-dropdown')) {
+    document.querySelectorAll('.dropdown-menu').forEach(m=>m.classList.remove('show'));
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('open'));
+  }
+});
+function toggleAll(tipo) {
+  const menuId = tipo==='mes'?'menuMes':tipo==='emp'?'menuEmp':'menuBanco';
+  const cbs = document.querySelectorAll('#'+menuId+' input[type=checkbox]');
+  const all = Array.from(cbs).every(c=>c.checked);
+  cbs.forEach(c=>c.checked=!all);
+  updateFilter(tipo);
+}
+function updateFilter(tipo) {
+  if (tipo==='mes') {
+    filtros.meses = Array.from(document.querySelectorAll('#menuMes input:checked')).map(c=>c.value);
+    const n=filtros.meses.length, tot=document.querySelectorAll('#menuMes input').length;
+    document.getElementById('labelMes').textContent = n===tot?'Todos os meses':n===0?'Nenhum':n+' meses';
+  } else if (tipo==='emp') {
+    filtros.empresas = Array.from(document.querySelectorAll('#menuEmp input:checked')).map(c=>c.value);
+    const n=filtros.empresas.length;
+    document.getElementById('labelEmp').textContent = n===3?'Todos':n===0?'Nenhum':filtros.empresas.join(', ');
+  } else {
+    filtros.bancos = Array.from(document.querySelectorAll('#menuBanco input:checked')).map(c=>c.value);
+    const n=filtros.bancos.length;
+    document.getElementById('labelBanco').textContent = n===2?'Seleções múltiplas':n===0?'Nenhum':filtros.bancos.join(', ');
+  }
+  page = 0;
+  render();
+}
+function toggleTipo(el) {
+  const tipo = el.dataset.tipo;
+  if (tiposAtivos.has(tipo)) tiposAtivos.delete(tipo);
+  else tiposAtivos.add(tipo);
+  el.classList.toggle('active', tiposAtivos.has(tipo));
+  page = 0;
+  renderTable();
+}
+
+// ── Dados filtrados ───────────────────────────────────────────────────────
+function getLancamentos() {
+  if (!dadosGlobais) return [];
+  // Lança do JSON: kpisPorMesEmpresaBanco tem os totais, mas não os lançamentos individuais
+  // Os lançamentos estão em gastosDetalhe (proesc) — para caixa precisamos de outro campo
+  // O JSON atual não exporta os lançamentos individuais de caixa/sicoob
+  // Vamos usar o que está disponível: kpisPorMesEmpresaBanco para os KPIs
+  // e indicar que o detalhamento requer campo novo no JSON
+  return dadosGlobais._lancamentosCaixa || [];
+}
+
+function getLancamentosFiltrados() {
+  const mesesAtivos = filtros.meses.length > 0
+    ? filtros.meses
+    : (dadosGlobais?.mesesDisponiveis || []);
+  const busca = (document.getElementById('searchInput')?.value || '').toLowerCase().trim();
+
+  return getLancamentos().filter(l => {
+    const mesOk  = mesesAtivos.includes((l.data||'').substring(0,7));
+    const empOk  = filtros.empresas.includes(l.empresa);
+    const bcOk   = filtros.bancos.includes(l.banco);
+    const tipoOk = tiposAtivos.has(l.tipo);
+    const buscaOk = !busca ||
+      (l.historico||'').toLowerCase().includes(busca) ||
+      (l.nomeRS||'').toLowerCase().includes(busca) ||
+      (l.documento||'').toLowerCase().includes(busca);
+    return mesOk && empOk && bcOk && tipoOk && buscaOk;
+  });
+}
+
+// ── KPI Strip ─────────────────────────────────────────────────────────────
+function renderKPIs() {
+  if (!dadosGlobais) return;
+  const mesesAtivos = filtros.meses.length > 0
+    ? filtros.meses
+    : dadosGlobais.mesesDisponiveis;
+
+  let entCaixa=0, saiCaixa=0, entOp=0, saiOp=0, ti=0, ic=0, af=0;
+  for (const mes of mesesAtivos) {
+    const km = dadosGlobais.kpisPorMesEmpresaBanco?.[mes];
+    if (!km) continue;
+    for (const emp of filtros.empresas) {
+      for (const bc of filtros.bancos) {
+        const k = km?.[emp]?.[bc]; if (!k) continue;
+        entCaixa += k.entradasCaixa||0; saiCaixa += k.saidasCaixa||0;
+        entOp    += k.entOp||0;         saiOp    += k.saiOp||0;
+        ti       += k.transInternas||0; ic       += k.intercompany||0;
+        af       += k.aplicacoes||0;
+      }
+    }
+  }
+  const resultBanc = entCaixa + saiCaixa;
+  const resultOp   = entOp + saiOp;
+  const totalAjust = ti + ic + af;
+
+  document.getElementById('kpiStrip').innerHTML = `
+    <div class="kpi-card kc-green">
+      <div class="kc-label">Resultado Bancário</div>
+      <div class="kc-value" style="color:${resultBanc>=0?'var(--green)':'var(--red)'}">${fmtBRL(resultBanc)}</div>
+      <div class="kc-sub">Ent: ${fmtBRL(entCaixa)}</div>
+    </div>
+    <div class="kpi-card kc-blue">
+      <div class="kc-label">Resultado Operacional</div>
+      <div class="kc-value" style="color:${resultOp>=0?'var(--accent)':'var(--red)'}">${fmtBRL(resultOp)}</div>
+      <div class="kc-sub">Sai: ${fmtBRL(saiOp)}</div>
+    </div>
+    <div class="kpi-card kc-warn">
+      <div class="kc-label">Transf. Internas</div>
+      <div class="kc-value" style="color:${ti===0?'var(--muted)':ti>0?'var(--green)':'var(--red)'}">${fmtBRL(ti)}</div>
+      <div class="kc-sub">Líquido no período</div>
+    </div>
+    <div class="kpi-card" style="border-top:2px solid #a78bfa">
+      <div class="kc-label">Intercompany</div>
+      <div class="kc-value" style="color:${ic===0?'var(--muted)':ic>0?'var(--green)':'var(--red)'}">${fmtBRL(ic)}</div>
+      <div class="kc-sub">Líquido no período</div>
+    </div>
+    <div class="kpi-card kc-accent">
+      <div class="kc-label">Aplicações Fin.</div>
+      <div class="kc-value" style="color:${af===0?'var(--muted)':af>0?'var(--red)':'var(--green)'}">${fmtBRL(af)}</div>
+      <div class="kc-sub">Movimentação líquida</div>
+    </div>
+    <div class="kpi-card kc-muted">
+      <div class="kc-label">Total Ajustes</div>
+      <div class="kc-value" style="color:${totalAjust===0?'var(--muted)':totalAjust>0?'var(--green)':'var(--red)'}">${fmtBRL(totalAjust)}</div>
+      <div class="kc-sub">TI + IC + AF</div>
+    </div>
+  `;
+}
+
+// ── Sumário por tipo ──────────────────────────────────────────────────────
+function renderSummary(itens) {
+  const tipos = ['Operacional','Transferência Interna','Intercompany','Aplicação Financeira'];
+  const cores  = { 'Operacional':'var(--accent2)', 'Transferência Interna':'var(--warn)', 'Intercompany':'#a78bfa', 'Aplicação Financeira':'var(--green)' };
+  const labels = { 'Operacional':'Operacional', 'Transferência Interna':'Transf. Interna', 'Intercompany':'Intercompany', 'Aplicação Financeira':'Aplicação Fin.' };
+
+  // Usa todos os lançamentos (sem filtro de tipo) para o sumário
+  const mesesAtivos = filtros.meses.length > 0 ? filtros.meses : (dadosGlobais?.mesesDisponiveis || []);
+  const busca = (document.getElementById('searchInput')?.value || '').toLowerCase().trim();
+  const todosLanc = getLancamentos().filter(l => {
+    const mesOk = mesesAtivos.includes((l.data||'').substring(0,7));
+    const empOk = filtros.empresas.includes(l.empresa);
+    const bcOk  = filtros.bancos.includes(l.banco);
+    const buscaOk = !busca || (l.historico||'').toLowerCase().includes(busca) || (l.nomeRS||'').toLowerCase().includes(busca);
+    return mesOk && empOk && bcOk && buscaOk;
+  });
+
+  document.getElementById('tipoSummary').innerHTML = tipos.map(t => {
+    const sub = todosLanc.filter(l => l.tipo === t);
+    const total = sub.reduce((s,l)=>s+l.valor,0);
+    const qtd   = sub.length;
+    // Atualiza pill count
+    const key = { 'Operacional':'op','Transferência Interna':'ti','Intercompany':'ic','Aplicação Financeira':'af' }[t];
+    const el = document.getElementById('cnt-'+key);
+    if (el) el.textContent = qtd;
+    return `<div class="ts-card">
+      <div class="ts-label" style="color:${cores[t]}">${labels[t]}</div>
+      <div class="ts-value" style="color:${total>=0?cores[t]:'var(--red)'}">${fmtBRL(total)}</div>
+      <div class="ts-count">${qtd} lançamento${qtd!==1?'s':''}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Tabela detalhada ──────────────────────────────────────────────────────
+function renderTable() {
+  const itens = getLancamentosFiltrados()
+    .sort((a,b) => (a.data||'') < (b.data||'') ? -1 : (a.data||'') > (b.data||'') ? 1 : 0);
+
+  const total = itens.length;
+  const pages = Math.ceil(total / PAGE_SIZE);
+  if (page >= pages) page = Math.max(0, pages-1);
+  const slice = itens.slice(page*PAGE_SIZE, (page+1)*PAGE_SIZE);
+
+  if (!dadosGlobais) {
+    document.getElementById('tableWrap').innerHTML = '<div class="loading">Carregando…</div>';
+    return;
+  }
+
+  // Verifica se temos lançamentos no JSON
+  if (!dadosGlobais._lancamentosCaixa || dadosGlobais._lancamentosCaixa.length === 0) {
+    document.getElementById('tableWrap').innerHTML = `
+      <div style="padding:2rem;text-align:center;color:var(--muted)">
+        <div style="font-size:1.1rem;margin-bottom:.5rem">⚠️ Lançamentos não disponíveis no JSON</div>
+        <div style="font-size:.8rem">Para exibir o detalhamento individual, é necessário adicionar<br>
+        <code style="color:var(--accent);background:var(--surface2);padding:.15rem .4rem;border-radius:4px">_lancamentosCaixa</code>
+        ao payload do <code style="color:var(--accent);background:var(--surface2);padding:.15rem .4rem;border-radius:4px">Codigo.gs</code>.</div>
+        <div style="font-size:.75rem;margin-top:.75rem;color:var(--muted)">Os KPIs acima são calculados a partir dos agregados já disponíveis.</div>
+      </div>`;
+    document.getElementById('tablePag').innerHTML = '';
+    return;
+  }
+
+  if (total === 0) {
+    document.getElementById('tableWrap').innerHTML = '<div style="padding:2rem;text-align:center;color:var(--muted)">Nenhum lançamento encontrado.</div>';
+    document.getElementById('tablePag').innerHTML = '';
+    return;
+  }
+
+  const totVal = itens.reduce((s,l)=>s+l.valor,0);
+
+  const rows = slice.map(l => {
+    const tipoCss = TIPO_CSS[l.tipo] || 'tb-op';
+    const empDot  = `<span class="emp-dot" style="background:${EMP_COLORS[l.empresa]||'#888'}"></span>`;
+    const valCls  = l.valor > 0 ? 'pos' : l.valor < 0 ? 'neg' : 'neu';
+    return `<tr>
+      <td>${fmtDate(l.data)}</td>
+      <td>${empDot}${l.empresa}</td>
+      <td><span style="font-size:.7rem;color:var(--muted)">${l.banco}</span></td>
+      <td><span class="tipo-badge ${tipoCss}">${l.tipo}</span></td>
+      <td style="max-width:320px;overflow:hidden;text-overflow:ellipsis;font-family:var(--font-h);font-size:.76rem" title="${(l.historico||'').replace(/"/g,"'")}">
+        ${l.historico||'—'}
+      </td>
+      <td style="text-align:left;font-size:.72rem;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis" title="${(l.nomeRS||'').replace(/"/g,"'")}">
+        ${l.nomeRS||'—'}
+      </td>
+      <td class="${valCls}">${fmtBRL(l.valor)}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('tableWrap').innerHTML = `
+    <table>
+      <thead><tr>
+        <th style="text-align:left">Data</th>
+        <th style="text-align:left">Empresa</th>
+        <th style="text-align:left">Banco</th>
+        <th style="text-align:left">Tipo</th>
+        <th style="text-align:left">Histórico</th>
+        <th style="text-align:left">Nome/Razão</th>
+        <th>Valor</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr>
+        <td colspan="6">${total.toLocaleString('pt-BR')} lançamentos · Página ${page+1}/${pages||1}</td>
+        <td class="${totVal>=0?'pos':'neg'}">${fmtBRL(totVal)}</td>
+      </tr></tfoot>
+    </table>`;
+
+  // Paginação
+  const pgEl = document.getElementById('tablePag');
+  if (pages <= 1) { pgEl.innerHTML=''; return; }
+  let btns = '';
+  if (page > 0) btns += `<button class="pg-btn" onclick="goPage(0)">«</button><button class="pg-btn" onclick="goPage(${page-1})">‹</button>`;
+  const start = Math.max(0, page-2), end = Math.min(pages-1, page+2);
+  for (let i=start; i<=end; i++) btns += `<button class="pg-btn${i===page?' active':''}" onclick="goPage(${i})">${i+1}</button>`;
+  if (page < pages-1) btns += `<button class="pg-btn" onclick="goPage(${page+1})">›</button><button class="pg-btn" onclick="goPage(${pages-1})">»</button>`;
+  btns += `<span class="pg-info">${total.toLocaleString('pt-BR')} registros</span>`;
+  pgEl.innerHTML = btns;
+}
+function goPage(p) { page=p; renderTable(); window.scrollTo({top:document.getElementById('tableWrap').offsetTop-80,behavior:'smooth'}); }
+
+// ── Render principal ──────────────────────────────────────────────────────
+function render() {
+  renderKPIs();
+  const itens = getLancamentosFiltrados();
+  renderSummary(itens);
+  renderTable();
+}
+
+// ── Menus dinâmicos ───────────────────────────────────────────────────────
+function buildMenuMes(meses) {
+  const menu = document.getElementById('menuMes');
+  menu.innerHTML = `<div class="dropdown-item select-all" onclick="toggleAll('mes')">☑ Selecionar todos</div>`;
+  meses.forEach(m => {
+    filtros.meses.push(m);
+    menu.innerHTML += `<div class="dropdown-item"><input type="checkbox" value="${m}" onchange="updateFilter('mes')" checked> ${formatMes(m)}</div>`;
+  });
+  document.getElementById('labelMes').textContent = 'Todos os meses';
+}
+
+// ── Load ──────────────────────────────────────────────────────────────────
+function fetchT(url, ms=8000) {
+  return new Promise((res,rej) => {
+    const t = setTimeout(()=>rej(new Error('Timeout')),ms);
+    fetch(url).then(r=>{clearTimeout(t);r.ok?res(r):rej(new Error('HTTP '+r.status));}).catch(e=>{clearTimeout(t);rej(e);});
+  });
+}
+async function carregarDados() {
+  try {
+    const resp = await Promise.any(PROXIES.map(u=>fetchT(u)));
+    dadosGlobais = await resp.json();
+    const dt = new Date(dadosGlobais.geradoEm);
+    document.getElementById('lastUpdate').textContent =
+      'Atualizado em '+dt.toLocaleDateString('pt-BR')+' às '+dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    buildMenuMes(dadosGlobais.mesesDisponiveis);
+    render();
+  } catch(err) {
+    const msg = `<div class="error-msg">Erro ao carregar dados: ${err.message}</div>`;
+    document.getElementById('kpiStrip').innerHTML = msg;
+    document.getElementById('tableWrap').innerHTML = msg;
+  }
+}
+carregarDados();
+</script>
+</body>
+</html>

@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DRE Gerencial — Einstein Palmas</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg:        #0d0f14;
+    --surface:   #13161e;
+    --surface2:  #1a1e2a;
+    --border:    #252b3b;
+    --accent:    #00e5a0;
+    --accent2:   #4f8fff;
+    --danger:    #ff4d6a;
+    --warn:      #ffb547;
+    --text:      #e8eaf0;
+    --muted:     #6b7280;
+    --font-head: 'Syne', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-head);
+    min-height: 100vh;
+  }
+
+  /* ── NAV ── */
+  nav {
+    display: flex; align-items: center; gap: 1rem;
+    padding: .75rem 2rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+  }
+  nav a {
+    color: var(--muted); text-decoration: none;
+    font-size: .78rem; letter-spacing: .08em; text-transform: uppercase;
+    transition: color .2s;
+  }
+  nav a:hover { color: var(--accent); }
+  nav .sep { color: var(--border); }
+  nav .active { color: var(--accent); }
+
+  /* ── HEADER ── */
+  .page-header {
+    padding: 2rem 2rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-end; gap: 2rem; flex-wrap: wrap;
+  }
+  .page-title { font-size: 1.6rem; font-weight: 800; letter-spacing: -.02em; }
+  .page-title span { color: var(--accent); }
+
+  /* ── FILTERS ── */
+  .filters {
+    display: flex; gap: .75rem; flex-wrap: wrap;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .filter-group { display: flex; flex-direction: column; gap: .3rem; }
+  .filter-group label { font-size: .65rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+  select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font-head);
+    font-size: .82rem;
+    padding: .4rem .75rem;
+    border-radius: 6px;
+    cursor: pointer;
+    outline: none;
+    min-width: 130px;
+    transition: border-color .2s;
+  }
+  select:hover, select:focus { border-color: var(--accent); }
+
+  .kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .kpi-card {
+    background: var(--surface);
+    padding: .9rem 1rem;
+    display: flex; flex-direction: column; gap: .25rem;
+    min-width: 0;
+  }
+  .kpi-label { font-size: .6rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kpi-value { font-size: 1.1rem; font-weight: 700; font-family: var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kpi-value.green  { color: var(--accent); }
+  .kpi-value.red    { color: var(--danger); }
+  .kpi-value.blue   { color: var(--accent2); }
+  .kpi-value.yellow { color: var(--warn); }
+  .kpi-delta { font-size: .7rem; color: var(--muted); font-family: var(--font-mono); }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex; gap: 0;
+    padding: 0 2rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .tab-btn {
+    background: none; border: none; border-bottom: 2px solid transparent;
+    color: var(--muted); font-family: var(--font-head); font-size: .8rem;
+    font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+    padding: .85rem 1.25rem; cursor: pointer;
+    transition: color .2s, border-color .2s;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ── CONTENT ── */
+  .content { padding: 1.5rem 2rem; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── DRE TABLE ── */
+  .dre-table-wrap { overflow-x: auto; }
+  table.dre {
+    width: 100%; border-collapse: collapse;
+    font-size: .82rem; font-family: var(--font-mono);
+  }
+  table.dre th {
+    background: var(--surface2); color: var(--muted);
+    font-size: .65rem; text-transform: uppercase; letter-spacing: .08em;
+    padding: .6rem 1rem; text-align: right; border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  table.dre th:first-child { text-align: left; }
+  table.dre td {
+    padding: .45rem 1rem; border-bottom: 1px solid #1c202e;
+    text-align: right; white-space: nowrap;
+  }
+  table.dre td:first-child { text-align: left; font-family: var(--font-head); }
+
+  /* row types */
+  tr.row-detalhe td { color: var(--text); }
+  tr.row-detalhe:hover td { background: var(--surface2); }
+  tr.row-subtotal td {
+    background: var(--surface2); color: var(--accent2);
+    font-weight: 600; font-size: .8rem; border-top: 1px solid var(--border);
+  }
+  tr.row-resultado td {
+    background: #161b28; color: var(--text);
+    font-weight: 700; font-size: .85rem;
+    border-top: 2px solid var(--border);
+  }
+  tr.row-resultado.res-receita td  { color: var(--accent2); background: #111827; }
+  tr.row-resultado.res-bruto td   { color: var(--accent);  background: #0d1a14; }
+  tr.row-resultado.res-op td      { color: var(--accent);  background: #0d1a14; font-size: .9rem; }
+  tr.row-resultado.res-final td   { color: var(--warn);    background: #1a1808; font-size: .92rem; border-top: 1px solid #3a2e00; }
+
+  td.pos { color: var(--accent); }
+  td.neg { color: var(--danger); }
+  td.zero { color: var(--muted); }
+  td.indent { padding-left: 2rem; }
+  td.empresa-col { font-weight: 600; }
+
+  /* ── CHARTS ── */
+  .chart-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+  @media (max-width: 900px) { .chart-grid { grid-template-columns: 1fr; } }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+  }
+  .chart-card.full { grid-column: 1 / -1; }
+  .chart-title {
+    font-size: .75rem; text-transform: uppercase;
+    letter-spacing: .1em; color: var(--muted);
+    margin-bottom: 1rem;
+  }
+  .chart-title span { color: var(--text); font-weight: 700; }
+  .chart-container { position: relative; }
+
+  /* ── ESTRUTURA GASTOS ── */
+  .gastos-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-top: 1rem;
+  }
+  @media (max-width: 900px) { .gastos-grid { grid-template-columns: 1fr; } }
+
+  .gastos-table-wrap { overflow-x: auto; }
+  table.gastos {
+    width: 100%; border-collapse: collapse;
+    font-size: .8rem;
+  }
+  table.gastos th {
+    background: var(--surface2); color: var(--muted);
+    font-size: .62rem; text-transform: uppercase; letter-spacing: .08em;
+    padding: .5rem .75rem; text-align: right;
+    border-bottom: 1px solid var(--border);
+  }
+  table.gastos th:first-child { text-align: left; }
+  table.gastos td {
+    padding: .4rem .75rem; border-bottom: 1px solid #1c202e;
+    text-align: right; font-family: var(--font-mono); font-size: .78rem;
+  }
+  table.gastos td:first-child { text-align: left; font-family: var(--font-head); color: var(--text); }
+  table.gastos tr:hover td { background: var(--surface2); }
+  .bar-cell { display: flex; align-items: center; gap: .5rem; }
+  .bar-bg { flex: 1; height: 4px; background: var(--border); border-radius: 2px; }
+  .bar-fill { height: 100%; border-radius: 2px; background: var(--danger); }
+
+  /* ── LOADING / ERROR ── */
+  .loading {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 300px; color: var(--muted); font-size: .9rem;
+    flex-direction: column; gap: 1rem;
+  }
+  .spinner {
+    width: 32px; height: 32px;
+    border: 3px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-msg {
+    background: #1f0d12; border: 1px solid var(--danger);
+    color: var(--danger); padding: 1rem 1.5rem; border-radius: 8px;
+    font-size: .82rem; margin: 1rem 0;
+  }
+
+  /* ── SECTION TITLE ── */
+  .section-title {
+    font-size: .7rem; text-transform: uppercase; letter-spacing: .12em;
+    color: var(--muted); margin-bottom: .75rem; padding-bottom: .4rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* empty state */
+  .empty { color: var(--muted); font-size: .85rem; padding: 2rem 0; text-align: center; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html">Menu</a><span class="sep">›</span>
+  <a href="painel_executivo.html">Painel</a><span class="sep">›</span>
+  <a href="fluxo_caixa.html">Fluxo</a><span class="sep">›</span>
+  <span class="active">DRE</span><span class="sep">›</span>
+  <a href="gastos.html">Gastos</a><span class="sep">›</span>
+  <a href="receitas.html">Receitas</a><span class="sep">›</span>
+  <a href="ajustes.html">Ajustes</a>
+</nav>
+
+<div class="page-header">
+  <div>
+    <div class="page-title">DRE <span>Gerencial</span></div>
+  </div>
+</div>
+
+<div class="filters">
+  <div class="filter-group">
+    <label>Empresa</label>
+    <select id="sel-empresa">
+      <option value="CONSOLIDADO">Consolidado</option>
+      <option value="MD">MD</option>
+      <option value="SEL">SEL</option>
+      <option value="SIGMA">SIGMA</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Mês de Referência</label>
+    <select id="sel-mes"></select>
+  </div>
+</div>
+
+<div class="kpi-strip" id="kpi-strip">
+  <div class="loading"><div class="spinner"></div></div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="tab-dre">DRE Gerencial</button>
+  <button class="tab-btn" data-tab="tab-evolucao">Evolução Mensal</button>
+  <button class="tab-btn" data-tab="tab-gastos">Estrutura de Gastos</button>
+</div>
+
+<div class="content">
+  <!-- TAB 1: DRE -->
+  <div id="tab-dre" class="tab-panel active">
+    <div id="dre-content" class="loading"><div class="spinner"></div><span>Carregando DRE...</span></div>
+  </div>
+
+  <!-- TAB 2: EVOLUÇÃO -->
+  <div id="tab-evolucao" class="tab-panel">
+    <div class="chart-grid">
+      <div class="chart-card full">
+        <div class="chart-title"><span>Receita Operacional</span> vs <span>Despesas Operacionais</span></div>
+        <div class="chart-container"><canvas id="chart-receita" height="90"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title"><span>Resultado Operacional</span> vs <span>Resultado Final</span></div>
+        <div class="chart-container"><canvas id="chart-resultado" height="140"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title"><span>Margens</span> · % sobre Receita Líquida</div>
+        <div class="chart-container"><canvas id="chart-margens" height="140"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: ESTRUTURA GASTOS -->
+  <div id="tab-gastos" class="tab-panel">
+    <div id="gastos-content" class="loading"><div class="spinner"></div><span>Carregando...</span></div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────────────
+const DRIVE_FILE_ID = '1uHgfvF8CU2qJSbYjv_MtmgRxJFJzJR-Z';
+const PROXIES = [
+  `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://drive.google.com/uc?export=download&id=${DRIVE_FILE_ID}`)}`,
+  `https://corsproxy.io/?${encodeURIComponent(`https://drive.google.com/uc?export=download&id=${DRIVE_FILE_ID}`)}`,
+  `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`https://drive.google.com/uc?export=download&id=${DRIVE_FILE_ID}`)}`
+];
+
+const MESES_LABEL = {
+  '2026-01': 'jan/26', '2026-02': 'fev/26', '2026-03': 'mar/26',
+  '2026-04': 'abr/26', '2026-05': 'mai/26'
+};
+
+const fmt  = v => v == null ? '—' : 'R$ ' + Math.abs(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+const fmtK = v => v == null ? '—' : (Math.abs(v) >= 1000
+  ? 'R$ ' + (Math.abs(v)/1000).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}) + ' Mil'
+  : fmt(v));
+const fmtPct = v => v == null ? '—' : v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) + '%';
+const signal = v => v >= 0 ? 'pos' : 'neg';
+const signalMarg = v => v >= 50 ? 'green' : v >= 20 ? 'blue' : v >= 0 ? 'yellow' : 'red';
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+let DATA = null;
+let charts = {};
+
+// ── LOAD DATA ─────────────────────────────────────────────────────────────────
+async function fetchWithTimeout(url, ms = 8000) {
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const r = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(tid);
+    if (!r.ok) throw new Error(r.status);
+    return await r.json();
+  } catch(e) { clearTimeout(tid); throw e; }
+}
+
+async function loadData() {
+  try {
+    DATA = await Promise.any(PROXIES.map(u => fetchWithTimeout(u)));
+    init();
+  } catch(e) {
+    document.getElementById('kpi-strip').innerHTML =
+      `<div class="error-msg">Erro ao carregar dados: ${e.message}<br>Verifique o JSON publicado no Drive.</div>`;
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+function init() {
+  const meses = DATA.mesesDisponiveis || [];
+
+  // Popula select de mês
+  const selMes = document.getElementById('sel-mes');
+  meses.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m; opt.textContent = MESES_LABEL[m] || m;
+    selMes.appendChild(opt);
+  });
+  selMes.value = meses[0] || '';
+
+  // Eventos
+  document.getElementById('sel-empresa').addEventListener('change', render);
+  selMes.addEventListener('change', render);
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.tab).classList.add('active');
+      renderCharts();
+    });
+  });
+
+  render();
+}
+
+function getFilters() {
+  return {
+    empresa: document.getElementById('sel-empresa').value,
+    mes:     document.getElementById('sel-mes').value
+  };
+}
+
+function render() {
+  const { empresa, mes } = getFilters();
+  renderKPIs(empresa, mes);
+  renderDRE(empresa, mes);
+  renderGastos(empresa, mes);
+  renderCharts();
+}
+
+// ── KPIs ──────────────────────────────────────────────────────────────────────
+function renderKPIs(empresa, mes) {
+  const dre = DATA?.dreGerencial?.[mes]?.[empresa];
+  if (!dre) { document.getElementById('kpi-strip').innerHTML = '<div class="kpi-card"><span class="kpi-label">Sem dados</span></div>'; return; }
+  const k = dre.kpis;
+
+  const cards = [
+    { label: 'Receita Líquida',        value: fmtK(k.receitaLiquida),       cls: 'blue' },
+    { label: 'Resultado Bruto',        value: fmtK(k.resultadoBruto),        cls: signal(k.resultadoBruto) === 'pos' ? 'green' : 'red' },
+    { label: 'Resultado Operacional',  value: fmtK(k.resultadoOperacional),  cls: signal(k.resultadoOperacional) === 'pos' ? 'green' : 'red' },
+    { label: 'Resultado Final',        value: fmtK(k.resultadoFinal),        cls: signal(k.resultadoFinal) === 'pos' ? 'green' : 'red' },
+    { label: 'Margem Bruta',           value: fmtPct(k.margemBruta),         cls: signalMarg(k.margemBruta) },
+    { label: 'Margem Operacional',     value: fmtPct(k.margemOperacional),   cls: signalMarg(k.margemOperacional) },
+    { label: 'Pessoal / RL',           value: fmtPct(k.pessoalSobreRL),      cls: Math.abs(k.pessoalSobreRL) > 40 ? 'red' : Math.abs(k.pessoalSobreRL) > 25 ? 'yellow' : 'green' },
+    { label: 'Desp. Operacionais',     value: fmtK(k.despesasOperacionais),  cls: 'red' },
+  ];
+
+  document.getElementById('kpi-strip').innerHTML = cards.map(c =>
+    `<div class="kpi-card">
+      <div class="kpi-label">${c.label}</div>
+      <div class="kpi-value ${c.cls}">${c.value}</div>
+    </div>`
+  ).join('');
+}
+
+// ── DRE TABLE ─────────────────────────────────────────────────────────────────
+// Classifica grupo semântico de uma linha para colorização
+function dreSemantica(dreGrupo, dreLinha) {
+  const g = (dreGrupo || '').toUpperCase();
+  const l = (dreLinha  || '').toUpperCase();
+  if (g.includes('RECEITAS OPERACIONAIS'))            return 'receita';
+  if (g.includes('DEDUÇÕES') || g.includes('DEDUCOES')) return 'deducao';
+  if (g.includes('CUSTOS OPERACIONAIS'))              return 'custo';
+  if (g.includes('DESPESAS OPERACIONAIS'))            return 'despesa';
+  if (g.includes('FINANCEIRO') || g.includes('NÃO OPERACIONAL') || g.includes('NAO OPERACIONAL')) return 'financeiro';
+  // Linhas de resultado específicas
+  if (l.includes('RECEITA LÍQUIDA') || l.includes('RECEITA LIQUIDA')) return 'result-receita';
+  if (l.includes('RESULTADO BRUTO'))      return 'result-bruto';
+  if (l.includes('RESULTADO OPERACIONAL')) return 'result-op';
+  if (l.includes('RESULTADO FINAL'))      return 'result-final';
+  return 'neutro';
+}
+
+function renderDRE(empresa, mes) {
+  const el = document.getElementById('dre-content');
+  const dre = DATA?.dreGerencial?.[mes]?.[empresa];
+
+  if (!dre || !dre.linhas || dre.linhas.length === 0) {
+    el.innerHTML = '<div class="empty">Nenhum dado de DRE disponível para o período selecionado.</div>';
+    return;
+  }
+
+  const linhas = dre.linhas;
+  const isConsolidado = empresa === 'CONSOLIDADO';
+  const empresasCols  = isConsolidado ? ['MD','SEL','SIGMA','CONSOLIDADO'] : [empresa];
+
+  // Normalização reforçada: remove acentos, caracteres invisíveis e espaços estranhos.
+  const norm = s => (s ?? '')
+    .toString()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/\u00A0/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+
+  const isDetalheTipo = l => norm(l?.tipoLinha).includes('DETAL');
+  const isSubtotalTipo = l => norm(l?.tipoLinha).includes('SUBTOTAL');
+  const isResultadoTipo = l => norm(l?.tipoLinha).includes('RESULT');
+
+  // Recalcula subtotais/resultados para um array de linhas.
+  // IMPORTANTE: não depende de tipoLinha === 'Subtotal_Grupo', porque no JSON pode vir como "Subtotal".
+  function calcValores(linhasArr, kpis = {}) {
+    let recOp = 0, deducoes = 0, custos = 0, despOp = 0, financeiro = 0, naoOp = 0;
+
+    linhasArr.forEach(l => {
+      if (!isDetalheTipo(l)) return;
+
+      const g = norm(l.dreGrupo);
+      const v = Number(l.valor || 0);
+      if (!v) return;
+
+      if (g.includes('DEDUC')) {
+        deducoes += v;
+      } else if (g.includes('CUSTO')) {
+        custos += v;
+      } else if (g.includes('DESPESA') && g.includes('OPERACION')) {
+        despOp += v;
+      } else if (g.includes('FINANCE')) {
+        financeiro += v;
+      } else if (g.includes('NAO OPERACION')) {
+        naoOp += v;
+      } else if (g.includes('RECEITA')) {
+        recOp += v;
+      }
+    });
+
+    const receitaLiquida = recOp + deducoes;
+    const resultadoBruto = receitaLiquida + custos;
+    const resultadoOperacional = resultadoBruto + despOp;
+    const resultadoFinal = resultadoOperacional + financeiro + naoOp;
+
+    return linhasArr.map(l => {
+      if (isDetalheTipo(l)) return Number(l.valor || 0);
+
+      const n = norm(l.dreLinha);
+
+      // Subtotais calculados pelos detalhes
+      if (n.includes('TOTAL RECEITA')) return recOp;
+      if (n.includes('TOTAL DEDUC')) return deducoes;
+      if (n.includes('TOTAL CUSTO')) return custos;
+      if (n.includes('TOTAL DESPESA')) return despOp;
+      if (n.includes('RESULTADO FINANCE')) return financeiro;
+      if (n.includes('RESULTADO NAO OPERACION')) return naoOp;
+
+      // Resultados preferem os KPIs do JSON quando existem, pois já estão validados.
+      if (n.includes('RECEITA LIQ')) {
+        return Number(kpis.receitaLiquida ?? receitaLiquida ?? 0);
+      }
+      if (n.includes('RESULTADO') && n.includes('BRUTO')) {
+        return Number(kpis.resultadoBruto ?? resultadoBruto ?? 0);
+      }
+      if (n.includes('RESULTADO') && n.includes('OPERACION') && !n.includes('NAO')) {
+        return Number(kpis.resultadoOperacional ?? resultadoOperacional ?? 0);
+      }
+      if (n.includes('RESULTADO') && n.includes('FINAL')) {
+        return Number(kpis.resultadoFinal ?? resultadoFinal ?? 0);
+      }
+
+      return Number(l.valor || 0);
+    });
+  }
+
+  // Mapa: empresa → array de valores (índice = posição da linha)
+  const valoresPorEmp = {};
+  ['MD','SEL','SIGMA'].forEach(emp => {
+    const d = DATA?.dreGerencial?.[mes]?.[emp];
+    if (!d || !d.linhas) {
+      valoresPorEmp[emp] = linhas.map(() => 0);
+      return;
+    }
+    valoresPorEmp[emp] = calcValores(d.linhas, d.kpis || {});
+  });
+
+  // CONSOLIDADO = soma MD + SEL + SIGMA por índice
+  valoresPorEmp['CONSOLIDADO'] = linhas.map((_, idx) =>
+    (Number(valoresPorEmp['MD']?.[idx] || 0)) +
+    (Number(valoresPorEmp['SEL']?.[idx] || 0)) +
+    (Number(valoresPorEmp['SIGMA']?.[idx] || 0))
+  );
+
+  const getValIdx = (idx, emp) => {
+    const arr = valoresPorEmp[emp];
+    return (arr && arr[idx] !== undefined) ? arr[idx] : null;
+  };
+
+  let html = `<div class="dre-table-wrap"><table class="dre"><thead><tr>
+    <th style="width:38%">Descrição</th>`;
+  if (isConsolidado) {
+    html += `<th>MD</th><th>SEL</th><th>SIGMA</th><th>Consolidado</th>`;
+  } else {
+    html += `<th>Valor</th><th>% RL</th>`;
+  }
+  html += `</tr></thead><tbody>`;
+
+  const receitaLiq = dre.kpis?.receitaLiquida || 1;
+
+  linhas.forEach((l, idx) => {
+    const tipoSubtotal = isSubtotalTipo(l);
+    const tipoResultado = isResultadoTipo(l);
+    const tipoDetalhe = isDetalheTipo(l);
+    const sem  = dreSemantica(l.dreGrupo, l.dreLinha);
+
+    let rowClass = 'row-detalhe';
+    if (tipoSubtotal) rowClass = 'row-subtotal';
+    else if (tipoResultado) rowClass = 'row-resultado';
+
+    if (sem === 'result-receita') rowClass += ' res-receita';
+    if (sem === 'result-op')      rowClass += ' res-op';
+    if (sem === 'result-final')   rowClass += ' res-final';
+
+    const semColors = {
+      receita: '#4f8fff', deducao: '#fb923c', custo: '#f87171',
+      despesa: '#ff4d6a', financeiro: '#c084fc',
+      'result-receita': '#4f8fff', 'result-bruto': '#00e5a0',
+      'result-op': '#00e5a0', 'result-final': '#ffb547', neutro: '#e8eaf0'
+    };
+
+    const labelColor = semColors[sem] || '#e8eaf0';
+    const indent     = tipoDetalhe ? 'padding-left:2rem;' : '';
+    const prefix     = tipoSubtotal ? '= ' : tipoResultado ? '⟹ ' : '';
+
+    html += `<tr class="${rowClass}"><td style="${indent}color:${labelColor}">${prefix}${l.dreLinha}</td>`;
+
+    if (isConsolidado) {
+      empresasCols.forEach(emp => {
+        const v = getValIdx(idx, emp);
+        const isNaoDetalhe = !tipoDetalhe;
+
+        if (v === null || v === undefined) {
+          html += `<td class="zero">—</td>`;
+        } else if (Number(v) === 0 && !isNaoDetalhe) {
+          html += `<td class="zero">—</td>`;
+        } else if (Number(v) === 0) {
+          html += `<td class="zero">R$ 0,00</td>`;
+        } else {
+          const cls = v > 0 ? 'pos' : 'neg';
+          html += `<td class="${cls}">${fmt(v)}</td>`;
+        }
+      });
+    } else {
+      const v = getValIdx(idx, empresa) ?? 0;
+      const isNaoDetalhe = !tipoDetalhe;
+
+      if (Number(v) === 0 && !isNaoDetalhe) {
+        html += `<td class="zero">—</td><td class="zero">—</td>`;
+      } else {
+        const pct = receitaLiq !== 0 ? (v / receitaLiq * 100) : 0;
+        const cls = v > 0 ? 'pos' : v < 0 ? 'neg' : 'zero';
+        html += `<td class="${cls}">${fmt(v)}</td>`;
+        html += `<td class="${cls}">${v !== 0 ? pct.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%' : '0,0%'}</td>`;
+      }
+    }
+
+    html += `</tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+  el.innerHTML = html;
+  el.className = 'tab-content';
+}
+
+// ── ESTRUTURA GASTOS ──────────────────────────────────────────────────────────
+function renderGastos(empresa, mes) {
+  const el = document.getElementById('gastos-content');
+
+  // Tenta estruturaGastos primeiro; se vazio, recalcula a partir das linhas DRE
+  const empresasQuery = empresa === 'CONSOLIDADO' ? ['MD','SEL','SIGMA'] : [empresa];
+  const grupoMap = {};
+
+  empresasQuery.forEach(emp => {
+    // Tenta estruturaGastos do JSON
+    const g = DATA?.estruturaGastos?.[mes]?.[emp];
+    if (g && g.length > 0) {
+      g.forEach(item => {
+        const k = item.dreLinha;
+        if (!grupoMap[k]) grupoMap[k] = { dreLinha: item.dreLinha, dreGrupo: item.dreGrupo, valor: 0 };
+        grupoMap[k].valor += Math.abs(item.valor);
+      });
+      return;
+    }
+    // Fallback: extrai despesas das linhas DRE (Detalhe com grupo de custo/despesa)
+    const linhas = DATA?.dreGerencial?.[mes]?.[emp]?.linhas || [];
+    const normStr = s => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();
+    linhas.forEach(l => {
+      if (l.tipoLinha !== 'Detalhe') return;
+      const g = normStr(l.dreGrupo||'');
+      const isDespesa = g.includes('CUSTOS OPERACIONAIS') ||
+                        g.includes('DESPESAS OPERACIONAIS') ||
+                        g.includes('FINANCEIRO') ||
+                        g.includes('NAO OPERACIONAL') || g.includes('NÃO OPERACIONAL');
+      if (!isDespesa) return;
+      const v = Math.abs(l.valor || 0);
+      if (v === 0) return;
+      const k = l.dreLinha;
+      if (!grupoMap[k]) grupoMap[k] = { dreLinha: l.dreLinha, dreGrupo: l.dreGrupo, valor: 0 };
+      grupoMap[k].valor += v;
+    });
+  });
+
+  const itens = Object.values(grupoMap)
+    .map(i => ({ ...i, valor: Math.round(i.valor * 100) / 100 }))
+    .filter(i => i.valor > 0)
+    .sort((a, b) => b.valor - a.valor);
+
+  if (itens.length === 0) {
+    el.innerHTML = '<div class="empty">Sem dados de estrutura de gastos para o período.</div>';
+    el.className = '';
+    return;
+  }
+
+  const total = itens.reduce((s, i) => s + Math.abs(i.valor), 0);
+
+  // Agrupa por dreGrupo para o donut
+  const grupoAgg = {};
+  itens.forEach(i => {
+    const g = i.dreGrupo || 'OUTROS';
+    if (!grupoAgg[g]) grupoAgg[g] = 0;
+    grupoAgg[g] += Math.abs(i.valor);
+  });
+
+  const CORES = ['#ff4d6a','#4f8fff','#ffb547','#00e5a0','#c084fc','#fb923c','#34d399','#f472b6'];
+
+  let html = `<div class="gastos-grid">
+    <div class="chart-card">
+      <div class="chart-title"><span>Composição</span> por Grupo</div>
+      <div class="chart-container"><canvas id="chart-donut" height="220"></canvas></div>
+    </div>
+    <div class="gastos-table-wrap chart-card">
+      <div class="chart-title"><span>Detalhamento</span> por Linha</div>
+      <table class="gastos">
+        <thead><tr><th>Linha</th><th>Grupo</th><th>Valor</th><th style="width:120px">% Total</th></tr></thead>
+        <tbody>`;
+
+  itens.forEach(i => {
+    const pct = total > 0 ? (Math.abs(i.valor) / total * 100) : 0;
+    html += `<tr>
+      <td>${i.dreLinha}</td>
+      <td style="color:var(--muted);font-size:.72rem">${i.dreGrupo}</td>
+      <td class="neg">${fmt(i.valor)}</td>
+      <td>
+        <div class="bar-cell">
+          <div class="bar-bg"><div class="bar-fill" style="width:${pct.toFixed(1)}%"></div></div>
+          <span style="color:var(--muted);font-size:.7rem;min-width:36px">${pct.toFixed(1)}%</span>
+        </div>
+      </td>
+    </tr>`;
+  });
+
+  html += `</tbody></table></div></div>`;
+  el.innerHTML = html;
+  el.className = '';
+
+  // Donut
+  const ctx = document.getElementById('chart-donut');
+  if (ctx) {
+    if (charts['donut']) charts['donut'].destroy();
+    charts['donut'] = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(grupoAgg),
+        datasets: [{ data: Object.values(grupoAgg), backgroundColor: CORES, borderWidth: 0, hoverOffset: 6 }]
+      },
+      options: {
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#9ca3af', font: { family: 'Syne', size: 11 }, padding: 12, boxWidth: 12 } },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const v = ctx.raw;
+                const p = total > 0 ? (v/total*100).toFixed(1) : 0;
+                return ` R$ ${(v/1000).toFixed(1)}k (${p}%)`;
+              }
+            },
+            backgroundColor: '#1a1e2a', titleColor: '#e8eaf0', bodyColor: '#9ca3af',
+            borderColor: '#252b3b', borderWidth: 1
+          }
+        },
+        cutout: '65%'
+      }
+    });
+  }
+}
+
+// ── CHARTS ────────────────────────────────────────────────────────────────────
+function renderCharts() {
+  const empresa = document.getElementById('sel-empresa').value;
+  const meses   = DATA?.mesesDisponiveis || [];
+  const labels  = meses.map(m => MESES_LABEL[m] || m);
+
+  function getKpi(m, key) {
+    if (empresa === 'CONSOLIDADO') {
+      // Para CONSOLIDADO soma os kpis individuais (mais confiável que o kpis do CONSOLIDADO)
+      const vals = ['MD','SEL','SIGMA'].map(e => DATA?.dreGerencial?.[m]?.[e]?.kpis?.[key] ?? 0);
+      // Margens e % não somam — usa direto do CONSOLIDADO
+      if (['margemBruta','margemOperacional','pessoalSobreRL'].includes(key)) {
+        return DATA?.dreGerencial?.[m]?.['CONSOLIDADO']?.kpis?.[key] ?? null;
+      }
+      return vals.reduce((s,v) => s + Number(v||0), 0);
+    }
+    return DATA?.dreGerencial?.[m]?.[empresa]?.kpis?.[key] ?? null;
+  }
+
+  const chartDefaults = {
+    responsive: true,
+    plugins: {
+      legend: { labels: { color: '#9ca3af', font: { family: 'Syne', size: 11 }, boxWidth: 12, padding: 14 } },
+      tooltip: {
+        backgroundColor: '#1a1e2a', titleColor: '#e8eaf0', bodyColor: '#9ca3af',
+        borderColor: '#252b3b', borderWidth: 1
+      }
+    },
+    scales: {
+      x: { ticks: { color: '#6b7280', font: { family: 'JetBrains Mono', size: 11 } }, grid: { color: '#1c202e' } },
+      y: { ticks: { color: '#6b7280', font: { family: 'JetBrains Mono', size: 11 }, callback: v => 'R$' + (v/1000).toFixed(0) + 'k' }, grid: { color: '#1c202e' } }
+    }
+  };
+
+  // Chart 1 — Receita Operacional vs Despesas Operacionais (barras agrupadas)
+  const ctxRec = document.getElementById('chart-receita');
+  if (ctxRec) {
+    if (charts['receita']) charts['receita'].destroy();
+
+    // Busca receita operacional somando linhas do grupo RECEITAS OPERACIONAIS
+    function getReceitaOp(m) {
+      const normStr = s => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[\u200B-\u200D\uFEFF]/g,'').replace(/\s+/g,' ').trim().toUpperCase();
+      const empresas = empresa === 'CONSOLIDADO' ? ['MD','SEL','SIGMA'] : [empresa];
+      const soma = empresas.reduce((total, emp) => {
+        const linhasEmp = DATA?.dreGerencial?.[m]?.[emp]?.linhas || [];
+        return total + linhasEmp
+          .filter(l => {
+            const g = normStr(l.dreGrupo||'');
+            const t = normStr(l.tipoLinha||'');
+            return t.includes('DETAL') && g === 'RECEITAS OPERACIONAIS';
+          })
+          .reduce((s, l) => s + (Number(l.valor) || 0), 0);
+      }, 0);
+      // Fallback: usa receitaLiquida dos kpis (= receita op quando não há deduções)
+      if (!soma) return getKpi(m, 'receitaLiquida') ?? 0;
+      return soma;
+    }
+
+    charts['receita'] = new Chart(ctxRec, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Receita Operacional',
+            data: meses.map(m => getReceitaOp(m)),
+            backgroundColor: '#4f8fff55', borderColor: '#4f8fff', borderWidth: 2, borderRadius: 4 },
+          { label: 'Despesas Operacionais',
+            data: meses.map(m => Math.abs(getKpi(m,'despesasOperacionais') ?? 0)),
+            backgroundColor: '#ff4d6a33', borderColor: '#ff4d6a', borderWidth: 2, borderRadius: 4 },
+          { label: 'Resultado Final',
+            data: meses.map(m => getKpi(m,'resultadoFinal')),
+            type: 'line', borderColor: '#ffb547', borderWidth: 2,
+            pointBackgroundColor: '#ffb547', pointRadius: 4, tension: .3, fill: false }
+        ]
+      },
+      options: { ...chartDefaults }
+    });
+  }
+
+  // Chart 2 — Resultado Operacional vs Resultado Final
+  const ctxRes = document.getElementById('chart-resultado');
+  if (ctxRes) {
+    if (charts['resultado']) charts['resultado'].destroy();
+    charts['resultado'] = new Chart(ctxRes, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Result. Operacional',
+            data: meses.map(m => getKpi(m,'resultadoOperacional')),
+            backgroundColor: '#00e5a044', borderColor: '#00e5a0', borderWidth: 2, borderRadius: 4 },
+          { label: 'Resultado Final',
+            data: meses.map(m => getKpi(m,'resultadoFinal')),
+            backgroundColor: '#ffb54744', borderColor: '#ffb547', borderWidth: 2, borderRadius: 4 }
+        ]
+      },
+      options: { ...chartDefaults }
+    });
+  }
+
+  // Chart 3 — Margens (linha)
+  const ctxMar = document.getElementById('chart-margens');
+  if (ctxMar) {
+    if (charts['margens']) charts['margens'].destroy();
+    charts['margens'] = new Chart(ctxMar, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Margem Bruta', data: meses.map(m => getKpi(m,'margemBruta')),
+            borderColor: '#4f8fff', borderWidth: 2, pointRadius: 4,
+            pointBackgroundColor: '#4f8fff', tension: .3, fill: false },
+          { label: 'Margem Operacional', data: meses.map(m => getKpi(m,'margemOperacional')),
+            borderColor: '#00e5a0', borderWidth: 2, pointRadius: 4,
+            pointBackgroundColor: '#00e5a0', tension: .3, fill: false },
+          { label: 'Pessoal / RL', data: meses.map(m => getKpi(m,'pessoalSobreRL')),
+            borderColor: '#ff4d6a', borderWidth: 2, pointRadius: 4,
+            borderDash: [4,3], pointBackgroundColor: '#ff4d6a', tension: .3, fill: false }
+        ]
+      },
+      options: {
+        ...chartDefaults,
+        scales: {
+          x: chartDefaults.scales.x,
+          y: {
+            ticks: { color: '#6b7280', font: { family: 'JetBrains Mono', size: 11 }, callback: v => v + '%' },
+            grid: { color: '#1c202e' }
+          }
+        }
+      }
+    });
+  }
+}
+
+// ── START ─────────────────────────────────────────────────────────────────────
+loadData();
+</script>
+</body>
+</html>

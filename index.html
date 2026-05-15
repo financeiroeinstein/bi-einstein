@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BI Einstein – Painel de Navegação</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #0a0c10;
+    --surface: #111318;
+    --surface2:#161a22;
+    --border:  #1e2330;
+    --border2: #252b3b;
+    --text:    #e8eaf0;
+    --muted:   #5a6072;
+    --muted2:  #8892a0;
+    --font-h:  'Syne', sans-serif;
+    --font-m:  'JetBrains Mono', monospace;
+
+    --c1: #4f8fff; /* Painel */
+    --c2: #00e5a0; /* Fluxo  */
+    --c3: #ffb547; /* DRE    */
+    --c4: #f87171; /* Gastos */
+    --c5: #a78bfa; /* Receitas */
+    --c6: #38bdf8; /* Ajustes  */
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-h);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── Fundo com grid sutil ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(79,143,255,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(79,143,255,.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: relative; z-index: 1;
+    padding: 2.5rem 3rem 2rem;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-end; justify-content: space-between;
+    flex-wrap: wrap; gap: 1rem;
+  }
+
+  .logo { display: flex; flex-direction: column; gap: .35rem; }
+
+  .logo-title {
+    font-size: 1.75rem; font-weight: 800; letter-spacing: -.04em;
+    display: flex; align-items: center; gap: .5rem;
+  }
+  .logo-title .accent { color: var(--c2); }
+  .logo-title .tag {
+    font-size: .6rem; font-family: var(--font-m); font-weight: 400;
+    letter-spacing: .12em; color: var(--muted2);
+    background: var(--surface2); border: 1px solid var(--border2);
+    padding: .2rem .5rem; border-radius: 4px;
+    text-transform: uppercase; vertical-align: middle;
+  }
+
+  .logo-sub { font-size: .78rem; color: var(--muted); letter-spacing: .02em; }
+
+  .header-right {
+    text-align: right; display: flex; flex-direction: column; gap: .2rem;
+  }
+  .clock {
+    font-family: var(--font-m); font-size: 1.5rem; font-weight: 500;
+    color: var(--text); letter-spacing: .05em;
+  }
+  .date-str { font-size: .72rem; color: var(--muted); }
+
+  /* ── STATUS BAR ── */
+  .status-bar {
+    position: relative; z-index: 1;
+    padding: .6rem 3rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 1.5rem;
+    font-size: .72rem; color: var(--muted);
+    font-family: var(--font-m);
+  }
+  .status-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--c2);
+    box-shadow: 0 0 6px var(--c2);
+    animation: pulse 2.5s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: .4; transform: scale(.7); }
+  }
+  .status-sep { color: var(--border2); }
+  .last-update-val { color: var(--muted2); }
+
+  /* ── MAIN ── */
+  main {
+    position: relative; z-index: 1;
+    padding: 2.5rem 3rem 3rem;
+  }
+
+  .section-label {
+    font-size: .64rem; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--muted);
+    margin-bottom: 1.25rem;
+    display: flex; align-items: center; gap: .75rem;
+  }
+  .section-label::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* ── GRID ── */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  @media (max-width: 1100px) { .cards-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px)  { .cards-grid { grid-template-columns: 1fr; } }
+
+  /* ── CARD ── */
+  .card {
+    position: relative; overflow: hidden;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.6rem 1.75rem 1.4rem;
+    text-decoration: none; color: inherit;
+    display: flex; flex-direction: column; gap: .5rem;
+    min-height: 190px;
+    transition: transform .2s ease, border-color .2s ease, box-shadow .25s ease;
+  }
+
+  /* Borda colorida superior */
+  .card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--c, var(--c1));
+    border-radius: 14px 14px 0 0;
+    opacity: .6;
+    transition: opacity .2s;
+  }
+
+  /* Glow sutil no hover */
+  .card::after {
+    content: '';
+    position: absolute; inset: 0;
+    border-radius: 14px;
+    background: radial-gradient(ellipse at 30% 0%, color-mix(in srgb, var(--c, var(--c1)) 8%, transparent), transparent 60%);
+    opacity: 0;
+    transition: opacity .25s;
+    pointer-events: none;
+  }
+
+  .card:hover {
+    transform: translateY(-4px);
+    border-color: color-mix(in srgb, var(--c, var(--c1)) 40%, var(--border));
+    box-shadow: 0 16px 48px rgba(0,0,0,.5), 0 0 0 1px color-mix(in srgb, var(--c, var(--c1)) 15%, transparent);
+  }
+  .card:hover::before { opacity: 1; }
+  .card:hover::after  { opacity: 1; }
+
+  /* Número */
+  .card-num {
+    position: absolute; top: 1.2rem; right: 1.5rem;
+    font-family: var(--font-m); font-size: .65rem; font-weight: 500;
+    color: var(--muted); letter-spacing: .08em;
+  }
+
+  /* Ícone */
+  .card-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    background: color-mix(in srgb, var(--c, var(--c1)) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--c, var(--c1)) 25%, transparent);
+    margin-bottom: .25rem; flex-shrink: 0;
+  }
+
+  .card-title {
+    font-size: .95rem; font-weight: 700; line-height: 1.3;
+    color: var(--text);
+  }
+
+  .card-desc {
+    font-size: .76rem; color: var(--muted2); line-height: 1.55; flex: 1;
+  }
+
+  .card-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: .5rem; padding-top: .75rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .card-tags { display: flex; gap: .35rem; flex-wrap: wrap; }
+
+  .tag {
+    font-size: .6rem; font-family: var(--font-m); letter-spacing: .06em;
+    padding: .2rem .45rem; border-radius: 4px;
+    background: var(--surface2); border: 1px solid var(--border2);
+    color: var(--muted2); text-transform: uppercase;
+  }
+
+  .card-arrow {
+    font-size: .8rem; color: var(--muted);
+    transition: transform .2s ease, color .2s ease;
+  }
+  .card:hover .card-arrow {
+    transform: translateX(5px);
+    color: var(--c, var(--c1));
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    position: relative; z-index: 1;
+    border-top: 1px solid var(--border);
+    padding: 1.25rem 3rem;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: .72rem; color: var(--muted);
+    font-family: var(--font-m);
+    flex-wrap: wrap; gap: .5rem;
+  }
+
+  @media (max-width: 640px) {
+    header, main, footer { padding: 1.5rem; }
+    .status-bar { padding: .6rem 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-title">
+      BI <span class="accent">Einstein</span>
+      <span class="tag">v2.0</span>
+    </div>
+    <div class="logo-sub">Grupo Einstein Palmas · Inteligência Financeira</div>
+  </div>
+  <div class="header-right">
+    <div class="clock" id="clock">--:--</div>
+    <div class="date-str" id="dateStr">—</div>
+  </div>
+</header>
+
+<div class="status-bar">
+  <span class="status-dot"></span>
+  <span>Sistema operacional</span>
+  <span class="status-sep">·</span>
+  <span>JSON atualizado via Apps Script</span>
+  <span class="status-sep">·</span>
+  <span class="last-update-val" id="lastUpdateVal">verificando...</span>
+</div>
+
+<main>
+  <div class="section-label">Painéis disponíveis</div>
+
+  <div class="cards-grid">
+
+    <a href="painel_executivo.html" class="card" style="--c: var(--c1)">
+      <span class="card-num">01</span>
+      <div class="card-icon">💼</div>
+      <div class="card-title">Painel Executivo</div>
+      <div class="card-desc">KPIs consolidados de caixa. Entradas, saídas, resultado bancário e operacional, saldo disponível e investimentos.</div>
+      <div class="card-footer">
+        <div class="card-tags"><span class="tag">Caixa</span><span class="tag">KPIs</span></div>
+        <span class="card-arrow">→</span>
+      </div>
+    </a>
+
+    <a href="fluxo_caixa.html" class="card" style="--c: var(--c2)">
+      <span class="card-num">02</span>
+      <div class="card-icon">📈</div>
+      <div class="card-title">Fluxo de Caixa</div>
+      <div class="card-desc">Evolução mensal das movimentações bancárias. Visão comparativa por empresa e banco com gráfico e tabela.</div>
+      <div class="card-footer">
+        <div class="card-tags"><span class="tag">Mensal</span><span class="tag">Bancos</span></div>
+        <span class="card-arrow">→</span>
+      </div>
+    </a>
+
+    <a href="dre.html" class="card" style="--c: var(--c3)">
+      <span class="card-num">03</span>
+      <div class="card-icon">📊</div>
+      <div class="card-title">DRE Gerencial</div>
+      <div class="card-desc">Demonstrativo de resultado por competência. Receitas, custos, despesas, margens bruta e operacional por empresa.</div>
+      <div class="card-footer">
+        <div class="card-tags"><span class="tag">Proesc</span><span class="tag">Competência</span></div>
+        <span class="card-arrow">→</span>
+      </div>
+    </a>
+
+    <a href="gastos.html" class="card" style="--c: var(--c4)">
+      <span class="card-num">04</span>
+      <div class="card-icon">🔍</div>
+      <div class="card-title">Estrutura de Gastos</div>
+      <div class="card-desc">Composição das saídas com drill-down hierárquico por grupo, categoria e lançamento. Exportação PDF e Excel.</div>
+      <div class="card-footer">
+        <div class="card-tags"><span class="tag">Drill-down</span><span class="tag">Caixa Real</span></div>
+        <span class="card-arrow">→</span>
+      </div>
+    </a>
+
+    <a href="receitas.html" class="card" style="--c: var(--c5)">
+      <span class="card-num">05</span>
+      <div class="card-icon">🎯</div>
+      <div class="card-title">Receitas e Inadimplência</div>
+      <div class="card-desc">Previsão vs realização de receitas. Inadimplência mês e YTD, pontualidade, fechamento e agenda futura Educbank.</div>
+      <div class="card-footer">
+        <div class="card-tags"><span class="tag">Parcelas</span><span class="tag">Inadimplência</span></div>
+        <span class="card-arrow">→</span>
+      </div>
+    </a>
+
+    <a href="ajustes.html" class="card" style="--c: var(--c6)">
+      <span class="card-num">06</span>
+      <div class="card-icon">⚙️</div>
+      <div class="card-title">Ajustes e Conferência</div>
+      <div class="card-desc">Lançamentos classificados por tipo: operacional, transferências internas, intercompany e aplicações financeiras.</div>
+      <div class="card-footer">
+        <div class="card-tags"><span class="tag">Extratos</span><span class="tag">Conferência</span></div>
+        <span class="card-arrow">→</span>
+      </div>
+    </a>
+
+  </div>
+</main>
+
+<footer>
+  <span>MD · SEL · SIGMA — Einstein Palmas</span>
+  <span id="footerJson">—</span>
+</footer>
+
+<script>
+const DRIVE_FILE_ID = '1uHgfvF8CU2qJSbYjv_MtmgRxJFJzJR-Z';
+const _TS  = Date.now();
+const _BASE = `https://drive.google.com/uc?export=download&id=${DRIVE_FILE_ID}&_=${_TS}`;
+const PROXIES = [
+  `https://api.allorigins.win/raw?url=${encodeURIComponent(_BASE)}`,
+  `https://corsproxy.io/?${encodeURIComponent(_BASE)}`,
+  `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(_BASE)}`
+];
+
+// Relógio
+function tick() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+  document.getElementById('dateStr').textContent =
+    now.toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
+}
+tick(); setInterval(tick, 1000);
+
+// Verifica data do JSON
+function fetchT(url, ms=8000) {
+  return new Promise((res,rej) => {
+    const t = setTimeout(()=>rej(new Error('timeout')), ms);
+    fetch(url).then(r=>{clearTimeout(t); r.ok?res(r):rej(new Error('HTTP '+r.status));}).catch(e=>{clearTimeout(t);rej(e);});
+  });
+}
+async function verificarJSON() {
+  try {
+    const resp = await Promise.any(PROXIES.map(u=>fetchT(u)));
+    const data = await resp.json();
+    const dt   = new Date(data.geradoEm);
+    const str  = 'Dados de ' + dt.toLocaleDateString('pt-BR') + ' às ' + dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('lastUpdateVal').textContent = str;
+    document.getElementById('footerJson').textContent    = str;
+  } catch(e) {
+    document.getElementById('lastUpdateVal').textContent = 'erro ao verificar JSON';
+  }
+}
+verificarJSON();
+</script>
+</body>
+</html>

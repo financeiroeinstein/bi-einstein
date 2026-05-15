@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel Executivo — Einstein Palmas</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0d0f14;
+    --surface:  #13161e;
+    --surface2: #1a1e2a;
+    --surface3: #10131b;
+    --border:   #252b3b;
+    --accent:   #00e5a0;
+    --accent2:  #4f8fff;
+    --danger:   #ff4d6a;
+    --warn:     #ffb547;
+    --text:     #e8eaf0;
+    --muted:    #6b7280;
+    --font-h:   'Syne', sans-serif;
+    --font-m:   'JetBrains Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-h); background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  nav {
+    display: flex; align-items: center; gap: .75rem;
+    padding: .65rem 2rem; background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+  }
+  nav a { color: var(--muted); text-decoration: none; font-size: .74rem; letter-spacing: .07em; text-transform: uppercase; transition: color .15s; }
+  nav a:hover { color: var(--accent); }
+  nav .sep { color: var(--border); }
+  nav .active { color: var(--accent); font-size: .74rem; letter-spacing: .07em; text-transform: uppercase; }
+
+  .page-header {
+    padding: 1.75rem 2rem 1.4rem; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;
+  }
+  .page-title { font-size: 1.55rem; font-weight: 800; letter-spacing: -.02em; }
+  .page-title span { color: var(--accent); }
+  .last-update { font-size: .72rem; color: var(--muted); font-family: var(--font-m); }
+
+  .filters {
+    display: grid; grid-template-columns: repeat(3, minmax(160px, 1fr));
+    gap: .75rem; padding: 1rem 2rem;
+    border-bottom: 1px solid var(--border); background: var(--surface);
+  }
+  @media (max-width: 700px) { .filters { grid-template-columns: 1fr; } }
+
+  .filter-group label { font-size: .62rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); display: block; margin-bottom: .3rem; }
+  .filter-dropdown { position: relative; }
+  .filter-btn {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); font-family: var(--font-h); font-size: .82rem;
+    padding: .48rem .75rem; border-radius: 7px; cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center; transition: border-color .15s;
+  }
+  .filter-btn:hover, .filter-btn.open { border-color: var(--accent); }
+  .filter-btn .arrow { font-size: .65rem; color: var(--muted); transition: transform .2s; }
+  .filter-btn.open .arrow { transform: rotate(180deg); }
+  .dropdown-menu {
+    display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 7px;
+    z-index: 200; max-height: 220px; overflow-y: auto;
+  }
+  .dropdown-menu.show { display: block; }
+  .dropdown-item { padding: .5rem .75rem; font-size: .8rem; cursor: pointer; display: flex; align-items: center; gap: .5rem; }
+  .dropdown-item:hover { background: var(--surface3); }
+  .dropdown-item input[type=checkbox] { accent-color: var(--accent); width: 13px; height: 13px; cursor: pointer; }
+  .dropdown-item.select-all { border-bottom: 1px solid var(--border); color: var(--accent); font-size: .75rem; }
+
+  .content { padding: 1.5rem 2rem 2rem; display: flex; flex-direction: column; gap: 1rem; }
+
+  .kpi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 800px) { .kpi-row, .kpi-row-bottom { grid-template-columns: 1fr !important; } }
+
+  .kpi-section {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1rem 1.1rem;
+  }
+  .section-label {
+    font-size: .6rem; text-transform: uppercase; letter-spacing: .12em;
+    color: var(--muted); margin-bottom: .75rem;
+    padding-bottom: .4rem; border-bottom: 1px solid var(--border);
+  }
+  .kpi-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+  .kpi-grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: .7rem; }
+
+  .kpi-card {
+    border-radius: 9px; padding: .85rem 1rem;
+    display: flex; flex-direction: column; gap: .3rem;
+    position: relative; overflow: hidden;
+  }
+  .kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:var(--kc,transparent); }
+  .kpi-card .kc-label { font-size: .6rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .kpi-card .kc-value { font-size: 1.18rem; font-weight: 700; font-family: var(--font-m); color: var(--kc, var(--text)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kpi-card .kc-value.large { font-size: 1.4rem; }
+
+  .kc-green { --kc:#4ade80; background:rgba(74,222,128,.06); border:1px solid rgba(74,222,128,.18); }
+  .kc-red   { --kc:#f87171; background:rgba(248,113,113,.06); border:1px solid rgba(248,113,113,.18); }
+  .kc-blue  { --kc:var(--accent2); background:rgba(79,143,255,.07); border:1px solid rgba(79,143,255,.2); }
+  .kc-blue2 { --kc:var(--accent2); background:rgba(79,143,255,.13); border:1px solid rgba(79,143,255,.3); }
+  .kc-muted { --kc:var(--muted); background:var(--surface2); border:1px solid var(--border); }
+
+  .kpi-row-bottom { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+
+  .kpi-big {
+    background: var(--surface); border-radius: 12px;
+    padding: 1.3rem 1.5rem;
+    display: flex; flex-direction: column; gap: .35rem;
+    position: relative; overflow: hidden;
+  }
+  .kpi-big::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--kb,transparent); }
+  .kpi-big .kb-label { font-size: .62rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+  .kpi-big .kb-value { font-size: 1.7rem; font-weight: 700; font-family: var(--font-m); color: var(--kb-text, var(--text)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kpi-big .kb-sub   { font-size: .68rem; color: var(--muted); font-family: var(--font-m); margin-top: .1rem; }
+
+  .kb-disp  { --kb:var(--accent2); --kb-text:var(--accent2); border:1px solid rgba(79,143,255,.25); background:rgba(79,143,255,.05); }
+  .kb-inv   { --kb:var(--warn);    --kb-text:var(--warn);    border:1px solid rgba(255,181,71,.25);  background:rgba(255,181,71,.05); }
+  .kb-total { --kb:var(--accent);  --kb-text:var(--accent);  border:2px solid rgba(0,229,160,.3);    background:rgba(0,229,160,.07); }
+
+  .error-msg { padding:1rem 1.5rem; color:var(--danger); background:#1f0d12; border:1px solid var(--danger); border-radius:8px; font-size:.82rem; }
+  .loading   { text-align:center; padding:3rem; color:var(--muted); }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html">Menu</a><span class="sep">›</span>
+  <span class="active">Painel</span><span class="sep">›</span>
+  <a href="fluxo_caixa.html">Fluxo</a><span class="sep">›</span>
+  <a href="dre.html">DRE</a><span class="sep">›</span>
+  <a href="gastos.html">Gastos</a><span class="sep">›</span>
+  <a href="receitas.html">Receitas</a><span class="sep">›</span>
+  <a href="ajustes.html">Ajustes</a>
+</nav>
+
+<div class="page-header">
+  <div class="page-title">Painel <span>Executivo</span></div>
+  <div class="last-update" id="lastUpdate">Carregando...</div>
+</div>
+
+<div class="filters">
+  <div class="filter-group">
+    <label>Período (Mês/Ano)</label>
+    <div class="filter-dropdown" id="dropMes">
+      <button class="filter-btn" onclick="toggleDrop('dropMes')"><span id="labelMes">Todos os meses</span><span class="arrow">▼</span></button>
+      <div class="dropdown-menu" id="menuMes"></div>
+    </div>
+  </div>
+  <div class="filter-group">
+    <label>Empresa</label>
+    <div class="filter-dropdown" id="dropEmp">
+      <button class="filter-btn" onclick="toggleDrop('dropEmp')"><span id="labelEmp">Todos</span><span class="arrow">▼</span></button>
+      <div class="dropdown-menu" id="menuEmp">
+        <div class="dropdown-item select-all" onclick="toggleAll('emp')">☑ Selecionar todos</div>
+        <div class="dropdown-item"><input type="checkbox" value="MD"    onchange="updateFilter('emp')" checked> MD</div>
+        <div class="dropdown-item"><input type="checkbox" value="SEL"   onchange="updateFilter('emp')" checked> SEL</div>
+        <div class="dropdown-item"><input type="checkbox" value="SIGMA" onchange="updateFilter('emp')" checked> SIGMA</div>
+      </div>
+    </div>
+  </div>
+  <div class="filter-group">
+    <label>Banco</label>
+    <div class="filter-dropdown" id="dropBanco">
+      <button class="filter-btn" onclick="toggleDrop('dropBanco')"><span id="labelBanco">Seleções múltiplas</span><span class="arrow">▼</span></button>
+      <div class="dropdown-menu" id="menuBanco">
+        <div class="dropdown-item select-all" onclick="toggleAll('banco')">☑ Selecionar todos</div>
+        <div class="dropdown-item"><input type="checkbox" value="CAIXA"  onchange="updateFilter('banco')" checked> CAIXA</div>
+        <div class="dropdown-item"><input type="checkbox" value="SICOOB" onchange="updateFilter('banco')" checked> SICOOB</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="content" id="painelContent">
+  <div class="loading">Carregando dados...</div>
+</div>
+
+<script>
+const DRIVE_FILE_ID = '1uHgfvF8CU2qJSbYjv_MtmgRxJFJzJR-Z';
+const DRIVE_DIRECT  = `https://drive.google.com/uc?export=download&id=${DRIVE_FILE_ID}`;
+const PROXIES = [
+  `https://api.allorigins.win/raw?url=${encodeURIComponent(DRIVE_DIRECT)}`,
+  `https://corsproxy.io/?${encodeURIComponent(DRIVE_DIRECT)}`,
+  `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(DRIVE_DIRECT)}`
+];
+
+let dadosGlobais = null;
+const filtros = { meses:[], empresas:['MD','SEL','SIGMA'], bancos:['CAIXA','SICOOB'] };
+
+function toggleDrop(id) {
+  document.querySelectorAll('.dropdown-menu').forEach(m => { if (m.id !== 'menu'+id.replace('drop','')) m.classList.remove('show'); });
+  const btn=document.querySelector('#'+id+' .filter-btn'), menu=document.querySelector('#'+id+' .dropdown-menu');
+  btn.classList.toggle('open', menu.classList.toggle('show'));
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.filter-dropdown')) {
+    document.querySelectorAll('.dropdown-menu').forEach(m=>m.classList.remove('show'));
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('open'));
+  }
+});
+function toggleAll(tipo) {
+  const menuId = tipo==='mes'?'menuMes':tipo==='emp'?'menuEmp':'menuBanco';
+  const cbs = document.querySelectorAll('#'+menuId+' input[type=checkbox]');
+  const all = Array.from(cbs).every(c=>c.checked);
+  cbs.forEach(c=>c.checked=!all);
+  updateFilter(tipo);
+}
+function updateFilter(tipo) {
+  if (tipo==='mes') {
+    filtros.meses = Array.from(document.querySelectorAll('#menuMes input:checked')).map(c=>c.value);
+    const n=filtros.meses.length, tot=document.querySelectorAll('#menuMes input').length;
+    document.getElementById('labelMes').textContent = n===tot?'Todos os meses':n===0?'Nenhum':n+' meses';
+  } else if (tipo==='emp') {
+    filtros.empresas = Array.from(document.querySelectorAll('#menuEmp input:checked')).map(c=>c.value);
+    const n=filtros.empresas.length;
+    document.getElementById('labelEmp').textContent = n===3?'Todos':n===0?'Nenhum':filtros.empresas.join(', ');
+  } else {
+    filtros.bancos = Array.from(document.querySelectorAll('#menuBanco input:checked')).map(c=>c.value);
+    const n=filtros.bancos.length;
+    document.getElementById('labelBanco').textContent = n===2?'Seleções múltiplas':n===0?'Nenhum':filtros.bancos.join(', ');
+  }
+  renderKPIs();
+}
+
+function fmtBRL(val) {
+  const abs=Math.abs(val);
+  const str = abs>=1000 ? (abs/1000).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+' Mil'
+                        : abs.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  return (val<0?'-':'')+'R$ '+str;
+}
+function formatMes(m) {
+  const [ano,mes]=m.split('-');
+  return ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][parseInt(mes)-1]+'/'+ano;
+}
+
+function calcKPIs() {
+  if (!dadosGlobais) return null;
+  const mesesAtivos = filtros.meses.length>0 ? filtros.meses : dadosGlobais.mesesDisponiveis;
+  let entradasCaixa=0,saidasCaixa=0,entOp=0,saiOp=0,transInternas=0,intercompany=0,aplicacoes=0;
+  for (const mes of mesesAtivos) {
+    const km = dadosGlobais.kpisPorMesEmpresaBanco?.[mes];
+    if (!km) continue;
+    for (const emp of filtros.empresas) for (const bc of filtros.bancos) {
+      const k=km?.[emp]?.[bc]; if (!k) continue;
+      entradasCaixa+=k.entradasCaixa||0; saidasCaixa+=k.saidasCaixa||0;
+      entOp+=k.entOp||0; saiOp+=k.saiOp||0;
+      transInternas+=k.transInternas||0; intercompany+=k.intercompany||0; aplicacoes+=k.aplicacoes||0;
+    }
+  }
+  const mesLimite=[...mesesAtivos].sort().pop()||dadosGlobais.mesesDisponiveis.slice(-1)[0];
+  let disponivel=0,investimentos=0;
+  for (const emp of filtros.empresas) for (const bc of filtros.bancos) {
+    disponivel    += dadosGlobais.disponivel?.[mesLimite]?.[emp]?.[bc]    || 0;
+    investimentos += dadosGlobais.investimentos?.[mesLimite]?.[emp]?.[bc] || 0;
+  }
+  return { entradasCaixa, saidasCaixa, resultadoBancario:entradasCaixa+saidasCaixa,
+           entOp, saiOp, resultadoOp:entOp+saiOp,
+           transInternas, intercompany, aplicacoes,
+           disponivel, investimentos, totalPatrimonio:disponivel+investimentos };
+}
+
+function adjCls(v) { return v===0?'kc-muted':v>0?'kc-green':'kc-red'; }
+
+function renderKPIs() {
+  const k=calcKPIs(); if (!k) return;
+  document.getElementById('painelContent').innerHTML = `
+    <div class="kpi-row">
+      <div class="kpi-section">
+        <div class="section-label">Entradas</div>
+        <div class="kpi-grid-2">
+          <div class="kpi-card kc-green"><div class="kc-label">Bancárias</div><div class="kc-value">${fmtBRL(k.entradasCaixa)}</div></div>
+          <div class="kpi-card kc-green"><div class="kc-label">Operacionais</div><div class="kc-value">${fmtBRL(k.entOp)}</div></div>
+        </div>
+      </div>
+      <div class="kpi-section">
+        <div class="section-label">Resultados</div>
+        <div class="kpi-grid-2">
+          <div class="kpi-card kc-blue"><div class="kc-label">Resultado Bancário</div><div class="kc-value">${fmtBRL(k.resultadoBancario)}</div></div>
+          <div class="kpi-card kc-blue2"><div class="kc-label">Resultado Operacional</div><div class="kc-value large">${fmtBRL(k.resultadoOp)}</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi-section">
+        <div class="section-label">Saídas</div>
+        <div class="kpi-grid-2">
+          <div class="kpi-card kc-red"><div class="kc-label">Bancárias</div><div class="kc-value">${fmtBRL(k.saidasCaixa)}</div></div>
+          <div class="kpi-card kc-red"><div class="kc-label">Operacionais</div><div class="kc-value">${fmtBRL(k.saiOp)}</div></div>
+        </div>
+      </div>
+      <div class="kpi-section">
+        <div class="section-label">Ajustes</div>
+        <div class="kpi-grid-3">
+          <div class="kpi-card ${adjCls(k.transInternas)}"><div class="kc-label">Transf. Internas</div><div class="kc-value">${fmtBRL(k.transInternas)}</div></div>
+          <div class="kpi-card ${adjCls(k.intercompany)}"><div class="kc-label">Intercompany</div><div class="kc-value">${fmtBRL(k.intercompany)}</div></div>
+          <div class="kpi-card ${adjCls(k.aplicacoes)}"><div class="kc-label">Aplicações Fin.</div><div class="kc-value">${fmtBRL(k.aplicacoes)}</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-row-bottom">
+      <div class="kpi-big kb-disp">
+        <div class="kb-label">Disponível em Conta</div>
+        <div class="kb-value">${fmtBRL(k.disponivel)}</div>
+        <div class="kb-sub">Saldo acumulado em conta</div>
+      </div>
+      <div class="kpi-big kb-inv">
+        <div class="kb-label">Investimentos</div>
+        <div class="kb-value">${fmtBRL(Math.abs(k.investimentos))}</div>
+        <div class="kb-sub">CDB / Aplicações financeiras</div>
+      </div>
+      <div class="kpi-big kb-total">
+        <div class="kb-label">Total — Conta + Invest.</div>
+        <div class="kb-value">${fmtBRL(k.totalPatrimonio)}</div>
+        <div class="kb-sub">Disponível + Investimentos</div>
+      </div>
+    </div>
+  `;
+}
+
+function buildMenuMes(meses) {
+  const menu=document.getElementById('menuMes');
+  menu.innerHTML=`<div class="dropdown-item select-all" onclick="toggleAll('mes')">☑ Selecionar todos</div>`;
+  meses.forEach(m => {
+    filtros.meses.push(m);
+    menu.innerHTML+=`<div class="dropdown-item"><input type="checkbox" value="${m}" onchange="updateFilter('mes')" checked> ${formatMes(m)}</div>`;
+  });
+  document.getElementById('labelMes').textContent='Todos os meses';
+}
+
+function fetchT(url,ms=8000) {
+  return new Promise((res,rej) => {
+    const t=setTimeout(()=>rej(new Error('Timeout')),ms);
+    fetch(url).then(r=>{clearTimeout(t);r.ok?res(r):rej(new Error('HTTP '+r.status));}).catch(e=>{clearTimeout(t);rej(e);});
+  });
+}
+
+async function carregarDados() {
+  try {
+    const resp=await Promise.any(PROXIES.map(u=>fetchT(u)));
+    dadosGlobais=await resp.json();
+    const dt=new Date(dadosGlobais.geradoEm);
+    document.getElementById('lastUpdate').textContent=
+      'Atualizado em '+dt.toLocaleDateString('pt-BR')+' às '+dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    buildMenuMes(dadosGlobais.mesesDisponiveis);
+    renderKPIs();
+  } catch(err) {
+    document.getElementById('painelContent').innerHTML=`<div class="error-msg">Erro ao carregar dados: ${err.message}</div>`;
+  }
+}
+
+carregarDados();
+</script>
+</body>
+</html>

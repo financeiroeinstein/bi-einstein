@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Receitas — Einstein Palmas</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:       #0d0f14;
+    --surface:  #13161e;
+    --surface2: #1a1e2a;
+    --surface3: #10131b;
+    --border:   #252b3b;
+    --accent:   #00e5a0;
+    --accent2:  #4f8fff;
+    --danger:   #ff4d6a;
+    --warn:     #ffb547;
+    --green:    #4ade80;
+    --red:      #f87171;
+    --text:     #e8eaf0;
+    --muted:    #6b7280;
+    --font-h:   'Syne', sans-serif;
+    --font-m:   'JetBrains Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-h); background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* NAV */
+  nav {
+    display: flex; align-items: center; gap: .75rem;
+    padding: .65rem 2rem; background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+  }
+  nav a { color: var(--muted); text-decoration: none; font-size: .74rem; letter-spacing: .07em; text-transform: uppercase; transition: color .15s; }
+  nav a:hover { color: var(--accent); }
+  nav .sep { color: var(--border); }
+  nav .active { color: var(--accent); font-size: .74rem; letter-spacing: .07em; text-transform: uppercase; }
+
+  /* HEADER */
+  .page-header {
+    padding: 1.75rem 2rem 1.4rem; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;
+  }
+  .page-title { font-size: 1.55rem; font-weight: 800; letter-spacing: -.02em; }
+  .page-title span { color: var(--accent); }
+  .last-update { font-size: .72rem; color: var(--muted); font-family: var(--font-m); }
+
+  /* FILTERS */
+  .filters {
+    display: grid; grid-template-columns: repeat(3, minmax(160px,1fr));
+    gap: .75rem; padding: 1rem 2rem;
+    border-bottom: 1px solid var(--border); background: var(--surface);
+  }
+  @media (max-width: 700px) { .filters { grid-template-columns: 1fr; } }
+  .filter-group label { font-size: .62rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); display: block; margin-bottom: .3rem; }
+  .filter-dropdown { position: relative; }
+  .filter-btn {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); font-family: var(--font-h); font-size: .82rem;
+    padding: .48rem .75rem; border-radius: 7px; cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center; transition: border-color .15s;
+  }
+  .filter-btn:hover, .filter-btn.open { border-color: var(--accent); }
+  .filter-btn .arrow { font-size: .65rem; color: var(--muted); transition: transform .2s; }
+  .filter-btn.open .arrow { transform: rotate(180deg); }
+  .dropdown-menu {
+    display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 7px;
+    z-index: 200; max-height: 220px; overflow-y: auto;
+  }
+  .dropdown-menu.show { display: block; }
+  .dropdown-item { padding: .5rem .75rem; font-size: .8rem; cursor: pointer; display: flex; align-items: center; gap: .5rem; }
+  .dropdown-item:hover { background: var(--surface3); }
+  .dropdown-item input { accent-color: var(--accent); width: 13px; height: 13px; cursor: pointer; }
+  .dropdown-item.select-all { border-bottom: 1px solid var(--border); color: var(--accent); font-size: .75rem; }
+
+  /* KPI STRIP */
+  .kpi-strip {
+    display: grid; grid-template-columns: repeat(6, minmax(130px,1fr));
+    gap: 1px; background: var(--border); border-bottom: 1px solid var(--border);
+  }
+  @media (max-width: 1100px) { .kpi-strip { grid-template-columns: repeat(3,1fr); } }
+  @media (max-width: 600px)  { .kpi-strip { grid-template-columns: repeat(2,1fr); } }
+  .kpi-mini {
+    background: var(--surface); padding: 1rem 1.15rem;
+    display: flex; flex-direction: column; gap: .28rem;
+    position: relative; overflow: hidden;
+  }
+  .kpi-mini::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:var(--kc,transparent); }
+  .kpi-mini .km-label { font-size: .6rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .kpi-mini .km-value { font-size: 1.05rem; font-weight: 700; font-family: var(--font-m); color: var(--kc,var(--text)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kpi-mini .km-sub   { font-size: .68rem; color: var(--muted); font-family: var(--font-m); }
+
+  /* GAUGE */
+  .gauge-wrap {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 1.5rem 1rem 1rem;
+  }
+  .gauge-canvas { width: 180px !important; height: 100px !important; }
+  .gauge-label  { font-size: 1.5rem; font-weight: 800; font-family: var(--font-m); margin-top: .5rem; }
+  .gauge-sub    { font-size: .7rem; color: var(--muted); margin-top: .1rem; }
+  .gauge-range  { display: flex; justify-content: space-between; width: 180px; font-size: .65rem; color: var(--muted); font-family: var(--font-m); margin-top: .25rem; }
+
+  /* CONTENT */
+  .content { padding: 1.5rem 2rem 2rem; display: flex; flex-direction: column; gap: 1.25rem; }
+
+  /* TABS */
+  .tabs {
+    display: flex; gap: 0; border-bottom: 1px solid var(--border);
+    background: var(--surface); margin: 0 -2rem; padding: 0 2rem;
+  }
+  .tab-btn {
+    background: none; border: none; border-bottom: 2px solid transparent;
+    color: var(--muted); font-family: var(--font-h); font-size: .78rem;
+    font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+    padding: .85rem 1.1rem; cursor: pointer; transition: color .2s, border-color .2s;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: flex; flex-direction: column; gap: 1.25rem; }
+
+  /* CARDS */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.25rem 1.5rem;
+  }
+  .card-title {
+    font-size: .7rem; text-transform: uppercase; letter-spacing: .1em;
+    color: var(--muted); margin-bottom: 1rem;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem;
+  }
+  .card-title strong { color: var(--text); font-weight: 700; font-size: .82rem; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.25rem; }
+  @media (max-width: 900px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+  .chart-wrap { position: relative; height: 280px; }
+  .chart-wrap.tall { height: 340px; }
+
+  /* PROGRESS BAR */
+  .progress-section { display: flex; flex-direction: column; gap: .9rem; }
+  .progress-item { display: flex; flex-direction: column; gap: .3rem; }
+  .progress-header { display: flex; justify-content: space-between; align-items: baseline; }
+  .progress-label { font-size: .78rem; font-weight: 600; }
+  .progress-values { font-size: .7rem; color: var(--muted); font-family: var(--font-m); }
+  .progress-bar-bg { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; border-radius: 3px; transition: width .6s ease; }
+
+  /* TABLES */
+  table { width: 100%; border-collapse: collapse; font-family: var(--font-m); font-size: .78rem; }
+  thead th {
+    background: var(--surface2); color: var(--muted);
+    font-size: .62rem; text-transform: uppercase; letter-spacing: .08em;
+    padding: .55rem .85rem; text-align: right; border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  thead th:first-child { text-align: left; }
+  tbody td { padding: .55rem .85rem; border-bottom: 1px solid #1c202e; text-align: right; white-space: nowrap; }
+  tbody td:first-child { text-align: left; font-family: var(--font-h); }
+  tbody tr:hover td { background: var(--surface2); }
+  tfoot td { padding: .6rem .85rem; border-top: 1px solid var(--border); text-align: right; font-weight: 700; }
+  tfoot td:first-child { text-align: left; font-family: var(--font-h); }
+
+  .pos  { color: var(--green); }
+  .neg  { color: var(--red); }
+  .warn { color: var(--warn); }
+  .blu  { color: var(--accent2); }
+  .acc  { color: var(--accent); }
+  .zero { color: var(--muted); }
+
+  /* STATUS BADGE */
+  .badge {
+    display: inline-block; font-size: .65rem; font-weight: 700;
+    padding: .18rem .5rem; border-radius: 4px; font-family: var(--font-h);
+    text-transform: uppercase; letter-spacing: .06em;
+  }
+  .badge-pago    { background: rgba(74,222,128,.15); color: var(--green); border: 1px solid rgba(74,222,128,.25); }
+  .badge-aberto  { background: rgba(255,181,71,.12); color: var(--warn); border: 1px solid rgba(255,181,71,.25); }
+  .badge-vencido { background: rgba(248,113,113,.15); color: var(--red); border: 1px solid rgba(248,113,113,.25); }
+
+  /* PAGINATION */
+  .pagination { display: flex; align-items: center; gap: .5rem; justify-content: flex-end; margin-top: .75rem; }
+  .pagination button {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    font-family: var(--font-h); font-size: .75rem; padding: .3rem .6rem; border-radius: 5px; cursor: pointer;
+    transition: border-color .15s;
+  }
+  .pagination button:hover { border-color: var(--accent); }
+  .pagination button:disabled { opacity: .3; cursor: not-allowed; }
+  .pagination .page-info { font-size: .72rem; color: var(--muted); font-family: var(--font-m); }
+
+  .error-msg { padding: 1rem 1.5rem; color: var(--danger); background: #1f0d12; border: 1px solid var(--danger); border-radius: 8px; font-size: .82rem; }
+  .loading   { text-align: center; padding: 3rem; color: var(--muted); }
+  .empty     { text-align: center; padding: 2rem; color: var(--muted); font-size: .85rem; }
+
+  /* AGENDA empresa dot */
+  .emp-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: .35rem; vertical-align: middle; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html">Menu</a><span class="sep">›</span>
+  <a href="painel_executivo.html">Painel</a><span class="sep">›</span>
+  <a href="fluxo_caixa.html">Fluxo</a><span class="sep">›</span>
+  <a href="dre.html">DRE</a><span class="sep">›</span>
+  <a href="gastos.html">Gastos</a><span class="sep">›</span>
+  <span class="active">Receitas</span><span class="sep">›</span>
+  <a href="ajustes.html">Ajustes</a>
+</nav>
+
+<div class="page-header">
+  <div class="page-title">Previsão e <span>Realização</span> de Receitas</div>
+  <div class="last-update" id="lastUpdate">Carregando...</div>
+</div>
+
+<div class="filters">
+  <div class="filter-group">
+    <label>Empresa</label>
+    <div class="filter-dropdown" id="dropEmp">
+      <button class="filter-btn" onclick="toggleDrop('dropEmp')"><span id="labelEmp">Consolidado</span><span class="arrow">▼</span></button>
+      <div class="dropdown-menu" id="menuEmp">
+        <div class="dropdown-item"><input type="radio" name="emp" value="CONSOLIDADO" onchange="updateEmp(this)" checked> Consolidado</div>
+        <div class="dropdown-item"><input type="radio" name="emp" value="MD"           onchange="updateEmp(this)"> MD</div>
+        <div class="dropdown-item"><input type="radio" name="emp" value="SEL"          onchange="updateEmp(this)"> SEL</div>
+        <div class="dropdown-item"><input type="radio" name="emp" value="SIGMA"        onchange="updateEmp(this)"> SIGMA</div>
+      </div>
+    </div>
+  </div>
+  <div class="filter-group">
+    <label>Mês de Referência</label>
+    <div class="filter-dropdown" id="dropMes">
+      <button class="filter-btn" onclick="toggleDrop('dropMes')"><span id="labelMes">—</span><span class="arrow">▼</span></button>
+      <div class="dropdown-menu" id="menuMes"></div>
+    </div>
+  </div>
+  <div class="filter-group">
+    <label>Tipo de Receita</label>
+    <div class="filter-dropdown" id="dropTipo">
+      <button class="filter-btn" onclick="toggleDrop('dropTipo')"><span id="labelTipo">Recorrente</span><span class="arrow">▼</span></button>
+      <div class="dropdown-menu" id="menuTipo">
+        <div class="dropdown-item"><input type="radio" name="tipo" value="Recorrente"     onchange="updateTipo(this)" checked> Recorrente (Mensalidades)</div>
+        <div class="dropdown-item"><input type="radio" name="tipo" value="Não Recorrente" onchange="updateTipo(this)"> Não Recorrente</div>
+        <div class="dropdown-item"><input type="radio" name="tipo" value="TODOS"          onchange="updateTipo(this)"> Todos</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="kpi-strip" id="kpiStrip">
+  <div class="loading" style="grid-column:1/-1">Carregando...</div>
+</div>
+
+<div class="content">
+  <div class="tabs" id="tabsEl">
+    <button class="tab-btn active" data-tab="tab-visao">Visão Geral</button>
+    <button class="tab-btn" data-tab="tab-evolucao">Evolução Mensal</button>
+    <button class="tab-btn" data-tab="tab-detalhe">Detalhamento</button>
+    <button class="tab-btn" data-tab="tab-agenda">Agenda Futura</button>
+  </div>
+
+  <!-- TAB 1: VISÃO GERAL -->
+  <div id="tab-visao" class="tab-panel active">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title"><strong>Conversão da Receita Recorrente</strong></div>
+        <div class="gauge-wrap">
+          <canvas id="gaugeChart" class="gauge-canvas"></canvas>
+          <div class="gauge-label" id="gaugeLabel">—</div>
+          <div class="gauge-sub">% Realização da Receita</div>
+          <div class="gauge-range"><span id="gaugeMin">R$ 0</span><span id="gaugeMax">—</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><strong>Previsto vs Recebido por Tipo</strong></div>
+        <div id="porTipoSection" class="progress-section"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><strong>Previsto vs Recebido por Mês</strong> <span style="font-size:.7rem;color:var(--muted)">todos os meses</span></div>
+      <div class="chart-wrap"><canvas id="chartMensal"></canvas></div>
+    </div>
+  </div>
+
+  <!-- TAB 2: EVOLUÇÃO -->
+  <div id="tab-evolucao" class="tab-panel">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title"><strong>% Realização Mensal</strong></div>
+        <div class="chart-wrap"><canvas id="chartRealizacao"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><strong>% Inadimplência Mensal</strong></div>
+        <div class="chart-wrap"><canvas id="chartInad"></canvas></div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">
+          <strong>% Pagaram no Prazo</strong>
+          <span style="font-size:.68rem;color:var(--muted)">dataPag ≤ dataVenc</span>
+        </div>
+        <div class="chart-wrap"><canvas id="chartPrazo"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">
+          <strong>% Inadimplência no Fechamento</strong>
+          <span style="font-size:.68rem;color:var(--muted)">em aberto no último dia do mês</span>
+        </div>
+        <div class="chart-wrap"><canvas id="chartFechamento"></canvas></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><strong>Evolução da Receita — Previsto vs Recebido</strong></div>
+      <div class="chart-wrap tall"><canvas id="chartEvolucao"></canvas></div>
+    </div>
+  </div>
+
+  <!-- TAB 3: DETALHAMENTO -->
+  <div id="tab-detalhe" class="tab-panel">
+    <div class="card">
+      <div class="card-title">
+        <strong>Lançamentos do Mês</strong>
+        <div style="display:flex;gap:.5rem;align-items:center">
+          <select id="selStatus" onchange="renderDetalhe()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--font-h);font-size:.76rem;padding:.3rem .6rem;border-radius:5px">
+            <option value="TODOS">Todos os status</option>
+            <option value="Pago">Pago</option>
+            <option value="Em Aberto">Em Aberto</option>
+          </select>
+          <select id="selVencido" onchange="renderDetalhe()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--font-h);font-size:.76rem;padding:.3rem .6rem;border-radius:5px">
+            <option value="TODOS">Todos</option>
+            <option value="Sim">Somente Vencidos</option>
+          </select>
+        </div>
+      </div>
+      <div id="detalheTable"></div>
+      <div class="pagination" id="detalhePag"></div>
+    </div>
+  </div>
+
+  <!-- TAB 4: AGENDA FUTURA -->
+  <div id="tab-agenda" class="tab-panel">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title"><strong>Receita Futura (Agenda)</strong> <span style="font-size:.68rem;color:var(--muted)">Educbank: apenas repasses futuros</span></div>
+        <div class="chart-wrap"><canvas id="chartAgenda"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><strong>Detalhamento da Agenda</strong></div>
+        <div id="agendaTable"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DRIVE_FILE_ID = '1uHgfvF8CU2qJSbYjv_MtmgRxJFJzJR-Z';
+const _TS = Date.now();
+const DRIVE_DIRECT  = `https://drive.google.com/uc?export=download&id=${DRIVE_FILE_ID}&_=${_TS}`;
+const _BASE_URL = `https://drive.google.com/uc?export=download&id=${DRIVE_FILE_ID}&_=${_TS}`;
+const PROXIES = [
+  `https://api.allorigins.win/raw?url=${encodeURIComponent(_BASE_URL)}`,
+  `https://corsproxy.io/?${encodeURIComponent(_BASE_URL)}`,
+  `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(_BASE_URL)}`
+];
+
+let DATA = null;
+let filtros = { empresa: 'CONSOLIDADO', mes: '', tipo: 'Recorrente' };
+let detalhePage = 0;
+const PAGE_SIZE = 50;
+const CHARTS = {};
+
+const NOMES_MES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const EMP_COLORS = { MD: '#4f8fff', SEL: '#00e5a0', SIGMA: '#ffb547' };
+
+function formatMes(m) { const [a,mo]=m.split('-'); return NOMES_MES[parseInt(mo)-1]+'/'+a; }
+function fmtBRL(v) {
+  const abs=Math.abs(v);
+  const s = abs>=1000 ? (abs/1000).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+' Mil'
+                      : abs.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  return (v<0?'-':'')+'R$ '+s;
+}
+function fmtPct(v) { return (v==null?'—':v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%'); }
+function fmtDate(d) {
+  if (!d) return '—';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+
+// ── Dropdowns ─────────────────────────────────────────────────────────────
+function toggleDrop(id) {
+  document.querySelectorAll('.dropdown-menu').forEach(m=>{if(m.parentElement.parentElement.id!==id)m.classList.remove('show');});
+  const el=document.getElementById(id);
+  const menu=el.querySelector('.dropdown-menu'), btn=el.querySelector('.filter-btn');
+  btn.classList.toggle('open', menu.classList.toggle('show'));
+}
+document.addEventListener('click', e=>{
+  if(!e.target.closest('.filter-dropdown')){
+    document.querySelectorAll('.dropdown-menu').forEach(m=>m.classList.remove('show'));
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('open'));
+  }
+});
+function updateEmp(radio) {
+  filtros.empresa = radio.value;
+  document.getElementById('labelEmp').textContent = radio.value === 'CONSOLIDADO' ? 'Consolidado' : radio.value;
+  render();
+}
+function updateTipo(radio) {
+  filtros.tipo = radio.value;
+  document.getElementById('labelTipo').textContent = radio.value === 'TODOS' ? 'Todos' : radio.value;
+  render();
+}
+
+// ── Dados filtrados ────────────────────────────────────────────────────────
+function getReceita(mes, emp) {
+  const r = DATA?.receitas?.[mes]?.[emp];
+  if (!r) return null;
+  if (filtros.tipo === 'TODOS') return r;
+  // Para Recorrente/Não Recorrente, filtra os lancamentos e recalcula
+  const itens = r.lancamentos?.filter(l => l.tipoGrupo === filtros.tipo) || [];
+  const previsto  = itens.reduce((s,l)=>s+l.valorLiquido,0);
+  const recebido  = itens.filter(l=>l.status==='Pago').reduce((s,l)=>s+l.valorLiquido,0);
+  const emAberto  = itens.filter(l=>l.status==='Em Aberto').reduce((s,l)=>s+l.valorLiquido,0);
+  const vencido   = itens.filter(l=>l.flagVencido==='Sim').reduce((s,l)=>s+l.valorLiquido,0);
+  const gap       = previsto - recebido;
+
+  // Recalcula pagaramNoPrazo e inadimplenciaFechamento para o filtro ativo
+  // pagaramNoPrazo: dataPag <= dataVenc
+  const pagaramNoPrazoValor = itens.filter(l => l.dataPag && l.dataPag <= l.dataVenc)
+    .reduce((s,l)=>s+l.valorLiquido,0);
+  const pagaramNoPrazo = previsto !== 0
+    ? Math.round((pagaramNoPrazoValor / previsto) * 10000) / 100 : 0;
+
+  // inadimplenciaFechamento: não pagou até o último dia do mês de vencimento
+  const ultimoDiaMes = mes + '-31';
+  const recebidoNoPrazoMes = itens.filter(l => l.dataPag && l.dataPag <= ultimoDiaMes)
+    .reduce((s,l)=>s+l.valorLiquido,0);
+  const inadimplenciaFechamento = previsto !== 0
+    ? Math.round(((previsto - recebidoNoPrazoMes) / previsto) * 10000) / 100 : 0;
+
+  return {
+    previsto:     Math.round(previsto*100)/100,
+    recebido:     Math.round(recebido*100)/100,
+    emAberto:     Math.round(emAberto*100)/100,
+    vencido:      Math.round(vencido*100)/100,
+    gap:          Math.round(gap*100)/100,
+    realizacao:   previsto!==0 ? Math.round((recebido/previsto)*10000)/100 : 0,
+    inadimplencia:previsto!==0 ? Math.round((gap/previsto)*10000)/100 : 0,
+    inadimplenciaFechamento,
+    pagaramNoPrazo,
+    porTipo: r.porTipo,
+    lancamentos: itens
+  };
+}
+
+function todosOsMeses() {
+  return Object.keys(DATA?.receitas||{}).sort();
+}
+
+// ── Render principal ───────────────────────────────────────────────────────
+function render() {
+  const { empresa, mes } = filtros;
+  renderKPIs(empresa, mes);
+  renderVisaoGeral(empresa, mes);
+  renderEvolucao(empresa);
+  renderDetalhe();
+  renderAgenda(empresa);
+}
+
+// ── Inadimplência YTD — calculada no frontend com corte em hoje ─────────────
+function calcInadYTD(empresa) {
+  const hoje = new Date();
+  hoje.setHours(23,59,59,999); // inclui tudo até o fim do dia de hoje
+  const hojeStr = hoje.toISOString().slice(0,10); // 'YYYY-MM-DD'
+  const mesAtual = hojeStr.slice(0,7); // 'YYYY-MM'
+
+  const meses = todosOsMeses();
+  let totalPrevisto = 0, totalGap = 0;
+
+  for (const m of meses) {
+    // Só considera meses até o mês atual
+    if (m > mesAtual) continue;
+
+    const r = getReceita(m, empresa);
+    if (!r?.lancamentos?.length) continue;
+
+    // Para meses passados: todos os lançamentos
+    // Para o mês atual: apenas com vencimento até hoje
+    const itens = m < mesAtual
+      ? r.lancamentos
+      : r.lancamentos.filter(l => l.dataVenc && l.dataVenc <= hojeStr);
+
+    const prev  = itens.reduce((s,l) => s + l.valorLiquido, 0);
+    const receb = itens.filter(l => l.status === 'Pago').reduce((s,l) => s + l.valorLiquido, 0);
+    totalPrevisto += prev;
+    totalGap      += (prev - receb);
+  }
+
+  return totalPrevisto > 0
+    ? Math.round((totalGap / totalPrevisto) * 10000) / 100
+    : 0;
+}
+
+// ── KPI Strip ──────────────────────────────────────────────────────────────
+function renderKPIs(empresa, mes) {
+  const r = getReceita(mes, empresa);
+  if (!r) { document.getElementById('kpiStrip').innerHTML='<div class="loading" style="grid-column:1/-1">Sem dados</div>'; return; }
+
+  const inadYTD = calcInadYTD(empresa);
+
+  const items = [
+    { label:'Receita Prevista',     value: fmtBRL(r.previsto),      kc:'var(--accent2)',  sub: 'Recorrente no mês' },
+    { label:'Receita Recebida',     value: fmtBRL(r.recebido),      kc:'var(--green)',    sub: 'Pago no mês' },
+    { label:'Gap Previsto × Recebido', value: fmtBRL(r.gap),        kc: r.gap>0?'var(--warn)':'var(--accent)', sub: 'Diferença mês' },
+    { label:'% Realização',         value: fmtPct(r.realizacao),    kc: r.realizacao>=95?'var(--accent)':r.realizacao>=85?'var(--warn)':'var(--red)', sub: 'Meta: 100%' },
+    { label:'% Inadimplência Mês',  value: fmtPct(r.inadimplencia), kc: r.inadimplencia<=3?'var(--accent)':r.inadimplencia<=8?'var(--warn)':'var(--red)', sub: 'No mês selecionado' },
+    { label:'% Inadimplência YTD',  value: fmtPct(inadYTD), kc: inadYTD<=3?'var(--accent)':inadYTD<=8?'var(--warn)':'var(--red)', sub: 'Vencidos até '+new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) },
+  ];
+
+  document.getElementById('kpiStrip').innerHTML = items.map(i=>`
+    <div class="kpi-mini" style="--kc:${i.kc}">
+      <div class="km-label">${i.label}</div>
+      <div class="km-value">${i.value??'—'}</div>
+      <div class="km-sub">${i.sub}</div>
+    </div>`).join('');
+}
+
+// ── Visão Geral ────────────────────────────────────────────────────────────
+function renderVisaoGeral(empresa, mes) {
+  const r = getReceita(mes, empresa);
+  if (!r) return;
+
+  // Gauge
+  const pct = r.realizacao || 0;
+  renderGauge(pct, r.previsto);
+
+  // Por tipo — barra de progresso
+  const sec = document.getElementById('porTipoSection');
+  const tipos = (r.porTipo||[]).filter(t => filtros.tipo === 'TODOS' || t.tipoGrupo === filtros.tipo);
+  if (!tipos.length) { sec.innerHTML='<div class="empty">Sem dados</div>'; }
+  else {
+    sec.innerHTML = tipos.map(t => {
+      const pct = t.previsto>0 ? Math.min((t.recebido/t.previsto)*100,100) : 0;
+      const cor  = pct>=95?'var(--accent)':pct>=80?'var(--warn)':'var(--red)';
+      return `<div class="progress-item">
+        <div class="progress-header">
+          <span class="progress-label">${t.tipo}</span>
+          <span class="progress-values">${fmtBRL(t.recebido)} / ${fmtBRL(t.previsto)} · ${fmtPct(t.realizacao)}</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" style="width:${pct.toFixed(1)}%;background:${cor}"></div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Gráfico barras mensal — previsto vs recebido
+  const meses = todosOsMeses();
+  const labels = meses.map(m=>formatMes(m));
+  const prev = meses.map(m=>getReceita(m,empresa)?.previsto||0);
+  const receb= meses.map(m=>getReceita(m,empresa)?.recebido||0);
+  const ctx = document.getElementById('chartMensal');
+  if (CHARTS.mensal) CHARTS.mensal.destroy();
+  CHARTS.mensal = new Chart(ctx, {
+    type:'bar',
+    data:{ labels, datasets:[
+      { label:'Previsto',  data:prev,  backgroundColor:'rgba(79,143,255,.5)', borderColor:'#4f8fff', borderWidth:1, borderRadius:4 },
+      { label:'Recebido',  data:receb, backgroundColor:'rgba(0,229,160,.5)', borderColor:'#00e5a0', borderWidth:1, borderRadius:4 }
+    ]},
+    options: chartOpts()
+  });
+}
+
+function renderGauge(pct, previsto) {
+  const ctx = document.getElementById('gaugeChart');
+  if (CHARTS.gauge) CHARTS.gauge.destroy();
+  const angle = Math.PI; // semicircle
+  const filled = Math.min(pct/100, 1);
+  const cor = pct>=95?'#00e5a0':pct>=85?'#ffb547':'#ff4d6a';
+  CHARTS.gauge = new Chart(ctx, {
+    type:'doughnut',
+    data:{ datasets:[{
+      data:[filled, 1-filled],
+      backgroundColor:[cor,'#1a1e2a'],
+      borderWidth:0, circumference:180, rotation:270
+    }]},
+    options:{ cutout:'78%', plugins:{ legend:{display:false}, tooltip:{enabled:false} }, animation:{animateRotate:true} }
+  });
+  document.getElementById('gaugeLabel').textContent = fmtPct(pct);
+  document.getElementById('gaugeLabel').style.color = cor;
+  document.getElementById('gaugeMax').textContent = fmtBRL(previsto);
+}
+
+// ── Evolução Mensal ────────────────────────────────────────────────────────
+function renderEvolucao(empresa) {
+  const meses  = todosOsMeses();
+  const labels = meses.map(m=>formatMes(m));
+
+  // % Realização
+  const ctxR = document.getElementById('chartRealizacao');
+  if (CHARTS.realizacao) CHARTS.realizacao.destroy();
+  CHARTS.realizacao = new Chart(ctxR, {
+    type:'line',
+    data:{ labels, datasets:[{
+      label:'% Realização', data: meses.map(m=>getReceita(m,empresa)?.realizacao||null),
+      borderColor:'#00e5a0', backgroundColor:'rgba(0,229,160,.1)', fill:true,
+      tension:.3, pointRadius:5, pointBackgroundColor:'#00e5a0', borderWidth:2
+    }]},
+    options: chartOptsPct('% Realização')
+  });
+
+  // % Inadimplência
+  const ctxI = document.getElementById('chartInad');
+  if (CHARTS.inad) CHARTS.inad.destroy();
+  CHARTS.inad = new Chart(ctxI, {
+    type:'line',
+    data:{ labels, datasets:[{
+      label:'% Inadimplência', data: meses.map(m=>getReceita(m,empresa)?.inadimplencia||null),
+      borderColor:'#ff4d6a', backgroundColor:'rgba(255,77,106,.08)', fill:true,
+      tension:.3, pointRadius:5, pointBackgroundColor:'#ff4d6a', borderWidth:2
+    }]},
+    options: chartOptsPct('% Inadimplência')
+  });
+
+  // % Pagaram no prazo (dataPag <= dataVenc)
+  const ctxP = document.getElementById('chartPrazo');
+  if (CHARTS.prazo) CHARTS.prazo.destroy();
+  CHARTS.prazo = new Chart(ctxP, {
+    type:'line',
+    data:{ labels, datasets:[{
+      label:'% Pagaram no Prazo',
+      data: meses.map(m => {
+        const r = getReceita(m, empresa);
+        return r?.pagaramNoPrazo != null ? r.pagaramNoPrazo : null;
+      }),
+      borderColor:'#4ade80', backgroundColor:'rgba(74,222,128,.1)', fill:true,
+      tension:.3, pointRadius:5, pointBackgroundColor:'#4ade80', borderWidth:2
+    }]},
+    options: chartOptsPct('% Pagaram no Prazo')
+  });
+
+  // % Inadimplência no fechamento do mês
+  const ctxF = document.getElementById('chartFechamento');
+  if (CHARTS.fechamento) CHARTS.fechamento.destroy();
+  CHARTS.fechamento = new Chart(ctxF, {
+    type:'line',
+    data:{ labels, datasets:[
+      {
+        label:'Inad. Fechamento',
+        data: meses.map(m => {
+          const r = getReceita(m, empresa);
+          return r?.inadimplenciaFechamento != null ? r.inadimplenciaFechamento : null;
+        }),
+        borderColor:'#ffb547', backgroundColor:'rgba(255,181,71,.08)', fill:true,
+        tension:.3, pointRadius:5, pointBackgroundColor:'#ffb547', borderWidth:2
+      },
+      {
+        label:'Inad. Atual (hoje)',
+        data: meses.map(m => getReceita(m, empresa)?.inadimplencia || null),
+        borderColor:'#ff4d6a', backgroundColor:'transparent',
+        borderDash:[5,4], tension:.3, pointRadius:4, pointBackgroundColor:'#ff4d6a', borderWidth:1.5
+      }
+    ]},
+    options: chartOptsPct('% Inadimplência Fechamento')
+  });
+
+  // Evolução receita barras
+  const ctxE = document.getElementById('chartEvolucao');
+  if (CHARTS.evolucao) CHARTS.evolucao.destroy();
+  CHARTS.evolucao = new Chart(ctxE, {
+    type:'bar',
+    data:{ labels, datasets:[
+      { label:'Previsto',  data:meses.map(m=>getReceita(m,empresa)?.previsto||0),  backgroundColor:'rgba(79,143,255,.45)', borderColor:'#4f8fff', borderWidth:1, borderRadius:4 },
+      { label:'Recebido',  data:meses.map(m=>getReceita(m,empresa)?.recebido||0),  backgroundColor:'rgba(0,229,160,.45)',  borderColor:'#00e5a0', borderWidth:1, borderRadius:4 },
+      { label:'Em Aberto', data:meses.map(m=>getReceita(m,empresa)?.emAberto||0),  backgroundColor:'rgba(255,181,71,.35)', borderColor:'#ffb547',  borderWidth:1, borderRadius:4 },
+      { label:'Vencido',   data:meses.map(m=>getReceita(m,empresa)?.vencido||0),   backgroundColor:'rgba(255,77,106,.35)', borderColor:'#ff4d6a',  borderWidth:1, borderRadius:4 }
+    ]},
+    options: chartOpts()
+  });
+}
+
+// ── Detalhamento ───────────────────────────────────────────────────────────
+function renderDetalhe() {
+  const { empresa, mes, tipo } = filtros;
+  const r = getReceita(mes, empresa);
+  const el = document.getElementById('detalheTable');
+  const pagEl = document.getElementById('detalhePag');
+  if (!r?.lancamentos?.length) { el.innerHTML='<div class="empty">Sem lançamentos.</div>'; pagEl.innerHTML=''; return; }
+
+  const filtStatus  = document.getElementById('selStatus').value;
+  const filtVencido = document.getElementById('selVencido').value;
+
+  let itens = r.lancamentos.filter(l => {
+    if (filtStatus !== 'TODOS' && l.status !== filtStatus) return false;
+    if (filtVencido !== 'TODOS' && l.flagVencido !== filtVencido) return false;
+    return true;
+  });
+
+  const total = itens.length;
+  const pages = Math.ceil(total / PAGE_SIZE);
+  if (detalhePage >= pages) detalhePage = Math.max(0, pages-1);
+  const slice = itens.slice(detalhePage * PAGE_SIZE, (detalhePage+1) * PAGE_SIZE);
+
+  const rows = slice.map(l => {
+    const statusCls  = l.status==='Pago'?'badge-pago':l.flagVencido==='Sim'?'badge-vencido':'badge-aberto';
+    const statusTxt  = l.flagVencido==='Sim'&&l.status!=='Pago' ? 'Vencido' : l.status;
+    const atraso     = l.diasAtraso>0 ? `<span style="color:var(--red);font-size:.68rem"> (+${l.diasAtraso}d)</span>` : '';
+    const empDot     = empresa==='CONSOLIDADO' ? `<span class="emp-dot" style="background:${EMP_COLORS[l.empresa]||'#888'}"></span>` : '';
+    return `<tr>
+      <td>${empDot}${l.turma||'—'}</td>
+      <td style="text-align:left">${l.tipoReceita}</td>
+      <td>${fmtDate(l.dataVenc)}${atraso}</td>
+      <td>${l.dataPag ? fmtDate(l.dataPag) : '—'}</td>
+      <td><span class="badge ${statusCls}">${statusTxt}</span></td>
+      <td class="${l.status==='Pago'?'pos':'warn'}">${fmtBRL(l.valorLiquido)}</td>
+    </tr>`;
+  }).join('');
+
+  const totReceb = itens.filter(l=>l.status==='Pago').reduce((s,l)=>s+l.valorLiquido,0);
+  const totAberto= itens.filter(l=>l.status!=='Pago').reduce((s,l)=>s+l.valorLiquido,0);
+
+  el.innerHTML = `<table>
+    <thead><tr>
+      <th style="text-align:left">Turma</th>
+      <th style="text-align:left">Tipo</th>
+      <th>Vencimento</th><th>Pagamento</th><th>Status</th><th>Valor Líquido</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr>
+      <td colspan="4">Total (${total} lançamentos)</td>
+      <td></td>
+      <td class="pos">${fmtBRL(totReceb)} recebido · <span class="warn">${fmtBRL(totAberto)} em aberto</span></td>
+    </tr></tfoot>
+  </table>`;
+
+  pagEl.innerHTML = `
+    <button onclick="changePage(-1)" ${detalhePage===0?'disabled':''}>‹ Anterior</button>
+    <span class="page-info">Pág ${detalhePage+1} / ${pages||1} · ${total} registros</span>
+    <button onclick="changePage(1)" ${detalhePage>=pages-1?'disabled':''}>Próxima ›</button>`;
+}
+
+function changePage(dir) { detalhePage += dir; renderDetalhe(); }
+
+// ── Agenda Futura ──────────────────────────────────────────────────────────
+function renderAgenda(empresa) {
+  const agenda  = DATA?.agendaFutura || {};
+  const hojeStr = new Date().toISOString().slice(0,10); // 'YYYY-MM-DD'
+
+  // Filtra itens da agenda:
+  // - Educbank (SIGMA): só datas >= hoje (meses passados já foram antecipados)
+  // - SEL/MD: todos (são vencimentos a receber)
+  function filtrarItens(itens) {
+    return itens.filter(i => {
+      const isEducbank = i.tipoPrevisao && i.tipoPrevisao.includes('EDUCBANK');
+      if (isEducbank) return i.data >= hojeStr;
+      return true;
+    });
+  }
+
+  const meses = Object.keys(agenda).sort();
+
+  // Totais por mês para o gráfico (já com filtro de data)
+  function totalMesFiltrado(m, emp) {
+    const itens = filtrarItens(agenda[m]||[]).filter(i => emp==='CONSOLIDADO' || i.empresa===emp);
+    return itens.reduce((s,i)=>s+i.valorLiquido,0);
+  }
+
+  // Gráfico
+  const ctxA = document.getElementById('chartAgenda');
+  if (CHARTS.agenda) CHARTS.agenda.destroy();
+  const labelsGraf = meses.map(m=>formatMes(m));
+
+  if (empresa === 'CONSOLIDADO') {
+    CHARTS.agenda = new Chart(ctxA, {
+      type:'line',
+      data:{ labels:labelsGraf, datasets: Object.entries(EMP_COLORS).map(([emp,cor])=>({
+        label: emp,
+        data: meses.map(m=>totalMesFiltrado(m,emp)),
+        borderColor:cor, backgroundColor:cor+'22', fill:false, tension:.3, pointRadius:5, borderWidth:2
+      }))},
+      options: chartOpts()
+    });
+  } else {
+    CHARTS.agenda = new Chart(ctxA, {
+      type:'line',
+      data:{ labels:labelsGraf, datasets:[{
+        label: empresa,
+        data: meses.map(m=>totalMesFiltrado(m,empresa)),
+        borderColor: EMP_COLORS[empresa]||'#4f8fff',
+        backgroundColor:(EMP_COLORS[empresa]||'#4f8fff')+'22',
+        fill:true, tension:.3, pointRadius:5, borderWidth:2
+      }]},
+      options: chartOpts()
+    });
+  }
+
+  // ── Detalhamento: tabela única agrupada por DATA ───────────────────────────
+  // Expande Educbank com a data real (dia 05 = DIA05, dia 15 = DIA15)
+  // e coleta todos os demais itens filtrados
+  const todosExpandidos = [];
+
+  meses.forEach(m => {
+    const itens = filtrarItens(agenda[m]||[])
+      .filter(i => empresa==='CONSOLIDADO' || i.empresa===empresa);
+
+    itens.forEach(i => {
+      const isEducbank = i.tipoPrevisao && i.tipoPrevisao.includes('EDUCBANK');
+      if (isEducbank) {
+        // Determina a data real: DIA05 → dia 05 do mês, DIA15 → dia 15
+        const dia = i.tipoPrevisao.includes('DIA15') ? '15' : '05';
+        const dataReal = `${m}-${dia}`;
+        todosExpandidos.push({ ...i, dataReal, isEducbank:true });
+      } else {
+        todosExpandidos.push({ ...i, dataReal: i.data, isEducbank:false });
+      }
+    });
+  });
+
+  // Agrupa por dataReal + empresa + isEducbank
+  // Cada linha = (data + empresa + origem) → soma dos valores do dia
+  const groupMap = {};
+  todosExpandidos.forEach(i => {
+    const chave = `${i.dataReal}|${i.empresa}|${i.isEducbank?'eb':'out'}`;
+    if (!groupMap[chave]) groupMap[chave] = {
+      dataReal: i.dataReal,
+      empresa: i.empresa,
+      isEducbank: i.isEducbank,
+      tipoReceita: i.tipoReceita,
+      total: 0
+    };
+    groupMap[chave].total += i.valorLiquido;
+  });
+
+  // Ordena por data, depois empresa
+  const grupos = Object.values(groupMap).sort((a,b) => {
+    if (a.dataReal !== b.dataReal) return a.dataReal < b.dataReal ? -1 : 1;
+    return a.empresa < b.empresa ? -1 : 1;
+  });
+
+  // Monta linhas — agrupa visualmente por data (mostra data só na 1ª linha do dia)
+  let rows = '';
+  let dataAnterior = null;
+  let totalGeral = grupos.reduce((s,g)=>s+g.total,0);
+
+  grupos.forEach(g => {
+    const isHoje    = g.dataReal === hojeStr;
+    const mudouData = g.dataReal !== dataAnterior;
+    dataAnterior    = g.dataReal;
+
+    // Linha separadora de data
+    if (mudouData) {
+      const bgSep = isHoje ? 'background:rgba(0,229,160,.08)' : 'background:var(--surface3)';
+      const corData = isHoje ? 'color:var(--accent);font-weight:700' : 'color:var(--text)';
+      const hojeBadge = isHoje ? ' <span style="font-size:.6rem;background:rgba(0,229,160,.2);color:var(--accent);padding:.1rem .35rem;border-radius:3px;vertical-align:middle">HOJE</span>' : '';
+      rows += `<tr style="${bgSep}">
+        <td colspan="4" style="text-align:left;font-family:var(--font-m);font-size:.78rem;${corData};padding:.4rem .85rem">
+          ${fmtDate(g.dataReal)}${hojeBadge}
+        </td>
+        <td style="text-align:right;font-size:.72rem;color:var(--muted);padding:.4rem .85rem"></td>
+      </tr>`;
+    }
+
+    const empDot = `<span class="emp-dot" style="background:${EMP_COLORS[g.empresa]||'#888'}"></span>`;
+    const rowBg  = isHoje ? 'background:rgba(0,229,160,.04)' : '';
+    const corVal = g.isEducbank ? 'warn' : 'acc';
+    const origem = g.isEducbank
+      ? `<span style="font-size:.68rem;color:var(--warn);background:rgba(255,181,71,.1);padding:.1rem .35rem;border-radius:3px">Educbank</span>`
+      : `<span style="font-size:.68rem;color:var(--muted)">${g.tipoReceita}</span>`;
+
+    rows += `<tr style="${rowBg}">
+      <td style="padding-left:1.5rem;color:var(--muted);font-size:.72rem">—</td>
+      <td style="text-align:left">${empDot}${g.empresa}</td>
+      <td style="text-align:left">${origem}</td>
+      <td></td>
+      <td class="${corVal}">${fmtBRL(g.total)}</td>
+    </tr>`;
+  });
+
+  if (!grupos.length) {
+    rows = `<tr><td colspan="5" class="empty">Sem eventos futuros.</td></tr>`;
+  }
+
+  document.getElementById('agendaTable').innerHTML = `<table>
+    <thead><tr>
+      <th style="text-align:left">Data</th>
+      <th style="text-align:left">Empresa</th>
+      <th style="text-align:left">Origem</th>
+      <th></th>
+      <th>Total do Dia</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr>
+      <td colspan="4">Total agenda</td>
+      <td class="acc">${fmtBRL(totalGeral)}</td>
+    </tfoot>
+  </table>`;
+}
+
+// ── Chart helpers ──────────────────────────────────────────────────────────
+const TOOLTIP = {
+  backgroundColor:'#1a1e2a', borderColor:'#252b3b', borderWidth:1,
+  titleColor:'#e8eaf0', bodyColor:'#6b7280', padding:12
+};
+function chartOpts() {
+  return {
+    responsive:true, maintainAspectRatio:false,
+    interaction:{mode:'index',intersect:false},
+    plugins:{ legend:{ labels:{color:'#9ca3af',font:{family:'Syne',size:11},boxWidth:12,padding:12} }, tooltip:TOOLTIP },
+    scales:{
+      x:{ grid:{color:'#1c202e'}, ticks:{color:'#6b7280',font:{family:'JetBrains Mono',size:11}} },
+      y:{ grid:{color:'#1c202e'}, ticks:{color:'#6b7280',font:{family:'JetBrains Mono',size:11},callback:v=>'R$'+(v/1000).toFixed(0)+'k'} }
+    }
+  };
+}
+function chartOptsPct(label) {
+  return {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:TOOLTIP },
+    scales:{
+      x:{ grid:{color:'#1c202e'}, ticks:{color:'#6b7280',font:{family:'JetBrains Mono',size:11}} },
+      y:{ grid:{color:'#1c202e'}, ticks:{color:'#6b7280',font:{family:'JetBrains Mono',size:11},callback:v=>v+'%'}, min:0, max:100 }
+    }
+  };
+}
+
+// ── Tabs ───────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab==='tab-evolucao')  renderEvolucao(filtros.empresa);
+    if (btn.dataset.tab==='tab-agenda')    renderAgenda(filtros.empresa);
+    if (btn.dataset.tab==='tab-detalhe')   renderDetalhe();
+  });
+});
+
+// ── Init ───────────────────────────────────────────────────────────────────
+function buildMenuMes() {
+  const meses = todosOsMeses();
+  const menu  = document.getElementById('menuMes');
+  menu.innerHTML = '';
+  meses.forEach((m,i)=>{
+    menu.innerHTML += `<div class="dropdown-item">
+      <input type="radio" name="mes" value="${m}" onchange="updateMes(this)" ${i===0?'checked':''}> ${formatMes(m)}
+    </div>`;
+  });
+  filtros.mes = meses[0] || '';
+  document.getElementById('labelMes').textContent = formatMes(filtros.mes);
+}
+function updateMes(radio) {
+  filtros.mes = radio.value;
+  document.getElementById('labelMes').textContent = formatMes(radio.value);
+  detalhePage = 0;
+  render();
+}
+
+function fetchT(url,ms=8000) {
+  return new Promise((res,rej)=>{
+    const t=setTimeout(()=>rej(new Error('Timeout')),ms);
+    fetch(url).then(r=>{clearTimeout(t);r.ok?res(r):rej(new Error('HTTP '+r.status));}).catch(e=>{clearTimeout(t);rej(e);});
+  });
+}
+
+async function loadData() {
+  try {
+    const resp = await Promise.any(PROXIES.map(u=>fetchT(u)));
+    DATA = await resp.json();
+    const dt = new Date(DATA.geradoEm);
+    document.getElementById('lastUpdate').textContent =
+      'Atualizado em '+dt.toLocaleDateString('pt-BR')+' às '+dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    buildMenuMes();
+    render();
+  } catch(err) {
+    document.getElementById('kpiStrip').innerHTML =
+      `<div class="error-msg" style="grid-column:1/-1">Erro ao carregar dados: ${err.message}</div>`;
+  }
+}
+
+loadData();
+</script>
+</body>
+</html>

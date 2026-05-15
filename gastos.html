@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estrutura de Gastos — Caixa Real</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg:        #0d0f14;
+    --surface:   #13161e;
+    --surface2:  #1a1e2a;
+    --surface3:  #10131b;
+    --border:    #252b3b;
+    --accent:    #00e5a0;
+    --accent2:   #4f8fff;
+    --danger:    #ff4d6a;
+    --warn:      #ffb547;
+    --purple:    #c084fc;
+    --text:      #e8eaf0;
+    --muted:     #6b7280;
+    --font-head: 'Syne', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-head);
+    min-height: 100vh;
+  }
+
+  nav {
+    display: flex; align-items: center; gap: 1rem;
+    padding: .75rem 2rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+  }
+
+  nav a, nav span {
+    color: var(--muted); text-decoration: none;
+    font-size: .78rem; letter-spacing: .08em; text-transform: uppercase;
+  }
+
+  nav a:hover { color: var(--accent); }
+  nav .sep { color: var(--border); }
+  nav .active { color: var(--accent); }
+
+  .page-header {
+    padding: 2rem 2rem 1.4rem;
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: flex-end; gap: 2rem; flex-wrap: wrap;
+  }
+
+  .page-title { font-size: 1.6rem; font-weight: 800; letter-spacing: -.02em; }
+  .page-title span { color: var(--accent); }
+  .page-subtitle { margin-top:.35rem; color:var(--muted); font-size:.78rem; }
+
+  .last-update {
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: .72rem;
+  }
+
+  .filters {
+    display: grid;
+    grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr) minmax(180px, 1.15fr) minmax(180px, 1.15fr);
+    gap: .75rem;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  @media (max-width: 900px) { .filters { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 560px) { .filters { grid-template-columns: 1fr; } }
+
+  .filter-group { display: flex; flex-direction: column; gap: .3rem; }
+  .filter-group label {
+    font-size: .65rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted);
+  }
+
+  select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font-head);
+    font-size: .82rem;
+    padding: .52rem .75rem;
+    border-radius: 7px;
+    cursor: pointer;
+    outline: none;
+    width: 100%;
+  }
+
+  select:hover, select:focus { border-color: var(--accent); }
+
+  .toolbar {
+    display: flex;
+    gap: .55rem;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 1rem 2rem;
+    background: var(--surface3);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .btn {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: .48rem .72rem;
+    font-family: var(--font-head);
+    font-size: .76rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: .15s;
+  }
+
+  .btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .btn.primary {
+    background: rgba(0,229,160,.09);
+    border-color: rgba(0,229,160,.35);
+    color: var(--accent);
+  }
+
+  .toolbar-note {
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: .68rem;
+    margin-left: .3rem;
+  }
+
+  .kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(145px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+
+  .kpi-card {
+    background: var(--surface);
+    padding: 1.05rem 1.15rem;
+    min-width: 145px;
+    display: flex;
+    flex-direction: column;
+    gap: .28rem;
+  }
+
+  .kpi-label {
+    font-size: .62rem;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--muted);
+    line-height: 1.25;
+  }
+
+  .kpi-value {
+    font-size: 1.16rem;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    white-space: nowrap;
+  }
+
+  .kpi-value.green { color: var(--accent); }
+  .kpi-value.red { color: var(--danger); }
+  .kpi-value.blue { color: var(--accent2); }
+  .kpi-value.yellow { color: var(--warn); }
+  .kpi-value.purple { color: var(--purple); }
+
+  .content { padding: 1.5rem 2rem 2rem; }
+
+  .grid-charts {
+    display: grid;
+    grid-template-columns: minmax(330px, .85fr) minmax(440px, 1.15fr);
+    gap: 1.2rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .grid-evol {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.2rem;
+    margin-bottom: 1.2rem;
+  }
+
+  @media (max-width: 1150px) {
+    .grid-charts, .grid-evol { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.15rem;
+    overflow: hidden;
+  }
+
+  .card-title {
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--muted);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+  }
+
+  .card-title span { color: var(--text); font-weight: 800; }
+  .card-title small { color: var(--muted); font-size: .62rem; font-family: var(--font-mono); }
+
+  .chart-wrap { position: relative; height: 310px; }
+  .chart-wrap.short { height: 255px; }
+
+  .table-wrap { overflow-x: auto; max-height: 720px; overflow-y: auto; border-radius: 8px; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: .76rem;
+  }
+
+  th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: var(--surface2);
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    font-size: .6rem;
+    padding: .62rem .72rem;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  th:first-child, td:first-child { text-align: left; }
+
+  td {
+    padding: .52rem .72rem;
+    border-bottom: 1px solid #1c202e;
+    text-align: right;
+    white-space: nowrap;
+    vertical-align: top;
+  }
+
+  tbody tr:hover td { background: var(--surface2); }
+
+  .linha-nome {
+    font-family: var(--font-head);
+    font-weight: 700;
+    white-space: normal;
+    min-width: 360px;
+  }
+
+  .node {
+    display: inline-flex;
+    align-items: center;
+    gap: .48rem;
+  }
+
+  .toggle {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: #121723;
+    color: var(--text);
+    cursor: pointer;
+    font-size: .82rem;
+    line-height: 18px;
+    text-align: center;
+    font-family: var(--font-mono);
+  }
+
+  .toggle:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .toggle.blank {
+    visibility: hidden;
+    cursor: default;
+  }
+
+  tr.level-0 td { background: rgba(79,143,255,.045); font-weight: 800; }
+  tr.level-1 td { background: rgba(255,255,255,.018); }
+  tr.level-2 td { background: rgba(255,255,255,.008); }
+  tr.level-3 td { color: #d9dde8; }
+  tr.level-4 td { color: #c1c7d6; }
+
+  .indent-0 { padding-left: 0; }
+  .indent-1 { padding-left: 1.2rem; }
+  .indent-2 { padding-left: 2.4rem; }
+  .indent-3 { padding-left: 3.6rem; }
+  .indent-4 { padding-left: 4.8rem; }
+
+  .meta {
+    color: var(--muted);
+    font-size: .64rem;
+    margin-top: .22rem;
+    font-family: var(--font-mono);
+    line-height: 1.25;
+  }
+
+  .grupo-tag {
+    display:inline-flex;
+    align-items:center;
+    gap:.35rem;
+    padding:.18rem .44rem;
+    border-radius:999px;
+    font-size:.6rem;
+    font-family:var(--font-head);
+    color:var(--text);
+    background:#1b2130;
+    border:1px solid var(--border);
+  }
+
+  .dot {
+    width:7px; height:7px; border-radius:50%;
+    background: var(--accent2);
+  }
+
+  .pos { color: var(--accent); }
+  .neg { color: var(--danger); }
+  .zero { color: var(--muted); }
+  .blue { color: var(--accent2); }
+  .yellow { color: var(--warn); }
+  .purple { color: var(--purple); }
+
+  .footer-note {
+    margin-top: 1rem;
+    color: var(--muted);
+    font-size: .72rem;
+    line-height: 1.45;
+  }
+
+  .loading, .empty {
+    min-height: 240px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    flex-direction: column;
+    gap: .85rem;
+    font-size: .9rem;
+  }
+
+  .spinner {
+    width: 32px; height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-msg {
+    background: #1f0d12;
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    font-size: .82rem;
+  }
+
+  @media print {
+    body { background: #fff; color: #111; font-family: Arial, sans-serif; }
+    nav, .filters, .toolbar, .kpi-strip, .grid-charts, .grid-evol, .footer-note { display: none !important; }
+    .page-header { border: none; padding: 0 0 12px; }
+    .page-title, .page-title span { color: #111; }
+    .page-subtitle, .last-update { color: #444; }
+    .content { padding: 0; }
+    .card { border: none; padding: 0; }
+    .card-title { color: #111; border-bottom: 2px solid #111; padding-bottom: 6px; }
+    .table-wrap { max-height: none; overflow: visible; }
+    table { font-size: 9px; }
+    th { position: static; background: #eee; color: #111; }
+    td { border-bottom: 1px solid #ddd; color: #111 !important; }
+    .toggle, .grupo-tag, .dot { display:none; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html">Menu</a><span class="sep">›</span>
+  <a href="painel_executivo.html">Painel</a><span class="sep">›</span>
+  <a href="fluxo_caixa.html">Fluxo</a><span class="sep">›</span>
+  <a href="dre.html">DRE</a><span class="sep">›</span>
+  <span class="active">Gastos</span><span class="sep">›</span>
+  <a href="receitas.html">Receitas</a><span class="sep">›</span>
+  <a href="ajustes.html">Ajustes</a>
+</nav>
+
+<div class="page-header">
+  <div>
+    <div class="page-title">Estrutura de Gastos <span>Caixa Real</span></div>
+    <div class="page-subtitle">Análise executiva e detalhamento operacional dos gastos pagos no Proesc.</div>
+  </div>
+  <div class="last-update" id="last-update">Carregando...</div>
+</div>
+
+<div class="filters">
+  <div class="filter-group">
+    <label>Empresa</label>
+    <select id="sel-empresa">
+      <option value="CONSOLIDADO">Consolidado</option>
+      <option value="MD">MD</option>
+      <option value="SEL">SEL</option>
+      <option value="SIGMA">SIGMA</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Mês de Referência</label>
+    <select id="sel-mes"></select>
+  </div>
+  <div class="filter-group">
+    <label>Grupo de Gasto</label>
+    <select id="sel-grupo">
+      <option value="TODOS">Todos</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Grupo Final</label>
+    <select id="sel-final">
+      <option value="TODOS">Todos</option>
+    </select>
+  </div>
+</div>
+
+<div class="toolbar">
+  <button class="btn primary" onclick="expandAll()">Expandir tudo</button>
+  <button class="btn" onclick="collapseAll()">Recolher tudo</button>
+  <button class="btn" onclick="exportExcel()">Exportar Excel</button>
+  <button class="btn" onclick="exportPDF()">Exportar PDF</button>
+  <span class="toolbar-note" id="nivel-note">Drill individual por linha</span>
+</div>
+
+<div class="kpi-strip" id="kpi-strip">
+  <div class="loading" style="grid-column:1/-1"><div class="spinner"></div></div>
+</div>
+
+<div class="content">
+  <div id="main-content" class="loading">
+    <div class="spinner"></div>
+    <span>Carregando estrutura de gastos...</span>
+  </div>
+</div>
+
+<script>
+const DRIVE_FILE_ID = '1uHgfvF8CU2qJSbYjv_MtmgRxJFJzJR-Z';
+const DRIVE_DIRECT  = `https://drive.google.com/uc?export=download&id=${DRIVE_FILE_ID}`;
+const PROXIES = [
+  `https://api.allorigins.win/raw?url=${encodeURIComponent(DRIVE_DIRECT)}`,
+  `https://corsproxy.io/?${encodeURIComponent(DRIVE_DIRECT)}`,
+  `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(DRIVE_DIRECT)}`
+];
+
+const EMPRESAS = ['MD','SEL','SIGMA'];
+const MESES_LABEL = {
+  '2026-01': 'jan/26', '2026-02': 'fev/26', '2026-03': 'mar/26',
+  '2026-04': 'abr/26', '2026-05': 'mai/26'
+};
+
+let DATA = null;
+let charts = {};
+let expanded = new Set();
+
+const PALETTE = ['#155b9a','#14d9a1','#60a5fa','#7c4dce','#b56af2','#ff4d6a','#ffb547','#34d399','#f472b6','#93c5fd'];
+
+const fmt = v => v == null ? '—' : 'R$ ' + Math.abs(Number(v || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtK = v => {
+  const n = Math.abs(Number(v || 0));
+  if (n >= 1000000) return 'R$ ' + (n/1000000).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' Mi';
+  if (n >= 1000) return 'R$ ' + (n/1000).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' Mil';
+  return fmt(n);
+};
+const fmtPct = v => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+
+const norm = s => (s ?? '')
+  .toString()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/[\u200B-\u200D\uFEFF]/g, '')
+  .replace(/\u00A0/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim()
+  .toUpperCase();
+
+function grupoColor(name, idx = 0) {
+  const n = norm(name);
+  if (n.includes('CUSTOS')) return '#4f8fff';
+  if (n.includes('DESPESAS OPERACIONAIS')) return '#ff4d6a';
+  if (n.includes('FORA')) return '#ffb547';
+  if (n.includes('FINANCEIR')) return '#c084fc';
+  if (n.includes('PESSOAL')) return '#155b9a';
+  if (n.includes('TRIBUTO')) return '#60a5fa';
+  if (n.includes('ADMIN')) return '#4f8fff';
+  if (n.includes('MANUT')) return '#7c4dce';
+  if (n.includes('MATERIAL')) return '#14d9a1';
+  return PALETTE[idx % PALETTE.length];
+}
+
+async function fetchWithTimeout(url, ms = 8000) {
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const r = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(tid);
+    if (!r.ok) throw new Error(r.status);
+    return await r.json();
+  } catch(e) {
+    clearTimeout(tid);
+    throw e;
+  }
+}
+
+async function loadData() {
+  try {
+    DATA = await Promise.any(PROXIES.map(u => fetchWithTimeout(u)));
+    init();
+  } catch(e) {
+    document.getElementById('kpi-strip').innerHTML = `<div class="error-msg" style="grid-column:1/-1">Erro ao carregar JSON publicado no Drive: ${e.message}</div>`;
+    document.getElementById('main-content').innerHTML = '';
+  }
+}
+
+function init() {
+  const meses = DATA.mesesDisponiveis || [];
+  const selMes = document.getElementById('sel-mes');
+  selMes.innerHTML = '';
+  meses.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m;
+    opt.textContent = MESES_LABEL[m] || m;
+    selMes.appendChild(opt);
+  });
+  selMes.value = meses[0] || '';
+
+  ['sel-empresa','sel-mes'].forEach(id => {
+    document.getElementById(id).addEventListener('change', () => {
+      expanded.clear();
+      refreshFilterOptions();
+      render();
+    });
+  });
+
+  document.getElementById('sel-grupo').addEventListener('change', () => {
+    expanded.clear();
+    refreshFinalOptions();
+    render();
+  });
+
+  document.getElementById('sel-final').addEventListener('change', () => {
+    expanded.clear();
+    render();
+  });
+
+  if (DATA.geradoEm) {
+    const dt = new Date(DATA.geradoEm);
+    document.getElementById('last-update').textContent = 'Atualizado em ' + dt.toLocaleString('pt-BR');
+  }
+
+  refreshFilterOptions();
+  render();
+}
+
+function getFilters() {
+  return {
+    empresa: document.getElementById('sel-empresa').value,
+    mes: document.getElementById('sel-mes').value,
+    grupo: document.getElementById('sel-grupo').value,
+    final: document.getElementById('sel-final').value
+  };
+}
+
+function getDetalhe(mes, empresa) {
+  const empresas = empresa === 'CONSOLIDADO' ? EMPRESAS : [empresa];
+  let out = [];
+
+  empresas.forEach(emp => {
+    const arr = DATA?.gastosDetalhe?.[mes]?.[emp];
+    if (arr && arr.length) {
+      out.push(...arr.map(i => ({...i, empresa: i.empresa || emp})));
+      return;
+    }
+
+    const fallback = DATA?.estruturaGastos?.[mes]?.[emp] || [];
+    fallback.forEach(i => {
+      out.push({
+        data: '',
+        empresa: emp,
+        grupoGastos: i.grupoGastos || i.macro || i.dreGrupo || 'OUTROS',
+        grupoGastosFinal: i.grupoGastosFinal || i.dreLinha || 'SEM GRUPO',
+        categoriaProesc: i.categoriaProesc || i.dreLinha || 'SEM CATEGORIA',
+        descricao: i.dreLinha || '',
+        documento: '',
+        cliente: '',
+        dreGrupo: i.dreGrupo || '',
+        dreLinha: i.dreLinha || '',
+        dreOrdem: Number(i.dreOrdem || 9999),
+        valor: Number(i.valor || 0),
+        qtd: Number(i.qtd || 0)
+      });
+    });
+  });
+
+  return out.map(i => ({
+    ...i,
+    valor: Math.abs(Number(i.valor || 0)),
+    dreOrdem: Number(i.dreOrdem || 9999),
+    grupoGastos: i.grupoGastos || 'OUTROS',
+    grupoGastosFinal: i.grupoGastosFinal || i.dreLinha || i.categoriaProesc || 'SEM GRUPO',
+    categoriaProesc: i.categoriaProesc || i.categoria || 'SEM CATEGORIA',
+    descricao: i.descricao || i['Descrição do Lançamento'] || '',
+    documento: i.documento || '',
+    cliente: i.cliente || '',
+    data: i.data || ''
+  })).filter(i => i.valor > 0).sort(sortDetalhe);
+}
+
+function getDetalheFiltrado(mes, empresa) {
+  const { grupo, final } = getFilters();
+  return getDetalhe(mes, empresa).filter(i => {
+    if (grupo !== 'TODOS' && i.grupoGastos !== grupo) return false;
+    if (final !== 'TODOS' && i.grupoGastosFinal !== final) return false;
+    return true;
+  });
+}
+
+function sortDetalhe(a,b) {
+  if ((a.dreOrdem || 9999) !== (b.dreOrdem || 9999)) return (a.dreOrdem || 9999) - (b.dreOrdem || 9999);
+  if ((a.grupoGastos || '') !== (b.grupoGastos || '')) return String(a.grupoGastos || '').localeCompare(String(b.grupoGastos || ''), 'pt-BR');
+  if ((a.grupoGastosFinal || '') !== (b.grupoGastosFinal || '')) return String(a.grupoGastosFinal || '').localeCompare(String(b.grupoGastosFinal || ''), 'pt-BR');
+  if ((a.categoriaProesc || '') !== (b.categoriaProesc || '')) return String(a.categoriaProesc || '').localeCompare(String(b.categoriaProesc || ''), 'pt-BR');
+  if ((a.data || '') !== (b.data || '')) return String(a.data || '').localeCompare(String(b.data || ''));
+  return String(a.cliente || '').localeCompare(String(b.cliente || ''), 'pt-BR');
+}
+
+function refreshFilterOptions() {
+  const { empresa, mes } = getFilters();
+  const itens = getDetalhe(mes, empresa);
+  const grupos = [...new Set(itens.map(i => i.grupoGastos))].sort((a,b) => a.localeCompare(b, 'pt-BR'));
+
+  const selGrupo = document.getElementById('sel-grupo');
+  const old = selGrupo.value;
+  selGrupo.innerHTML = '<option value="TODOS">Todos</option>' + grupos.map(g => `<option value="${escapeAttr(g)}">${escapeHtml(g)}</option>`).join('');
+  selGrupo.value = grupos.includes(old) ? old : 'TODOS';
+
+  refreshFinalOptions();
+}
+
+function refreshFinalOptions() {
+  const { empresa, mes, grupo } = getFilters();
+  const itens = getDetalhe(mes, empresa).filter(i => grupo === 'TODOS' || i.grupoGastos === grupo);
+  const finais = [...new Set(itens.map(i => i.grupoGastosFinal))].sort((a,b) => a.localeCompare(b, 'pt-BR'));
+
+  const sel = document.getElementById('sel-final');
+  const old = sel.value;
+  sel.innerHTML = '<option value="TODOS">Todos</option>' + finais.map(g => `<option value="${escapeAttr(g)}">${escapeHtml(g)}</option>`).join('');
+  sel.value = finais.includes(old) ? old : 'TODOS';
+}
+
+function render() {
+  const { empresa, mes } = getFilters();
+  const raw = getDetalhe(mes, empresa);
+  const itens = getDetalheFiltrado(mes, empresa);
+
+  if (!raw.length) {
+    document.getElementById('kpi-strip').innerHTML = '<div class="kpi-card"><div class="kpi-label">Sem dados</div><div class="kpi-value zero">—</div></div>';
+    document.getElementById('main-content').innerHTML = '<div class="empty">Nenhum gasto encontrado para o período selecionado.</div>';
+    return;
+  }
+
+  renderKPIs(raw, itens);
+  renderMain(itens, raw);
+  renderCharts(itens, raw);
+}
+
+function aggregate(keys, itens) {
+  const map = {};
+  itens.forEach(i => {
+    const k = keys.map(key => i[key] ?? '').join('||');
+    if (!map[k]) {
+      map[k] = {};
+      keys.forEach(key => map[k][key] = i[key]);
+      map[k].valor = 0;
+      map[k].qtd = 0;
+      map[k].dreOrdem = i.dreOrdem || 9999;
+    }
+    map[k].valor += Number(i.valor || 0);
+    map[k].qtd += i.qtd ? Number(i.qtd) : 1;
+    map[k].dreOrdem = Math.min(map[k].dreOrdem || 9999, i.dreOrdem || 9999);
+  });
+  return Object.values(map).map(i => ({...i, valor: Math.round(i.valor * 100) / 100}))
+    .sort((a,b) => (a.dreOrdem || 9999) - (b.dreOrdem || 9999) || (b.valor - a.valor));
+}
+
+function sum(itens) {
+  return itens.reduce((s,i) => s + Number(i.valor || 0), 0);
+}
+
+function renderKPIs(raw, itens) {
+  const totalSelecionado = sum(itens);
+  const totalBase = sum(raw);
+  const byMacro = aggregate(['grupoGastos'], raw);
+  const get = name => byMacro.find(i => i.grupoGastos === name)?.valor || 0;
+
+  const custos = get('CUSTOS OPERACIONAIS');
+  const despOp = get('DESPESAS OPERACIONAIS');
+  const fora = get('FORA_DRE');
+  const fin = get('DESPESAS FINANCEIRAS (GASTO)');
+  const qtd = itens.length;
+
+  const cards = [
+    { label: 'Total gastos selecionado', value: fmtK(totalSelecionado), cls: 'red' },
+    { label: 'Total custos operacionais', value: fmtK(custos), cls: 'blue' },
+    { label: 'Total despesas operacionais', value: fmtK(despOp), cls: 'red' },
+    { label: 'Total fora da DRE', value: fmtK(fora), cls: 'yellow' },
+    { label: 'Total despesa financeira', value: fmtK(fin), cls: 'purple' },
+    { label: 'Custos / total', value: fmtPct(totalBase ? custos / totalBase * 100 : 0), cls: 'blue' },
+    { label: 'Despesas op. / total', value: fmtPct(totalBase ? despOp / totalBase * 100 : 0), cls: 'red' },
+    { label: 'Qtd. lançamentos', value: qtd.toLocaleString('pt-BR'), cls: 'green' }
+  ];
+
+  document.getElementById('kpi-strip').innerHTML = cards.map(c => `
+    <div class="kpi-card">
+      <div class="kpi-label">${c.label}</div>
+      <div class="kpi-value ${c.cls}">${c.value}</div>
+    </div>
+  `).join('');
+}
+
+function buildTree(itens) {
+  const roots = [];
+  const rootMap = {};
+
+  itens.forEach(i => {
+    const k0 = i.grupoGastos;
+    const k1 = `${k0}||${i.grupoGastosFinal}`;
+    const k2 = `${k1}||${i.categoriaProesc}`;
+    const k3 = `${k2}||${i.descricao || 'Sem descrição'}`;
+
+    if (!rootMap[k0]) {
+      rootMap[k0] = { id: makeId('g', k0), label: k0, level: 0, valor: 0, qtd: 0, dreOrdem: i.dreOrdem, children: {}, kind: 'Grupo_Gastos' };
+      roots.push(rootMap[k0]);
+    }
+    const n0 = rootMap[k0];
+
+    if (!n0.children[k1]) n0.children[k1] = { id: makeId('f', k1), label: i.grupoGastosFinal, level: 1, valor: 0, qtd: 0, dreOrdem: i.dreOrdem, children: {}, kind: 'Grupo_Gastos_Final' };
+    const n1 = n0.children[k1];
+
+    if (!n1.children[k2]) n1.children[k2] = { id: makeId('c', k2), label: i.categoriaProesc, level: 2, valor: 0, qtd: 0, dreOrdem: i.dreOrdem, children: {}, kind: 'Categoria_Proesc' };
+    const n2 = n1.children[k2];
+
+    if (!n2.children[k3]) n2.children[k3] = { id: makeId('d', k3), label: i.descricao || 'Sem descrição', level: 3, valor: 0, qtd: 0, dreOrdem: i.dreOrdem, children: {}, kind: 'Descrição', detalhe: [] };
+    const n3 = n2.children[k3];
+
+    [n0,n1,n2,n3].forEach(n => {
+      n.valor += i.valor;
+      n.qtd += 1;
+      n.dreOrdem = Math.min(n.dreOrdem || 9999, i.dreOrdem || 9999);
+    });
+
+    n3.detalhe.push(i);
+  });
+
+  function finish(node) {
+    node.valor = Math.round(node.valor * 100) / 100;
+    node.childrenArr = Object.values(node.children || {}).sort((a,b) => (a.dreOrdem || 9999) - (b.dreOrdem || 9999) || b.valor - a.valor);
+    node.childrenArr.forEach(finish);
+    return node;
+  }
+
+  return roots.sort((a,b) => (a.dreOrdem || 9999) - (b.dreOrdem || 9999) || b.valor - a.valor).map(finish);
+}
+
+function makeId(prefix, text) {
+  return prefix + '_' + btoa(unescape(encodeURIComponent(String(text)))).replace(/[=+/]/g,'_').slice(0,80);
+}
+
+function renderMain(itens, raw) {
+  const total = sum(itens);
+  const tree = buildTree(itens);
+
+  const html = `
+    <div class="grid-charts">
+      <div class="card">
+        <div class="card-title"><span>Participação</span><small>Top 6 por grupo final</small></div>
+        <div class="chart-wrap short"><canvas id="chart-donut"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span>Evolução mensal</span><small>Total gasto — todos os meses</small></div>
+        <div class="chart-wrap short"><canvas id="chart-total"></canvas></div>
+      </div>
+    </div>
+
+    <div class="grid-evol">
+      <div class="card">
+        <div class="card-title"><span>Composição mensal</span><small>Top 6 grupos — todos os meses</small></div>
+        <div class="chart-wrap short"><canvas id="chart-stack"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span>Resumo por empresa</span><small>Mês selecionado</small></div>
+        <div class="chart-wrap short"><canvas id="chart-empresa"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>Detalhamento de gastos</span><small>Drill individual: Grupo → Grupo Final → Categoria → Descrição → Lançamentos</small></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Descrição / Hierarquia</th>
+              <th>MD</th>
+              <th>SEL</th>
+              <th>SIGMA</th>
+              <th>Total</th>
+              <th>% Total</th>
+              <th>Qtd.</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${renderTreeRows(tree, total)}
+          </tbody>
+        </table>
+      </div>
+      <div class="footer-note">
+        O detalhamento exportável usa os lançamentos pagos: Data, Documento, Cliente, Descrição e Valor. A evolução mensal não respeita o filtro de mês para permitir leitura de tendência ao longo do ano.
+      </div>
+    </div>
+  `;
+
+  document.getElementById('main-content').className = '';
+  document.getElementById('main-content').innerHTML = html;
+  document.getElementById('nivel-note').textContent = `${itens.length.toLocaleString('pt-BR')} lançamentos no filtro atual`;
+}
+
+function renderTreeRows(nodes, total) {
+  let rows = '';
+
+  nodes.forEach((node, idx) => {
+    rows += renderNodeRow(node, total, idx);
+    if (expanded.has(node.id)) {
+      if (node.level === 2) {
+        // Expande direto para lançamentos inline — pula nível Descrição
+        rows += renderLancamentosInline(node, total);
+      } else {
+        rows += renderTreeRows(node.childrenArr || [], total);
+      }
+    }
+  });
+
+  return rows;
+}
+
+// Coleta todos os lançamentos de um nó (recursivo nos filhos)
+function coletarLancamentos(node) {
+  if (node.detalhe && node.detalhe.length) return node.detalhe;
+  return (node.childrenArr || []).flatMap(coletarLancamentos);
+}
+
+function renderLancamentosInline(node, total) {
+  const lancamentos = coletarLancamentos(node).sort(sortDetalhe);
+  return lancamentos.map(i => {
+    const p = total ? i.valor / total * 100 : 0;
+    return `
+      <tr class="level-3">
+        <td class="linha-nome indent-3" style="font-weight:400">
+          <span class="node">
+            <button class="toggle blank" style="visibility:hidden">·</button>
+            <span style="color:var(--muted);font-size:.72rem;font-family:var(--font-mono)">
+              ${escapeHtml(formatDateBR(i.data) || '—')}
+              ${i.documento ? ' · ' + escapeHtml(i.documento) : ''}
+              ${i.cliente   ? ' · ' + escapeHtml(i.cliente)   : ''}
+              ${i.descricao ? ' · ' + escapeHtml(i.descricao) : ''}
+            </span>
+          </span>
+        </td>
+        <td class="${i.empresa === 'MD'    ? 'neg' : 'zero'}">${i.empresa === 'MD'    ? fmt(i.valor) : '—'}</td>
+        <td class="${i.empresa === 'SEL'   ? 'neg' : 'zero'}">${i.empresa === 'SEL'   ? fmt(i.valor) : '—'}</td>
+        <td class="${i.empresa === 'SIGMA' ? 'neg' : 'zero'}">${i.empresa === 'SIGMA' ? fmt(i.valor) : '—'}</td>
+        <td class="neg">${fmt(i.valor)}</td>
+        <td>${fmtPct(p)}</td>
+        <td>1</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderNodeRow(node, total, idx) {
+  // Nível 2 (Categoria_Proesc) expande direto para lançamentos inline
+  const canExpand = node.level <= 2 &&
+    ((node.childrenArr && node.childrenArr.length) ||
+     (node.level === 2 && node.detalhe && node.detalhe.length));
+  const exp = expanded.has(node.id);
+  const p = total ? node.valor / total * 100 : 0;
+  const emp = valoresPorEmpresa(node);
+  const indent = `indent-${Math.min(node.level,4)}`;
+  const color = grupoColor(node.label, idx);
+
+  return `
+    <tr class="level-${node.level}">
+      <td class="linha-nome ${indent}">
+        <span class="node">
+          <button class="toggle ${canExpand ? '' : 'blank'}" onclick="${canExpand ? `toggleNode('${node.id}')` : ''}">${exp ? '−' : '+'}</button>
+          <span class="dot" style="background:${color}"></span>
+          <span>${escapeHtml(node.label)}</span>
+        </span>
+        <div class="meta">${escapeHtml(node.kind)} · Ordem ${node.dreOrdem || '—'}</div>
+      </td>
+      <td class="${emp.MD ? 'neg' : 'zero'}">${emp.MD ? fmt(emp.MD) : '—'}</td>
+      <td class="${emp.SEL ? 'neg' : 'zero'}">${emp.SEL ? fmt(emp.SEL) : '—'}</td>
+      <td class="${emp.SIGMA ? 'neg' : 'zero'}">${emp.SIGMA ? fmt(emp.SIGMA) : '—'}</td>
+      <td class="neg">${fmt(node.valor)}</td>
+      <td>${fmtPct(p)}</td>
+      <td>${node.qtd.toLocaleString('pt-BR')}</td>
+    </tr>
+  `;
+}
+
+function valoresPorEmpresa(node) {
+  const out = { MD:0, SEL:0, SIGMA:0 };
+
+  function walk(n) {
+    if (n.detalhe) {
+      n.detalhe.forEach(i => { if (out[i.empresa] != null) out[i.empresa] += i.valor; });
+    }
+    (n.childrenArr || []).forEach(walk);
+  }
+
+  walk(node);
+  Object.keys(out).forEach(k => out[k] = Math.round(out[k]*100)/100);
+  return out;
+}
+
+function renderLeafRows(node, total) {
+  return (node.detalhe || []).sort(sortDetalhe).map(i => {
+    const p = total ? i.valor / total * 100 : 0;
+    return `
+      <tr class="level-4">
+        <td class="linha-nome indent-4">
+          <span class="node">
+            <button class="toggle blank">·</button>
+            <span>${escapeHtml(i.descricao || 'Sem descrição')}</span>
+          </span>
+          <div class="meta">${formatDateBR(i.data)} · Doc. ${escapeHtml(i.documento || '—')} · ${escapeHtml(i.cliente || 'Sem cliente')}</div>
+        </td>
+        <td class="${i.empresa === 'MD' ? 'neg' : 'zero'}">${i.empresa === 'MD' ? fmt(i.valor) : '—'}</td>
+        <td class="${i.empresa === 'SEL' ? 'neg' : 'zero'}">${i.empresa === 'SEL' ? fmt(i.valor) : '—'}</td>
+        <td class="${i.empresa === 'SIGMA' ? 'neg' : 'zero'}">${i.empresa === 'SIGMA' ? fmt(i.valor) : '—'}</td>
+        <td class="neg">${fmt(i.valor)}</td>
+        <td>${fmtPct(p)}</td>
+        <td>1</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function toggleNode(id) {
+  if (expanded.has(id)) expanded.delete(id);
+  else expanded.add(id);
+  render();
+}
+
+function expandAll() {
+  const { empresa, mes } = getFilters();
+  const tree = buildTree(getDetalheFiltrado(mes, empresa));
+  function walk(n) {
+    if (n.level <= 2) {           // 0=Grupo_Gastos, 1=Grupo_Gastos_Final, 2=Categoria_Proesc
+      expanded.add(n.id);
+      (n.childrenArr || []).forEach(walk);
+    }
+    // nível 3 (Descrição) e 4 (lançamentos) não são expandidos
+  }
+  tree.forEach(walk);
+  render();
+}
+
+function collapseAll() {
+  expanded.clear();
+  render();
+}
+
+function renderCharts(itens, raw) {
+  Object.values(charts).forEach(c => { try { c.destroy(); } catch(e) {} });
+  charts = {};
+
+  renderDonut(itens);
+  renderTotalLine();
+  renderStack();
+  renderEmpresa(itens);
+}
+
+function renderDonut(itens) {
+  const byFinal = aggregate(['grupoGastosFinal'], itens).sort((a,b) => b.valor - a.valor);
+  const top = byFinal.slice(0, 6);
+  const rest = byFinal.slice(6).reduce((s,i) => s + i.valor, 0);
+  const labels = top.map(i => i.grupoGastosFinal);
+  const values = top.map(i => i.valor);
+  if (rest > 0) { labels.push('OUTROS'); values.push(rest); }
+
+  const ctx = document.getElementById('chart-donut');
+  if (!ctx) return;
+
+  charts.donut = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: labels.map((l,idx) => grupoColor(l, idx)),
+        borderWidth: 0,
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '62%',
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#9ca3af', font: { family: 'Syne', size: 10 }, boxWidth: 12, padding: 10 } },
+        tooltip: tooltipMoney()
+      }
+    }
+  });
+}
+
+function renderTotalLine() {
+  const { empresa, grupo, final } = getFilters();
+  const meses = DATA.mesesDisponiveis || [];
+
+  const values = meses.map(m => sum(getDetalhe(m, empresa).filter(i => {
+    if (grupo !== 'TODOS' && i.grupoGastos !== grupo) return false;
+    if (final !== 'TODOS' && i.grupoGastosFinal !== final) return false;
+    return true;
+  })));
+
+  const ctx = document.getElementById('chart-total');
+  if (!ctx) return;
+
+  charts.total = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: meses.map(m => MESES_LABEL[m] || m),
+      datasets: [{
+        label: 'Total de gastos',
+        data: values,
+        borderColor: '#00e5a0',
+        backgroundColor: 'rgba(0,229,160,.12)',
+        fill: true,
+        tension: .35,
+        pointRadius: 5,
+        pointBackgroundColor: '#00e5a0',
+        pointBorderColor: '#00e5a0',
+        pointHoverRadius: 7
+      }]
+    },
+    options: chartOptionsMoney(false)
+  });
+}
+
+function renderStack() {
+  const { empresa, grupo, final } = getFilters();
+  const meses = DATA.mesesDisponiveis || [];
+
+  // Top grupos finais calculado sobre TODOS os meses (não só o selecionado)
+  const todosItens = meses.flatMap(m => getDetalhe(m, empresa).filter(i => {
+    if (grupo !== 'TODOS' && i.grupoGastos !== grupo) return false;
+    if (final !== 'TODOS' && i.grupoGastosFinal !== final) return false;
+    return true;
+  }));
+  const topFinal = aggregate(['grupoGastosFinal'], todosItens)
+    .sort((a,b) => b.valor - a.valor)
+    .slice(0,6)
+    .map(i => i.grupoGastosFinal);
+
+  const datasets = topFinal.map((gf, idx) => ({
+    label: gf,
+    data: meses.map(m => sum(getDetalhe(m, empresa).filter(i => {
+      if (grupo !== 'TODOS' && i.grupoGastos !== grupo) return false;
+      if (final !== 'TODOS' && i.grupoGastosFinal !== final) return false;
+      return i.grupoGastosFinal === gf;
+    }))),
+    backgroundColor: grupoColor(gf, idx) + '88',
+    borderColor: grupoColor(gf, idx),
+    borderWidth: 1,
+    borderRadius: 3
+  })).filter(ds => ds.data.some(v => v > 0));
+
+  const ctx = document.getElementById('chart-stack');
+  if (!ctx) return;
+
+  charts.stack = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: meses.map(m => MESES_LABEL[m] || m), datasets },
+    options: chartOptionsMoney(true)
+  });
+}
+
+function renderEmpresa(itens) {
+  const byEmp = aggregate(['empresa'], itens);
+  const ctx = document.getElementById('chart-empresa');
+  if (!ctx) return;
+
+  charts.empresa = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: EMPRESAS,
+      datasets: [{
+        label: 'Total',
+        data: EMPRESAS.map(emp => byEmp.find(i => i.empresa === emp)?.valor || 0),
+        backgroundColor: ['#4f8fff66','#00e5a066','#ff4d6a66'],
+        borderColor: ['#4f8fff','#00e5a0','#ff4d6a'],
+        borderWidth: 2,
+        borderRadius: 5
+      }]
+    },
+    options: chartOptionsMoney(false)
+  });
+}
+
+function chartOptionsMoney(stacked) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { color: '#9ca3af', font: { family: 'Syne', size: 10 }, boxWidth: 12, padding: 10 } },
+      tooltip: tooltipMoney()
+    },
+    scales: {
+      x: { stacked, ticks: { color: '#6b7280', font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: '#1c202e' } },
+      y: { stacked, ticks: { color: '#6b7280', font: { family: 'JetBrains Mono', size: 10 }, callback: v => 'R$' + (v/1000).toFixed(0) + 'k' }, grid: { color: '#1c202e' } }
+    }
+  };
+}
+
+function tooltipMoney() {
+  return {
+    backgroundColor: '#1a1e2a',
+    titleColor: '#e8eaf0',
+    bodyColor: '#9ca3af',
+    borderColor: '#252b3b',
+    borderWidth: 1,
+    callbacks: { label: ctx => ` ${ctx.dataset?.label ? ctx.dataset.label + ': ' : ''}${fmt(ctx.raw)}` }
+  };
+}
+
+function exportExcel() {
+  const { empresa, mes } = getFilters();
+  const itens = getDetalheFiltrado(mes, empresa).sort(sortDetalhe);
+  const headers = ['DRE_Ordem','Data','Empresa','Grupo_Gastos','Grupo_Gastos_Final','Categoria_Proesc','DRE_Linha','Documento','Cliente','Descrição','Valor'];
+  const rows = itens.map(i => [
+    i.dreOrdem || '',
+    formatDateBR(i.data), i.empresa, i.grupoGastos, i.grupoGastosFinal, i.categoriaProesc, i.dreLinha,
+    i.documento, i.cliente, i.descricao, i.valor.toLocaleString('pt-BR', {minimumFractionDigits:2})
+  ]);
+
+  const csv = [headers, ...rows].map(r => r.map(cell => `"${String(cell ?? '').replace(/"/g,'""')}"`).join(';')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  downloadBlob(blob, `gastos_${empresa}_${mes}.csv`);
+}
+
+function exportPDF() {
+  const { empresa, mes, grupo, final } = getFilters();
+  const itens = getDetalheFiltrado(mes, empresa).sort(sortDetalhe);
+  const total = sum(itens);
+  const raw   = getDetalhe(mes, empresa);
+  const byMacro = aggregate(['grupoGastos'], raw);
+  const get = name => byMacro.find(i => i.grupoGastos === name)?.valor || 0;
+
+  const linhas = itens.map(i => `
+    <tr>
+      <td>${escapeHtml(formatDateBR(i.data))}</td>
+      <td>${escapeHtml(i.grupoGastosFinal || '')} · ${escapeHtml(i.categoriaProesc || '')}<br><span class="sub2">${escapeHtml(i.descricao || '')}</span></td>
+      <td>${escapeHtml(i.empresa || '')}</td>
+      <td>${escapeHtml(i.cliente || '')}</td>
+      <td>${escapeHtml(i.documento || '')}</td>
+      <td style="text-align:right;font-weight:600">${fmt(i.valor)}</td>
+    </tr>
+  `).join('');
+
+  const html = `
+    <!DOCTYPE html>
+    <html><head><meta charset="utf-8">
+    <title>Relatório de Gastos — ${empresa} ${MESES_LABEL[mes]||mes}</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: Arial, sans-serif; color: #111; padding: 28px; font-size: 11px; }
+      .header { border-bottom: 3px solid #111; padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end; }
+      .header h1 { font-size: 20px; margin: 0 0 3px; }
+      .header .meta { color: #555; font-size: 10px; }
+      .header .gen { text-align: right; color: #555; font-size: 9px; }
+      .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+      .kpi { border: 1px solid #ccc; border-radius: 6px; padding: 8px 10px; }
+      .kpi small { display: block; color: #666; text-transform: uppercase; font-size: 8px; letter-spacing: .06em; margin-bottom: 3px; }
+      .kpi strong { font-size: 14px; }
+      .section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; border-top: 1px solid #ddd; padding-top: 8px; }
+      table { width: 100%; border-collapse: collapse; font-size: 9px; table-layout: fixed; }
+      col.c-data   { width: 7%; }
+      col.c-class  { width: 38%; }
+      col.c-emp    { width: 6%; }
+      col.c-client { width: 24%; }
+      col.c-doc    { width: 9%; }
+      col.c-val    { width: 16%; }
+      th { background: #f0f0f0; text-align: left; border-bottom: 2px solid #999; padding: 5px 6px; font-size: 8px; text-transform: uppercase; letter-spacing: .05em; }
+      td { border-bottom: 1px solid #e8e8e8; padding: 4px 6px; vertical-align: top; }
+      tr:hover td { background: #fafafa; }
+      .sub2 { color: #777; font-size: 8px; }
+      .total-row td { border-top: 2px solid #999; font-weight: 700; background: #f7f7f7; }
+      @media print { body { padding: 14px; } .kpis { grid-template-columns: repeat(4,1fr); } }
+    </style></head><body>
+      <div class="header">
+        <div>
+          <h1>Relatório de Gastos — Caixa Real</h1>
+          <div class="meta">
+            Empresa: <strong>${escapeHtml(empresa)}</strong> &nbsp;·&nbsp;
+            Período: <strong>${escapeHtml(MESES_LABEL[mes]||mes)}</strong>
+            ${grupo !== 'TODOS' ? ` &nbsp;·&nbsp; Grupo: <strong>${escapeHtml(grupo)}</strong>` : ''}
+            ${final !== 'TODOS' ? ` &nbsp;·&nbsp; Grupo Final: <strong>${escapeHtml(final)}</strong>` : ''}
+          </div>
+        </div>
+        <div class="gen">Gerado em ${new Date().toLocaleString('pt-BR')}<br>Total lançamentos: ${itens.length.toLocaleString('pt-BR')}</div>
+      </div>
+
+      <div class="kpis">
+        <div class="kpi"><small>Total selecionado</small><strong>${fmt(total)}</strong></div>
+        <div class="kpi"><small>Custos Operacionais</small><strong>${fmt(get('CUSTOS OPERACIONAIS'))}</strong></div>
+        <div class="kpi"><small>Despesas Operacionais</small><strong>${fmt(get('DESPESAS OPERACIONAIS'))}</strong></div>
+        <div class="kpi"><small>Fora da DRE</small><strong>${fmt(get('FORA_DRE'))}</strong></div>
+        <div class="kpi"><small>Despesas Financeiras</small><strong>${fmt(get('DESPESAS FINANCEIRAS (GASTO)'))}</strong></div>
+        <div class="kpi"><small>Qtd. Lançamentos</small><strong>${itens.length.toLocaleString('pt-BR')}</strong></div>
+        <div class="kpi"><small>Ticket Médio</small><strong>${fmt(itens.length ? total/itens.length : 0)}</strong></div>
+        <div class="kpi"><small>Maior lançamento</small><strong>${fmt(Math.max(...itens.map(i=>i.valor)))}</strong></div>
+      </div>
+
+      <div class="section-title">Detalhamento de Lançamentos</div>
+      <table>
+        <colgroup>
+          <col class="c-data"><col class="c-class"><col class="c-emp">
+          <col class="c-client"><col class="c-doc"><col class="c-val">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Classificação / Descrição</th>
+            <th>Emp.</th>
+            <th>Cliente / Favorecido</th>
+            <th>Doc.</th>
+            <th style="text-align:right">Valor</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${linhas}
+          <tr class="total-row">
+            <td colspan="5">Total</td>
+            <td style="text-align:right">${fmt(total)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </body></html>
+  `;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(() => w.print(), 600);
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function formatDateBR(s) {
+  if (!s) return '';
+  const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  return String(s);
+}
+
+function escapeHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#039;');
+}
+
+function escapeAttr(s) {
+  return escapeHtml(s).replace(/`/g, '&#096;');
+}
+
+loadData();
+</script>
+
+</body>
+</html>
