@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conciliação Bancária — BI Einstein</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0c10;--surface:#111318;--surface2:#181c24;--border:#1e2330;
+  --accent:#00e5a0;--warn:#f59e0b;--danger:#ef4444;
+  --text:#e2e8f0;--muted:#64748b;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh}
+
+nav{background:#0d0f14;border-bottom:1px solid var(--border);padding:10px 24px;
+    display:flex;align-items:center;gap:6px;font-size:13px;
+    font-family:'JetBrains Mono',monospace;position:sticky;top:0;z-index:100;flex-wrap:wrap}
+nav a{color:var(--muted);text-decoration:none;transition:color .2s}
+nav a:hover,nav a.active{color:var(--accent)}
+nav .sep{color:#2a3040}
+
+.page-header{padding:28px 24px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-header h1{font-size:22px;font-weight:800;letter-spacing:-.3px}
+.page-header h1 span{color:var(--accent)}
+.page-header p{font-size:13px;color:var(--muted);margin-top:4px}
+#status-bar{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);
+  background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 12px;white-space:nowrap}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;
+  background:var(--accent);margin-right:6px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.filters{padding:14px 24px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--border)}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg label{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.5px}
+.fg select{background:var(--surface);border:1px solid var(--border);color:var(--text);
+  padding:7px 12px;border-radius:6px;font-family:'Syne',sans-serif;font-size:13px;
+  cursor:pointer;min-width:130px;outline:none;transition:border-color .2s}
+.fg select:focus{border-color:var(--accent)}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;padding:20px 24px}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+.kpi-card.ac{border-color:rgba(0,229,160,.3);background:rgba(0,229,160,.04)}
+.kpi-card.wn{border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.04)}
+.kpi-card.dn{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.04)}
+.kpi-lbl{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.kpi-val{font-size:28px;font-weight:800;letter-spacing:-.5px}
+.kv-g{color:var(--accent)}.kv-a{color:var(--warn)}.kv-r{color:var(--danger)}.kv-w{color:var(--text)}
+.kpi-sub{font-size:12px;color:var(--muted);margin-top:4px;font-family:'JetBrains Mono',monospace}
+
+.bar-wrap{padding:0 24px 20px}
+.bar-lbl{font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-bottom:8px;display:flex;justify-content:space-between}
+.bar-track{height:6px;background:var(--surface2);border-radius:99px;overflow:hidden}
+.bar-fill{height:100%;border-radius:99px;background:var(--accent);transition:width .7s ease}
+
+.info-bar{padding:10px 24px;font-size:12px;color:var(--muted);
+  font-family:'JetBrains Mono',monospace;border-bottom:1px solid var(--border);display:flex;gap:16px;flex-wrap:wrap}
+.info-bar b{color:var(--text)}
+
+.table-wrap{padding:0 24px 48px}
+.tbl-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;padding-top:20px}
+.tbl-header h2{font-size:14px;font-weight:700}
+.tbl-right{display:flex;gap:8px;align-items:center}
+.search-box{background:var(--surface);border:1px solid var(--border);color:var(--text);
+  padding:7px 12px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:12px;
+  outline:none;width:220px;transition:border-color .2s}
+.search-box:focus{border-color:var(--accent)}
+.search-box::placeholder{color:var(--muted)}
+.btn-sec{background:var(--surface);border:1px solid var(--border);color:var(--muted);
+  padding:7px 14px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;
+  cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-sec:hover{border-color:var(--accent);color:var(--accent)}
+
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+thead th{background:var(--surface);border-bottom:1px solid var(--border);
+  padding:10px 12px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:11px;
+  color:var(--muted);text-transform:uppercase;letter-spacing:.4px;
+  position:sticky;top:45px;z-index:10;cursor:pointer;user-select:none;white-space:nowrap}
+thead th:hover{color:var(--text)}
+thead th.sorted{color:var(--accent)}
+tbody tr{border-bottom:1px solid #13161f;transition:background .1s}
+tbody tr:hover{background:var(--surface)}
+tbody tr.pend{background:rgba(245,158,11,.03)}
+tbody tr.pend:hover{background:rgba(245,158,11,.07)}
+td{padding:9px 12px;vertical-align:middle}
+
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:4px;
+  font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:700;white-space:nowrap}
+.badge.ok{background:rgba(0,229,160,.1);color:var(--accent);border:1px solid rgba(0,229,160,.2)}
+.badge.pend{background:rgba(245,158,11,.1);color:var(--warn);border:1px solid rgba(245,158,11,.2)}
+
+.btag{display:inline-block;padding:2px 7px;border-radius:3px;font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:700}
+.b-CAIXA{background:rgba(251,191,36,.12);color:#fbbf24}
+.b-SICOOB{background:rgba(59,130,246,.12);color:#60a5fa}
+
+.val-neg{color:#f87171;font-family:'JetBrains Mono',monospace}
+.match-cat{font-size:12px;color:var(--text)}
+.match-sub{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:2px}
+.via-nome{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:2px;font-style:italic}
+
+/* LOADING / ERROR */
+.overlay{position:fixed;inset:0;background:rgba(10,12,16,.9);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:16px}
+.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);
+  border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.overlay-txt{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted);text-align:center;max-width:480px;line-height:1.6}
+.overlay-txt b{color:var(--text)}
+.overlay-txt code{color:var(--accent);font-size:11px}
+.btn-reload{margin-top:8px;background:var(--accent);color:#0a0c10;border:none;
+  padding:9px 20px;border-radius:6px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer}
+
+.state-box{padding:60px 24px;text-align:center;color:var(--muted)}
+.state-box p{font-size:14px;margin-top:12px}
+.state-box span{font-size:36px;display:block;opacity:.3}
+
+.pagination{display:flex;gap:6px;align-items:center;justify-content:flex-end;padding:14px 0 0;flex-wrap:wrap}
+.pagination button{background:var(--surface);border:1px solid var(--border);color:var(--muted);
+  padding:5px 11px;border-radius:5px;font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s}
+.pagination button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.pagination button.active{background:rgba(0,229,160,.1);border-color:var(--accent);color:var(--accent)}
+.pagination button:disabled{opacity:.3;cursor:default}
+.pi{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;padding:0 6px}
+</style>
+</head>
+<body>
+
+<!-- OVERLAY loading/erro -->
+<div class="overlay" id="overlay">
+  <div class="spinner" id="ov-spinner"></div>
+  <div class="overlay-txt" id="ov-txt">Conectando ao servidor de dados...</div>
+</div>
+
+<nav>
+  <a href="index.html">Menu</a><span class="sep">›</span>
+  <a href="painel_executivo.html">Painel</a><span class="sep">›</span>
+  <a href="fluxo_caixa.html">Fluxo</a><span class="sep">›</span>
+  <a href="dre.html">DRE</a><span class="sep">›</span>
+  <a href="gastos.html">Gastos</a><span class="sep">›</span>
+  <a href="receitas.html">Receitas</a><span class="sep">›</span>
+  <a href="ajustes.html">Ajustes</a><span class="sep">›</span>
+  <a href="conciliacao.html" class="active">Conciliação</a>
+</nav>
+
+<div class="page-header">
+  <div>
+    <h1>Conciliação <span>Bancária vs Proesc</span></h1>
+    <p>Débitos operacionais do extrato × gastos registrados no Proesc</p>
+  </div>
+  <div id="status-bar"><span class="dot"></span><span id="status-txt">Carregando...</span></div>
+</div>
+
+<div class="filters" id="filters" style="display:none">
+  <div class="fg">
+    <label>Mês</label>
+    <select id="sel-mes" onchange="update()"></select>
+  </div>
+  <div class="fg">
+    <label>Empresa</label>
+    <select id="sel-emp" onchange="update()">
+      <option value="TODAS">Todas</option>
+      <option value="MD">MD</option>
+      <option value="SEL">SEL</option>
+      <option value="SIGMA">SIGMA</option>
+    </select>
+  </div>
+  <div class="fg">
+    <label>Banco</label>
+    <select id="sel-banco" onchange="update()">
+      <option value="TODOS">Todos</option>
+      <option value="CAIXA">Caixa</option>
+      <option value="SICOOB">Sicoob</option>
+    </select>
+  </div>
+  <div class="fg">
+    <label>Status</label>
+    <select id="sel-status" onchange="renderTabela()">
+      <option value="TODOS">Todos</option>
+      <option value="CONCILIADO">✅ Conciliados</option>
+      <option value="PENDENTE">⚠ Pendentes</option>
+    </select>
+  </div>
+</div>
+
+<div class="kpi-grid" id="kpis" style="display:none">
+  <div class="kpi-card">
+    <div class="kpi-lbl">Débitos Operacionais</div>
+    <div class="kpi-val kv-w" id="kpi-total">—</div>
+    <div class="kpi-sub" id="kpi-total-v">—</div>
+  </div>
+  <div class="kpi-card ac">
+    <div class="kpi-lbl">Conciliados</div>
+    <div class="kpi-val kv-g" id="kpi-conc">—</div>
+    <div class="kpi-sub" id="kpi-conc-v">—</div>
+  </div>
+  <div class="kpi-card wn">
+    <div class="kpi-lbl">Pendentes</div>
+    <div class="kpi-val kv-a" id="kpi-pend">—</div>
+    <div class="kpi-sub" id="kpi-pend-v">—</div>
+  </div>
+  <div class="kpi-card" id="pct-card">
+    <div class="kpi-lbl">% Conciliação</div>
+    <div class="kpi-val" id="kpi-pct">—</div>
+    <div class="kpi-sub">por quantidade</div>
+  </div>
+</div>
+
+<div class="bar-wrap" id="bar-wrap" style="display:none">
+  <div class="bar-lbl"><span>Progresso de conciliação</span><span id="bar-pct-lbl">—</span></div>
+  <div class="bar-track"><div class="bar-fill" id="bar-fill" style="width:0%"></div></div>
+</div>
+
+<div class="info-bar" id="info-bar" style="display:none">
+  <span>Critério 1: <b>Valor + Data</b></span>
+  <span>Critério 2: <b>Valor + Nome</b> (fallback)</span>
+  <span>Extrato op.: <b id="i-ext">—</b></span>
+  <span>Proesc gastos: <b id="i-pro">—</b></span>
+</div>
+
+<div class="table-wrap">
+  <div class="state-box" id="state-empty" style="display:none">
+    <span>🔍</span><p>Nenhum registro com esses filtros.</p>
+  </div>
+  <div id="tbl-container" style="display:none">
+    <div class="tbl-header">
+      <h2>Débitos Operacionais do Extrato</h2>
+      <div class="tbl-right">
+        <input class="search-box" id="search" placeholder="Buscar histórico, nome..." oninput="renderTabela()">
+        <button class="btn-sec" onclick="exportarExcel()">⬇ Excel</button>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th onclick="sortBy('data')" id="th-data">Data <span id="si-data"></span></th>
+          <th onclick="sortBy('empresa')" id="th-empresa">Empresa</th>
+          <th onclick="sortBy('banco')" id="th-banco">Banco</th>
+          <th onclick="sortBy('historico')" id="th-historico">Histórico</th>
+          <th onclick="sortBy('nomeRS')" id="th-nomeRS">Nome / Razão Social</th>
+          <th onclick="sortBy('valor')" id="th-valor">Valor <span id="si-valor"></span></th>
+          <th>Status</th>
+          <th>Match Proesc</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="pagination" id="paginacao"></div>
+  </div>
+</div>
+
+<script>
+const DRIVE_FILE_ID = '1uHgfvF8CU2qJSbYjv_MtmgRxJFJzJR-Z';
+const PAGE = 50;
+let DATA = null, resultado = [], sortCol = 'data', sortDir = 1, pg = 1;
+
+// ── LOAD JSON ─────────────────────────────────────────────────────────────────
+async function loadJSON() {
+  const _ts = Date.now();
+  const base = `https://drive.google.com/uc?export=download&id=${DRIVE_FILE_ID}&_=${_ts}`;
+  const proxies = [
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(base)}`,
+    `https://corsproxy.io/?${encodeURIComponent(base)}`,
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(base)}`
+  ];
+  const timeout = ms => new Promise((_,rej) => setTimeout(() => rej(new Error('timeout '+ ms + 'ms')), ms));
+
+  // tenta sequencialmente com feedback de progresso
+  const erros = [];
+  for (const [i, url] of proxies.entries()) {
+    try {
+      setOverlayTxt(`Tentando proxy ${i+1}/3...`);
+      const resp = await Promise.race([fetch(url), timeout(10000)]);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const json = await resp.json();
+      // validação mínima
+      if (!json.mesesDisponiveis || !json._lancamentosCaixa) throw new Error('JSON inválido ou incompleto');
+      return json;
+    } catch(e) {
+      erros.push(`Proxy ${i+1}: ${e.message}`);
+    }
+  }
+  throw new Error('Todos os proxies falharam:\n' + erros.join('\n'));
+}
+
+function setOverlayTxt(msg) {
+  document.getElementById('ov-txt').textContent = msg;
+}
+
+async function init() {
+  try {
+    DATA = await loadJSON();
+
+    // SUCESSO — esconde overlay
+    document.getElementById('overlay').style.display = 'none';
+
+    const dt = DATA.geradoEm ? new Date(DATA.geradoEm).toLocaleString('pt-BR') : '—';
+    document.getElementById('status-txt').textContent = `Atualizado em ${dt}`;
+
+    // popula meses
+    const meses = DATA.mesesDisponiveis || [];
+    const selMes = document.getElementById('sel-mes');
+    selMes.innerHTML = meses.map(m => `<option value="${m}">${fmtMes(m)}</option>`).join('');
+    // seleciona último mês com dados no Proesc (máximo com gastosDetalhe)
+    const gd = DATA.gastosDetalhe || {};
+    const mesComDados = [...meses].reverse().find(m => gd[m] && Object.keys(gd[m]).length > 0) || meses[meses.length - 1];
+    if (mesComDados) selMes.value = mesComDados;
+
+    ['filters','kpis','bar-wrap','info-bar'].forEach(id => document.getElementById(id).style.display = '');
+    document.getElementById('tbl-container').style.display = '';
+
+    update();
+  } catch(e) {
+    // ERRO — mostra mensagem clara
+    document.getElementById('ov-spinner').style.display = 'none';
+    const isLocalFile = location.protocol === 'file:';
+    document.getElementById('ov-txt').innerHTML = `
+      <b style="color:#ef4444;font-size:14px">Não foi possível carregar os dados</b><br><br>
+      ${isLocalFile
+        ? `<b>⚠ Você está abrindo o arquivo localmente (file:///).</b><br>
+           Os proxies CORS não funcionam em arquivos locais.<br><br>
+           <b>Solução:</b> acesse pelo GitHub Pages:<br>
+           <code>https://financeiroeinstein.github.io/bi-einstein/conciliacao.html</code>`
+        : `Erro ao conectar aos proxies CORS.<br>
+           <small style="color:#64748b">${e.message.replace(/\n/g,'<br>')}</small>`
+      }
+      <br><br>
+      <button class="btn-reload" onclick="location.reload()">↺ Tentar novamente</button>
+    `;
+  }
+}
+
+// ── CONCILIAÇÃO ───────────────────────────────────────────────────────────────
+function conciliar(mes, empresa, banco) {
+  if (!DATA) return [];
+
+  // Extrato — operacional, valor negativo (débito)
+  const extrato = (DATA._lancamentosCaixa || []).filter(l => {
+    if (!l.data || l.data.substring(0,7) !== mes) return false;
+    if (l.tipo !== 'Operacional') return false;
+    if (parseFloat(l.valor) >= 0) return false;
+    if (empresa !== 'TODAS' && l.empresa !== empresa) return false;
+    if (banco   !== 'TODOS' && l.banco   !== banco  ) return false;
+    return true;
+  });
+
+  // Proesc — gastosDetalhe do mês/empresa
+  const gd = DATA.gastosDetalhe || {};
+  let proesc = [];
+  if (gd[mes]) {
+    const emps = empresa === 'TODAS' ? Object.keys(gd[mes]) : (gd[mes][empresa] ? [empresa] : []);
+    for (const e of emps) if (gd[mes][e]) proesc.push(...gd[mes][e]);
+  }
+
+  // Mapa 1: valor + data (exato)
+  const mapVD = {};
+  // Mapa 2: valor + cliente (fallback PIX)
+  const mapVC = {};
+  for (const p of proesc) {
+    const v = Math.abs(parseFloat(p.valor || p.valorBase || p.valorOriginal || 0)).toFixed(2);
+    const d = (p.dataCaixa || p.data || '').substring(0, 10);
+    const c = String(p.cliente || '').trim().toUpperCase();
+    if (d) (mapVD[`${v}|${d}`] = mapVD[`${v}|${d}`] || []).push(p);
+    if (c) (mapVC[`${v}|${c}`] = mapVC[`${v}|${c}`] || []).push(p);
+  }
+
+  const consVD = {}, consVC = {};
+  return extrato.map(l => {
+    const v = Math.abs(parseFloat(l.valor)).toFixed(2);
+    const d = (l.data || '').substring(0, 10);
+    const nome = String(l.nomeRS || '').trim().toUpperCase();
+
+    // Tentativa 1: valor + data
+    const kVD = `${v}|${d}`;
+    consVD[kVD] = (consVD[kVD] || 0) + 1;
+    const poolVD = mapVD[kVD] || [];
+    if (consVD[kVD] <= poolVD.length)
+      return { ...l, _st:'CONCILIADO', _match:poolVD[consVD[kVD]-1], _chave:'valor+data' };
+
+    // Tentativa 2: valor + nome
+    if (nome) {
+      const kVC = `${v}|${nome}`;
+      consVC[kVC] = (consVC[kVC] || 0) + 1;
+      const poolVC = mapVC[kVC] || [];
+      if (consVC[kVC] <= poolVC.length)
+        return { ...l, _st:'CONCILIADO', _match:poolVC[consVC[kVC]-1], _chave:'valor+nome' };
+    }
+    return { ...l, _st:'PENDENTE', _match:null, _chave:null };
+  });
+}
+
+// ── UPDATE ────────────────────────────────────────────────────────────────────
+function update() {
+  const mes   = document.getElementById('sel-mes').value;
+  const emp   = document.getElementById('sel-emp').value;
+  const banco = document.getElementById('sel-banco').value;
+  if (!mes || !DATA) return;
+
+  resultado = conciliar(mes, emp, banco);
+
+  // contagem Proesc para info-bar
+  const gd = DATA.gastosDetalhe || {};
+  let nPro = 0;
+  if (gd[mes]) {
+    const emps = emp === 'TODAS' ? Object.keys(gd[mes]) : (gd[mes][emp] ? [emp] : []);
+    for (const e of emps) nPro += (gd[mes][e] || []).length;
+  }
+  document.getElementById('i-ext').textContent = resultado.length;
+  document.getElementById('i-pro').textContent = nPro;
+
+  pg = 1;
+  atualizarKPIs();
+  renderTabela();
+}
+
+// ── KPIs ──────────────────────────────────────────────────────────────────────
+function atualizarKPIs() {
+  const tot  = resultado.length;
+  const conc = resultado.filter(r => r._st === 'CONCILIADO').length;
+  const pend = tot - conc;
+  const pct  = tot > 0 ? (conc / tot * 100).toFixed(1) : '0.0';
+  const totV  = resultado.reduce((s,r) => s + Math.abs(parseFloat(r.valor)), 0);
+  const concV = resultado.filter(r => r._st === 'CONCILIADO').reduce((s,r) => s + Math.abs(parseFloat(r.valor)), 0);
+
+  document.getElementById('kpi-total').textContent = tot;
+  document.getElementById('kpi-total-v').textContent = fmtBRL(totV);
+  document.getElementById('kpi-conc').textContent = conc;
+  document.getElementById('kpi-conc-v').textContent = fmtBRL(concV);
+  document.getElementById('kpi-pend').textContent = pend;
+  document.getElementById('kpi-pend-v').textContent = fmtBRL(totV - concV);
+
+  const pctN = parseFloat(pct);
+  const el = document.getElementById('kpi-pct');
+  el.textContent = pct + '%';
+  el.className = 'kpi-val ' + (pctN >= 95 ? 'kv-g' : pctN >= 80 ? 'kv-a' : 'kv-r');
+  document.getElementById('pct-card').className = 'kpi-card ' + (pctN >= 95 ? 'ac' : pctN >= 80 ? 'wn' : 'dn');
+  document.getElementById('bar-fill').style.width = pct + '%';
+  document.getElementById('bar-pct-lbl').textContent = pct + '%';
+}
+
+// ── TABELA ────────────────────────────────────────────────────────────────────
+function renderTabela() {
+  atualizarKPIs();
+  const status = document.getElementById('sel-status').value;
+  const busca  = (document.getElementById('search').value || '').toLowerCase();
+
+  let d = resultado.slice();
+  if (status !== 'TODOS') d = d.filter(r => r._st === status);
+  if (busca) d = d.filter(r =>
+    (r.historico || '').toLowerCase().includes(busca) ||
+    (r.nomeRS    || '').toLowerCase().includes(busca) ||
+    (r.documento || '').toLowerCase().includes(busca)
+  );
+
+  d.sort((a,b) => {
+    let va = a[sortCol] ?? '', vb = b[sortCol] ?? '';
+    if (sortCol === 'valor') { va = Math.abs(parseFloat(va)); vb = Math.abs(parseFloat(vb)); }
+    return va < vb ? -sortDir : va > vb ? sortDir : 0;
+  });
+
+  const tot = d.length, pages = Math.max(1, Math.ceil(tot / PAGE));
+  if (pg > pages) pg = pages;
+  const page = d.slice((pg-1)*PAGE, pg*PAGE);
+
+  document.getElementById('state-empty').style.display = page.length ? 'none' : '';
+  document.getElementById('tbody').innerHTML = page.map(l => {
+    const ok = l._st === 'CONCILIADO';
+    const badge = ok
+      ? `<span class="badge ok">✅ Conciliado</span>`
+      : `<span class="badge pend">⚠ Pendente</span>`;
+    const viaLabel = ok && l._chave === 'valor+nome'
+      ? `<div class="via-nome">via nome</div>` : '';
+
+    const m = l._match;
+    const matchCell = ok && m
+      ? `<div>
+           <div class="match-cat">${esc(m.dreLinha || m.categoriaProesc || m.categoria || '—')}</div>
+           <div class="match-sub">${esc(m.cliente || '—')} · ${esc(m.formaPagamento || '')}</div>
+           ${m.descricao ? `<div class="match-sub" style="color:#334155">${esc(String(m.descricao).substring(0,55))}</div>` : ''}
+         </div>`
+      : `<span style="color:#2e3a52;font-size:11px;font-family:'JetBrains Mono',monospace">—</span>`;
+
+    return `<tr class="${ok ? '' : 'pend'}">
+      <td style="font-family:'JetBrains Mono',monospace;font-size:12px">${(l.data||'').substring(0,10)}</td>
+      <td style="font-size:12px">${esc(l.empresa||'')}</td>
+      <td><span class="btag b-${l.banco}">${l.banco}</span></td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px"
+          title="${esc(l.historico)}">${esc(l.historico||'—')}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px"
+          title="${esc(l.nomeRS)}">${esc(l.nomeRS||'—')}</td>
+      <td class="val-neg">${fmtBRL(Math.abs(parseFloat(l.valor)))}</td>
+      <td>${badge}${viaLabel}</td>
+      <td>${matchCell}</td>
+    </tr>`;
+  }).join('');
+
+  renderPag(tot, pages);
+}
+
+// ── SORT ──────────────────────────────────────────────────────────────────────
+function sortBy(col) {
+  if (sortCol === col) sortDir *= -1; else { sortCol = col; sortDir = 1; }
+  ['data','empresa','banco','historico','nomeRS','valor'].forEach(c => {
+    const th = document.getElementById('th-' + c);
+    if (!th) return;
+    th.classList.toggle('sorted', c === sortCol);
+    const si = document.getElementById('si-' + c);
+    if (si) si.textContent = c === sortCol ? (sortDir === 1 ? '↑' : '↓') : '';
+  });
+  renderTabela();
+}
+
+// ── PAGINAÇÃO ─────────────────────────────────────────────────────────────────
+function renderPag(tot, pages) {
+  const pag = document.getElementById('paginacao');
+  if (pages <= 1) { pag.innerHTML = ''; return; }
+  let h = `<span class="pi">${tot} registros</span>`;
+  h += `<button onclick="goPage(${pg-1})" ${pg===1?'disabled':''}>‹</button>`;
+  for (let p = 1; p <= pages; p++) {
+    if (pages > 7 && Math.abs(p-pg) > 2 && p !== 1 && p !== pages) {
+      if (p === 2 || p === pages-1) h += `<button disabled>…</button>`;
+      continue;
+    }
+    h += `<button class="${p===pg?'active':''}" onclick="goPage(${p})">${p}</button>`;
+  }
+  h += `<button onclick="goPage(${pg+1})" ${pg===pages?'disabled':''}>›</button>`;
+  pag.innerHTML = h;
+}
+function goPage(p) { pg = p; renderTabela(); }
+
+// ── EXPORT ────────────────────────────────────────────────────────────────────
+function exportarExcel() {
+  if (!window.XLSX) {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = _doExport;
+    document.head.appendChild(s);
+  } else { _doExport(); }
+}
+function _doExport() {
+  const mes = document.getElementById('sel-mes').value;
+  const rows = resultado.map(r => ({
+    'Data':               (r.data||'').substring(0,10),
+    'Empresa':            r.empresa,
+    'Banco':              r.banco,
+    'Histórico':          r.historico,
+    'Nome/Razão Social':  r.nomeRS,
+    'Valor':              Math.abs(parseFloat(r.valor)),
+    'Status':             r._st,
+    'Proesc DRE Linha':   r._match ? (r._match.dreLinha  || '') : '',
+    'Proesc Categoria':   r._match ? (r._match.categoriaProesc || r._match.categoria || '') : '',
+    'Proesc Cliente':     r._match ? (r._match.cliente   || '') : '',
+    'Proesc Forma Pag':   r._match ? (r._match.formaPagamento  || '') : '',
+    'Chave Match':        r._chave || '',
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Conciliação');
+  XLSX.writeFile(wb, `conciliacao_${mes}.xlsx`);
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function fmtMes(m) {
+  if (!m) return m;
+  const [ano, mes] = m.split('-');
+  return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][parseInt(mes)-1] + '/' + ano;
+}
+function fmtBRL(v) {
+  return new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' }).format(v || 0);
+}
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+init();
+</script>
+</body>
+</html>
