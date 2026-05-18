@@ -881,8 +881,8 @@ function renderMain(itens, raw) {
         <div class="chart-wrap short"><canvas id="chart-stack"></canvas></div>
       </div>
       <div class="card">
-        <div class="card-title"><span>Resumo por empresa</span><small>Mês selecionado</small></div>
-        <div class="chart-wrap short"><canvas id="chart-empresa"></canvas></div>
+        <div class="card-title"><span>Evolução por grupo macro</span><small>Todos os meses</small></div>
+        <div class="chart-wrap short"><canvas id="chart-grupos-macro"></canvas></div>
       </div>
     </div>
 
@@ -1071,6 +1071,7 @@ function renderCharts(itens, raw) {
   renderTotalLine();
   renderStack();
   renderEmpresa(itens);
+  renderGruposMacro();
 }
 
 function renderDonut(itens) {
@@ -1180,23 +1181,41 @@ function renderStack() {
 }
 
 function renderEmpresa(itens) {
-  const byEmp = aggregate(['empresa'], itens);
-  const ctx = document.getElementById('chart-empresa');
-  if (!ctx) return;
+  // substituído por renderGruposMacro
+}
 
-  charts.empresa = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: EMPRESAS,
-      datasets: [{
-        label: 'Total',
-        data: EMPRESAS.map(emp => byEmp.find(i => i.empresa === emp)?.valor || 0),
-        backgroundColor: ['#4f8fff66','#00e5a066','#ff4d6a66'],
-        borderColor: ['#4f8fff','#00e5a0','#ff4d6a'],
-        borderWidth: 2,
-        borderRadius: 5
-      }]
-    },
+function renderGruposMacro() {
+  const { empresa, grupo, final } = getFilters();
+  const meses = DATA.mesesDisponiveis || [];
+
+  const GRUPOS = [
+    { key: 'CUSTOS OPERACIONAIS',        label: 'Custos Op.',      color: '#4f8fff' },
+    { key: 'DESPESAS OPERACIONAIS',       label: 'Despesas Op.',    color: '#f87171' },
+    { key: 'DESPESAS FINANCEIRAS (GASTO)',label: 'Desp. Fin.',      color: '#a78bfa' },
+    { key: 'FORA_DRE',                    label: 'Fora DRE',        color: '#fbbf24' },
+  ];
+
+  const datasets = GRUPOS.map(g => ({
+    label: g.label,
+    data: meses.map(m => sum(getDetalhe(m, empresa).filter(i => i.grupoGastos === g.key))),
+    borderColor: g.color,
+    backgroundColor: g.color + '22',
+    fill: false,
+    tension: .3,
+    pointRadius: 4,
+    pointBackgroundColor: g.color,
+    pointBorderColor: g.color,
+    pointHoverRadius: 6,
+    borderWidth: 2
+  })).filter(ds => ds.data.some(v => v > 0));
+
+  const ctx = document.getElementById('chart-grupos-macro');
+  if (!ctx) return;
+  if (charts.gruposMacro) { try { charts.gruposMacro.destroy(); } catch(e) {} }
+
+  charts.gruposMacro = new Chart(ctx, {
+    type: 'line',
+    data: { labels: meses.map(m => MESES_LABEL[m] || m), datasets },
     options: chartOptionsMoney(false)
   });
 }
