@@ -203,6 +203,19 @@
   .ts-label { font-size: .62rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
   .ts-value { font-family: var(--font-m); font-size: .92rem; font-weight: 600; }
   .ts-count { font-size: .64rem; color: var(--muted); }
+  .ts-breakdown {
+    display: flex; gap: .4rem; margin-top: .35rem; flex-wrap: wrap;
+  }
+  .ts-chip {
+    font-family: var(--font-m); font-size: .64rem; padding: .18rem .5rem;
+    border-radius: 5px; cursor: pointer; border: 1px solid transparent; transition: all .15s; white-space: nowrap;
+  }
+  .ts-chip.ent { background: rgba(74,222,128,.1);  color: var(--green); border-color: rgba(74,222,128,.2); }
+  .ts-chip.sai { background: rgba(248,113,113,.1); color: var(--red);   border-color: rgba(248,113,113,.2); }
+  .ts-chip.ent:hover { background: rgba(74,222,128,.22); }
+  .ts-chip.sai:hover { background: rgba(248,113,113,.22); }
+  .ts-chip.ent.sel { background: rgba(74,222,128,.28); border-color: var(--green); font-weight:700; }
+  .ts-chip.sai.sel { background: rgba(248,113,113,.28); border-color: var(--red);  font-weight:700; }
 
   .loading { text-align: center; padding: 3rem; color: var(--muted); font-size: .85rem; }
   .error-msg { background: rgba(255,77,106,.1); border: 1px solid rgba(255,77,106,.3);
@@ -227,7 +240,8 @@
   <a href="dre.html">DRE</a><span class="sep">›</span>
   <a href="gastos.html">Gastos</a><span class="sep">›</span>
   <a href="receitas.html">Receitas</a><span class="sep">›</span>
-  <span class="active">Ajustes</span>
+  <span class="active">Ajustes</span><span class="sep">›</span>
+  <a href="conciliacao.html">Conciliação</a>
 </nav>
 
 <div class="page-header">
@@ -392,15 +406,22 @@ function updateFilter(tipo) {
     const n=filtros.bancos.length;
     document.getElementById('labelBanco').textContent = n===2?'Seleções múltiplas':n===0?'Nenhum':filtros.bancos.join(', ');
   }
+  // Resetar filtros de sinal ao mudar contexto
+  Object.keys(sinalFiltro).forEach(k => sinalFiltro[k] = null);
   page = 0;
   render();
 }
 function toggleTipo(el) {
   const tipo = el.dataset.tipo;
-  if (tiposAtivos.has(tipo)) tiposAtivos.delete(tipo);
-  else tiposAtivos.add(tipo);
+  if (tiposAtivos.has(tipo)) {
+    tiposAtivos.delete(tipo);
+    sinalFiltro[tipo] = null; // limpa filtro de sinal ao desativar tipo
+  } else {
+    tiposAtivos.add(tipo);
+  }
   el.classList.toggle('active', tiposAtivos.has(tipo));
   page = 0;
+  renderSummary(null);
   renderTable();
 }
 
@@ -430,7 +451,10 @@ function getLancamentosFiltrados() {
       (l.historico||'').toLowerCase().includes(busca) ||
       (l.nomeRS||'').toLowerCase().includes(busca) ||
       (l.documento||'').toLowerCase().includes(busca);
-    return mesOk && empOk && bcOk && tipoOk && buscaOk;
+    // Filtro de sinal por tipo (chips do sumário)
+    const sf = sinalFiltro[l.tipo];
+    const sinalOk = !sf || (sf === 'pos' ? l.valor > 0 : l.valor < 0);
+    return mesOk && empOk && bcOk && tipoOk && buscaOk && sinalOk;
   });
 }
 
@@ -494,12 +518,28 @@ function renderKPIs() {
 }
 
 // ── Sumário por tipo ──────────────────────────────────────────────────────
+// sinalFiltro: null = todos | 'pos' = só entradas | 'neg' = só saídas
+const sinalFiltro = { 'Operacional': null, 'Transferência Interna': null, 'Intercompany': null, 'Aplicação Financeira': null };
+
+function toggleSinal(tipo, sinal) {
+  sinalFiltro[tipo] = sinalFiltro[tipo] === sinal ? null : sinal;
+  // Se ativou filtro de sinal, garante que o tipo está ativo na tabela
+  if (sinalFiltro[tipo] !== null && !tiposAtivos.has(tipo)) {
+    tiposAtivos.add(tipo);
+    const key = { 'Operacional':'op','Transferência Interna':'ti','Intercompany':'ic','Aplicação Financeira':'af' }[tipo];
+    document.querySelector(`.pill-${key}`)?.classList.add('active');
+  }
+  page = 0;
+  renderSummary(null); // re-render chips
+  renderTable();
+}
+
 function renderSummary(itens) {
   const tipos = ['Operacional','Transferência Interna','Intercompany','Aplicação Financeira'];
   const cores  = { 'Operacional':'var(--accent2)', 'Transferência Interna':'var(--warn)', 'Intercompany':'#a78bfa', 'Aplicação Financeira':'var(--green)' };
   const labels = { 'Operacional':'Operacional', 'Transferência Interna':'Transf. Interna', 'Intercompany':'Intercompany', 'Aplicação Financeira':'Aplicação Fin.' };
+  const chaveKey = { 'Operacional':'op','Transferência Interna':'ti','Intercompany':'ic','Aplicação Financeira':'af' };
 
-  // Usa todos os lançamentos (sem filtro de tipo) para o sumário
   const mesesAtivos = filtros.meses.length > 0 ? filtros.meses : (dadosGlobais?.mesesDisponiveis || []);
   const busca = (document.getElementById('searchInput')?.value || '').toLowerCase().trim();
   const todosLanc = getLancamentos().filter(l => {
@@ -511,17 +551,36 @@ function renderSummary(itens) {
   });
 
   document.getElementById('tipoSummary').innerHTML = tipos.map(t => {
-    const sub = todosLanc.filter(l => l.tipo === t);
-    const total = sub.reduce((s,l)=>s+l.valor,0);
-    const qtd   = sub.length;
+    const sub    = todosLanc.filter(l => l.tipo === t);
+    const total  = sub.reduce((s,l)=>s+l.valor,0);
+    const entradas = sub.filter(l=>l.valor>0);
+    const saidas   = sub.filter(l=>l.valor<0);
+    const qtdEnt = entradas.length, qtdSai = saidas.length;
+    const valEnt = entradas.reduce((s,l)=>s+l.valor,0);
+    const valSai = saidas.reduce((s,l)=>s+l.valor,0);
+    const qtd    = sub.length;
+    const key    = chaveKey[t];
+
     // Atualiza pill count
-    const key = { 'Operacional':'op','Transferência Interna':'ti','Intercompany':'ic','Aplicação Financeira':'af' }[t];
     const el = document.getElementById('cnt-'+key);
     if (el) el.textContent = qtd;
+
+    const sfAtual = sinalFiltro[t];
+    const selEnt  = sfAtual === 'pos' ? 'sel' : '';
+    const selSai  = sfAtual === 'neg' ? 'sel' : '';
+
     return `<div class="ts-card">
       <div class="ts-label" style="color:${cores[t]}">${labels[t]}</div>
       <div class="ts-value" style="color:${total>=0?cores[t]:'var(--red)'}">${fmtBRL(total)}</div>
       <div class="ts-count">${qtd} lançamento${qtd!==1?'s':''}</div>
+      <div class="ts-breakdown">
+        <span class="ts-chip ent ${selEnt}" onclick="toggleSinal('${t}','pos')" title="Clique para filtrar só entradas">
+          ↑ ${qtdEnt} · ${fmtBRL(valEnt)}
+        </span>
+        <span class="ts-chip sai ${selSai}" onclick="toggleSinal('${t}','neg')" title="Clique para filtrar só saídas">
+          ↓ ${qtdSai} · ${fmtBRL(valSai)}
+        </span>
+      </div>
     </div>`;
   }).join('');
 }

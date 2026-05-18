@@ -9,7 +9,7 @@
 :root{
   --bg:#0a0c10;--surface:#111318;--surface2:#181c24;--border:#1e2330;
   --accent:#00e5a0;--warn:#f59e0b;--danger:#ef4444;
-  --text:#e2e8f0;--muted:#64748b;
+  --text:#e2e8f0;--muted:#64748b;--muted2:#2e3a52;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh}
@@ -21,116 +21,183 @@ nav a{color:var(--muted);text-decoration:none;transition:color .2s}
 nav a:hover,nav a.active{color:var(--accent)}
 nav .sep{color:#2a3040}
 
-.page-header{padding:28px 24px 16px;border-bottom:1px solid var(--border);
+.page-header{padding:24px 24px 16px;border-bottom:1px solid var(--border);
   display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px}
 .page-header h1{font-size:22px;font-weight:800;letter-spacing:-.3px}
 .page-header h1 span{color:var(--accent)}
 .page-header p{font-size:13px;color:var(--muted);margin-top:4px}
-#status-bar{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);
+#lastUpdate{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);
   background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 12px;white-space:nowrap}
-.dot{display:inline-block;width:7px;height:7px;border-radius:50%;
-  background:var(--accent);margin-right:6px;animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
-.filters{padding:14px 24px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--border)}
-.fg{display:flex;flex-direction:column;gap:4px}
-.fg label{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.5px}
-.fg select{background:var(--surface);border:1px solid var(--border);color:var(--text);
-  padding:7px 12px;border-radius:6px;font-family:'Syne',sans-serif;font-size:13px;
-  cursor:pointer;min-width:130px;outline:none;transition:border-color .2s}
+.filters{padding:12px 24px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;
+  border-bottom:1px solid var(--border);background:var(--surface)}
+.fg{display:flex;flex-direction:column;gap:3px}
+.fg label{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.5px}
+.fg select{background:var(--bg);border:1px solid var(--border);color:var(--text);
+  padding:6px 10px;border-radius:6px;font-family:'Syne',sans-serif;font-size:13px;
+  cursor:pointer;min-width:120px;outline:none;transition:border-color .2s}
 .fg select:focus{border-color:var(--accent)}
 
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;padding:20px 24px}
-.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
-.kpi-card.ac{border-color:rgba(0,229,160,.3);background:rgba(0,229,160,.04)}
-.kpi-card.wn{border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.04)}
-.kpi-card.dn{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.04)}
-.kpi-lbl{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
-.kpi-val{font-size:28px;font-weight:800;letter-spacing:-.5px}
-.kv-g{color:var(--accent)}.kv-a{color:var(--warn)}.kv-r{color:var(--danger)}.kv-w{color:var(--text)}
-.kpi-sub{font-size:12px;color:var(--muted);margin-top:4px;font-family:'JetBrains Mono',monospace}
+/* KPI STRIP */
+.kpi-strip{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px 24px;border-bottom:1px solid var(--border)}
+.kpi-bloco{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px}
+.kpi-bloco-title{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;
+  text-transform:uppercase;letter-spacing:.5px;padding-bottom:8px;margin-bottom:8px;border-bottom:1px solid var(--border)}
+.kpi-bloco-title b{color:var(--accent)}
+.kpi-bloco-title .pro-b{color:#60a5fa}
+.kpi-row{display:flex;justify-content:space-between;align-items:baseline}
+.kpi-num{font-size:30px;font-weight:800;letter-spacing:-.5px}
+.kpi-num.ext{color:var(--text)}
+.kpi-num.pro{color:#60a5fa}
+.kpi-label-sm{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace}
+.kpi-val-sm{font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--muted)}
+.diff-row{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);
+  display:flex;gap:20px;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--muted)}
+.diff-ok{color:var(--accent);font-weight:700}
+.diff-warn{color:var(--warn);font-weight:700}
+.diff-danger{color:var(--danger);font-weight:700}
 
-.bar-wrap{padding:0 24px 20px}
-.bar-lbl{font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-bottom:8px;display:flex;justify-content:space-between}
-.bar-track{height:6px;background:var(--surface2);border-radius:99px;overflow:hidden}
-.bar-fill{height:100%;border-radius:99px;background:var(--accent);transition:width .7s ease}
+/* aviso de campo ausente */
+.aviso-campo{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:8px;
+  padding:12px 16px;margin:12px 24px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--warn);
+  line-height:1.6}
+.aviso-campo code{background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:11px}
 
-.info-bar{padding:10px 24px;font-size:12px;color:var(--muted);
-  font-family:'JetBrains Mono',monospace;border-bottom:1px solid var(--border);display:flex;gap:16px;flex-wrap:wrap}
-.info-bar b{color:var(--text)}
+/* PROGRESS */
+.bar-wrap{padding:12px 24px 14px;border-bottom:1px solid var(--border)}
+.bar-lbl{font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;
+  margin-bottom:6px;display:flex;justify-content:space-between}
+.bar-track{height:5px;background:var(--surface2);border-radius:99px;overflow:hidden}
+.bar-fill{height:100%;border-radius:99px;background:var(--accent);transition:width .6s ease}
 
-.table-wrap{padding:0 24px 48px}
-.tbl-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;padding-top:20px}
-.tbl-header h2{font-size:14px;font-weight:700}
-.tbl-right{display:flex;gap:8px;align-items:center}
+/* CONTROLS */
+.controls{padding:10px 24px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+.status-filter{display:flex;gap:6px}
+.btn-sm{background:var(--surface);border:1px solid var(--border);color:var(--muted);
+  padding:5px 12px;border-radius:5px;font-family:'JetBrains Mono',monospace;font-size:11px;
+  cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-sm:hover{border-color:var(--accent);color:var(--accent)}
+.btn-sm.active{border-color:var(--accent);color:var(--accent);background:rgba(0,229,160,.08)}
 .search-box{background:var(--surface);border:1px solid var(--border);color:var(--text);
-  padding:7px 12px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:12px;
-  outline:none;width:220px;transition:border-color .2s}
+  padding:5px 10px;border-radius:5px;font-family:'JetBrains Mono',monospace;font-size:12px;
+  outline:none;width:200px;transition:border-color .2s;margin-left:auto}
 .search-box:focus{border-color:var(--accent)}
 .search-box::placeholder{color:var(--muted)}
-.btn-sec{background:var(--surface);border:1px solid var(--border);color:var(--muted);
-  padding:7px 14px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;
-  cursor:pointer;transition:all .15s;white-space:nowrap}
-.btn-sec:hover{border-color:var(--accent);color:var(--accent)}
 
-table{width:100%;border-collapse:collapse;font-size:12.5px}
-thead th{background:var(--surface);border-bottom:1px solid var(--border);
-  padding:10px 12px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:11px;
-  color:var(--muted);text-transform:uppercase;letter-spacing:.4px;
-  position:sticky;top:45px;z-index:10;cursor:pointer;user-select:none;white-space:nowrap}
-thead th:hover{color:var(--text)}
-thead th.sorted{color:var(--accent)}
-tbody tr{border-bottom:1px solid #13161f;transition:background .1s}
-tbody tr:hover{background:var(--surface)}
-tbody tr.pend{background:rgba(245,158,11,.03)}
-tbody tr.pend:hover{background:rgba(245,158,11,.07)}
-td{padding:9px 12px;vertical-align:middle}
+/* DIAS */
+.dias-wrap{padding:0 24px 48px}
+.dia-bloco{margin-top:12px;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.dia-header{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 16px;background:var(--surface);cursor:pointer;user-select:none;gap:8px;flex-wrap:wrap}
+.dia-header:hover{background:#13161e}
+.dia-date{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--text)}
+.dia-stats{display:flex;gap:12px;align-items:center;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+.dia-stats b{color:var(--text)}
+.dia-badge{padding:3px 9px;border-radius:4px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:700}
+.dia-badge.ok{background:rgba(0,229,160,.12);color:var(--accent);border:1px solid rgba(0,229,160,.2)}
+.dia-badge.warn{background:rgba(245,158,11,.12);color:var(--warn);border:1px solid rgba(245,158,11,.25)}
+.dia-badge.danger{background:rgba(239,68,68,.12);color:var(--danger);border:1px solid rgba(239,68,68,.2)}
+.dia-chevron{color:var(--muted);font-size:11px;margin-left:4px;transition:transform .2s}
+.dia-bloco.collapsed .dia-chevron{transform:rotate(-90deg)}
 
-.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:4px;
-  font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:700;white-space:nowrap}
-.badge.ok{background:rgba(0,229,160,.1);color:var(--accent);border:1px solid rgba(0,229,160,.2)}
-.badge.pend{background:rgba(245,158,11,.1);color:var(--warn);border:1px solid rgba(245,158,11,.2)}
+/* Grid 2 colunas */
+.dia-body{display:none;border-top:1px solid var(--border)}
+.dia-bloco:not(.collapsed) .dia-body{display:block}
+.col-headers{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--border)}
+.col-hdr{padding:7px 14px;font-size:10px;font-family:'JetBrains Mono',monospace;
+  text-transform:uppercase;letter-spacing:.5px;color:var(--muted);background:var(--surface2)}
+.col-hdr.ext{border-right:1px solid var(--border)}
+.ext-label{color:#fbbf24;font-weight:700}
+.pro-label{color:#60a5fa;font-weight:700}
 
-.btag{display:inline-block;padding:2px 7px;border-radius:3px;font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:700}
-.b-CAIXA{background:rgba(251,191,36,.12);color:#fbbf24}
-.b-SICOOB{background:rgba(59,130,246,.12);color:#60a5fa}
+.match-rows{display:flex;flex-direction:column}
+.match-row{display:grid;grid-template-columns:1fr 20px 1fr;border-bottom:1px solid #0e1117}
+.match-row:last-child{border-bottom:none}
+.match-row.r-ok{background:rgba(0,229,160,.015)}
+.match-row.r-approx{background:rgba(124,58,237,.04)}
+.match-row.r-elim{background:rgba(245,158,11,.03)}
+.match-row.r-none{background:rgba(239,68,68,.04)}
 
-.val-neg{color:#f87171;font-family:'JetBrains Mono',monospace}
-.match-cat{font-size:12px;color:var(--text)}
-.match-sub{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:2px}
-.via-nome{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:2px;font-style:italic}
+/* Células */
+.cell{padding:10px 14px;font-size:12px}
+.cell.ext{border-right:none}
+.cell.center{display:flex;align-items:center;justify-content:center;padding:0}
+.cell.empty{color:var(--muted2);font-style:italic;font-size:11px;font-family:'JetBrains Mono',monospace;
+  display:flex;align-items:center;padding:10px 14px}
 
-/* LOADING / ERROR */
-.overlay{position:fixed;inset:0;background:rgba(10,12,16,.9);
+.c-banco{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;
+  font-family:'JetBrains Mono',monospace;font-weight:700;margin-right:4px}
+.b-CAIXA{background:rgba(251,191,36,.15);color:#fbbf24}
+.b-SICOOB{background:rgba(59,130,246,.15);color:#60a5fa}
+.c-emp{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace}
+.c-hist{font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;margin-top:2px}
+.c-nome{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;margin-top:2px}
+.c-val{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;margin-top:4px}
+.c-val.ext{color:#f87171}
+.c-val.pro{color:#60a5fa}
+.c-cat{font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.c-cli{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;margin-top:2px}
+.c-tag{font-size:9px;color:var(--muted2);font-family:'JetBrains Mono',monospace;margin-top:3px;font-style:italic}
+.c-pro-warn{font-size:10px;color:var(--warn);font-family:'JetBrains Mono',monospace;margin-top:3px}
+.c-susp-warn{font-size:10px;color:#f59e0b;font-family:'JetBrains Mono',monospace;margin-top:3px}
+.c-approx-warn{font-size:10px;color:#a78bfa;font-family:'JetBrains Mono',monospace;margin-top:3px}
+.c-dup-warn{font-size:10px;color:#f87171;font-family:'JetBrains Mono',monospace;margin-top:3px;font-weight:600}
+
+/* Banner sem mapeamento */
+.banner-sem-mapa{
+  margin:0 0 12px 0; border-radius:8px; border:1px solid rgba(251,191,36,.4);
+  background:rgba(251,191,36,.07); overflow:hidden;
+}
+.banner-header{
+  display:flex; align-items:center; gap:12px; padding:10px 14px;
+  font-size:.82rem; color:#fbbf24; flex-wrap:wrap;
+}
+.banner-header strong{ color:#fde68a; }
+.banner-total{ margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:.75rem; color:var(--muted); }
+.banner-toggle{
+  background:rgba(251,191,36,.15); border:1px solid rgba(251,191,36,.3);
+  color:#fbbf24; border-radius:4px; padding:2px 8px; font-size:.72rem; cursor:pointer;
+}
+.banner-body{ display:none; padding:0 14px 10px; }
+.banner-sem-mapa.expandido .banner-body{ display:block; }
+.banner-sem-mapa.expandido .banner-toggle{ transform:rotate(180deg); }
+.banner-linha{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:4px 0; border-bottom:1px solid rgba(251,191,36,.1); font-size:.76rem;
+}
+.banner-linha:last-child{ border-bottom:none; }
+.banner-cat{ color:#fde68a; font-family:'JetBrains Mono',monospace; }
+.banner-info{ color:var(--muted); }
+
+/* Dot indicador */
+.match-dot{width:8px;height:8px;border-radius:50%}
+.dot-ok{background:var(--accent);box-shadow:0 0 5px rgba(0,229,160,.5)}
+.dot-approx{background:#7c3aed;box-shadow:0 0 5px rgba(124,58,237,.4)}
+.dot-suspeito{background:#f59e0b;box-shadow:0 0 5px rgba(245,158,11,.5)}
+.dot-elim{background:var(--warn);box-shadow:0 0 5px rgba(245,158,11,.4)}
+.dot-none{background:var(--danger);box-shadow:0 0 5px rgba(239,68,68,.3)}
+.dot-proonly{background:#60a5fa;box-shadow:0 0 5px rgba(96,165,250,.3)}
+
+/* Loading */
+.loading-screen{position:fixed;inset:0;background:var(--bg);
   display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:16px}
 .spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);
   border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.overlay-txt{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted);text-align:center;max-width:480px;line-height:1.6}
-.overlay-txt b{color:var(--text)}
-.overlay-txt code{color:var(--accent);font-size:11px}
-.btn-reload{margin-top:8px;background:var(--accent);color:#0a0c10;border:none;
-  padding:9px 20px;border-radius:6px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer}
-
+.loading-screen span{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted)}
+.error-msg{color:var(--danger);font-family:'JetBrains Mono',monospace;font-size:12px;
+  background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:16px 20px;margin:24px}
 .state-box{padding:60px 24px;text-align:center;color:var(--muted)}
 .state-box p{font-size:14px;margin-top:12px}
-.state-box span{font-size:36px;display:block;opacity:.3}
-
-.pagination{display:flex;gap:6px;align-items:center;justify-content:flex-end;padding:14px 0 0;flex-wrap:wrap}
-.pagination button{background:var(--surface);border:1px solid var(--border);color:var(--muted);
-  padding:5px 11px;border-radius:5px;font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s}
-.pagination button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
-.pagination button.active{background:rgba(0,229,160,.1);border-color:var(--accent);color:var(--accent)}
-.pagination button:disabled{opacity:.3;cursor:default}
-.pi{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;padding:0 6px}
 </style>
 </head>
 <body>
 
-<!-- OVERLAY loading/erro -->
-<div class="overlay" id="overlay">
-  <div class="spinner" id="ov-spinner"></div>
-  <div class="overlay-txt" id="ov-txt">Conectando ao servidor de dados...</div>
+<div class="loading-screen" id="loading-screen">
+  <div class="spinner"></div>
+  <span>Carregando conciliação...</span>
 </div>
 
 <nav>
@@ -147,195 +214,175 @@ td{padding:9px 12px;vertical-align:middle}
 <div class="page-header">
   <div>
     <h1>Conciliação <span>Bancária vs Proesc</span></h1>
-    <p>Débitos operacionais do extrato × gastos registrados no Proesc</p>
+    <p>Conferência dia a dia — extrato bancário × contas pagas no Proesc</p>
   </div>
-  <div id="status-bar"><span class="dot"></span><span id="status-txt">Carregando...</span></div>
+  <div id="lastUpdate">—</div>
 </div>
 
 <div class="filters" id="filters" style="display:none">
-  <div class="fg">
-    <label>Mês</label>
-    <select id="sel-mes" onchange="update()"></select>
-  </div>
-  <div class="fg">
-    <label>Empresa</label>
-    <select id="sel-emp" onchange="update()">
+  <div class="fg"><label>Mês</label>
+    <select id="sel-mes" onchange="onFiltroChange()"></select></div>
+  <div class="fg"><label>Empresa</label>
+    <select id="sel-emp" onchange="onFiltroChange()">
       <option value="TODAS">Todas</option>
       <option value="MD">MD</option>
       <option value="SEL">SEL</option>
       <option value="SIGMA">SIGMA</option>
-    </select>
-  </div>
-  <div class="fg">
-    <label>Banco</label>
-    <select id="sel-banco" onchange="update()">
+    </select></div>
+  <div class="fg"><label>Banco</label>
+    <select id="sel-banco" onchange="onFiltroChange()">
       <option value="TODOS">Todos</option>
       <option value="CAIXA">Caixa</option>
       <option value="SICOOB">Sicoob</option>
-    </select>
+    </select></div>
+</div>
+
+<div id="aviso-campo" style="display:none" class="aviso-campo">
+  ⚠ O campo <code>_lancamentosProesc</code> ainda não existe no JSON. Rode o <b>gerarJSON()</b> após adicionar
+  o trecho no <code>Codigo.gs</code> (ver documentação). Enquanto isso, usando <code>gastosDetalhe</code> como fallback
+  — lançamentos sem mapeamento DRE aparecerão como pendentes.
+</div>
+
+<div class="kpi-strip" id="kpi-strip" style="display:none">
+  <div class="kpi-bloco">
+    <div class="kpi-bloco-title">📊 <b>Extrato Bancário</b> — Débitos Operacionais</div>
+    <div class="kpi-row">
+      <div><div class="kpi-num ext" id="k-ext-qtd">—</div><div class="kpi-label-sm">lançamentos</div></div>
+      <div style="text-align:right"><div class="kpi-val-sm" id="k-ext-val">—</div><div class="kpi-label-sm">total debitado</div></div>
+    </div>
   </div>
-  <div class="fg">
-    <label>Status</label>
-    <select id="sel-status" onchange="renderTabela()">
-      <option value="TODOS">Todos</option>
-      <option value="CONCILIADO">✅ Conciliados</option>
-      <option value="PENDENTE">⚠ Pendentes</option>
-    </select>
+  <div class="kpi-bloco">
+    <div class="kpi-bloco-title">🧾 <b class="pro-b">Proesc Pagas</b> — Gastos Registrados</div>
+    <div class="kpi-row">
+      <div><div class="kpi-num pro" id="k-pro-qtd">—</div><div class="kpi-label-sm">lançamentos</div></div>
+      <div style="text-align:right"><div class="kpi-val-sm" id="k-pro-val">—</div><div class="kpi-label-sm">total pago</div></div>
+    </div>
+    <div class="diff-row">
+      <span>Δ qtd: <span id="k-diff-qtd">—</span></span>
+      <span>Δ valor: <span id="k-diff-val">—</span></span>
+      <span id="k-concil-pct" style="margin-left:auto"></span>
+    </div>
   </div>
 </div>
 
-<div class="kpi-grid" id="kpis" style="display:none">
-  <div class="kpi-card">
-    <div class="kpi-lbl">Débitos Operacionais</div>
-    <div class="kpi-val kv-w" id="kpi-total">—</div>
-    <div class="kpi-sub" id="kpi-total-v">—</div>
-  </div>
-  <div class="kpi-card ac">
-    <div class="kpi-lbl">Conciliados</div>
-    <div class="kpi-val kv-g" id="kpi-conc">—</div>
-    <div class="kpi-sub" id="kpi-conc-v">—</div>
-  </div>
-  <div class="kpi-card wn">
-    <div class="kpi-lbl">Pendentes</div>
-    <div class="kpi-val kv-a" id="kpi-pend">—</div>
-    <div class="kpi-sub" id="kpi-pend-v">—</div>
-  </div>
-  <div class="kpi-card" id="pct-card">
-    <div class="kpi-lbl">% Conciliação</div>
-    <div class="kpi-val" id="kpi-pct">—</div>
-    <div class="kpi-sub">por quantidade</div>
-  </div>
-</div>
+<div id="banner-sem-mapa" class="banner-sem-mapa" style="display:none"></div>
 
 <div class="bar-wrap" id="bar-wrap" style="display:none">
-  <div class="bar-lbl"><span>Progresso de conciliação</span><span id="bar-pct-lbl">—</span></div>
+  <div class="bar-lbl">
+    <span>Progresso de conciliação (lançamentos do extrato)</span>
+    <span id="bar-pct-lbl">—</span>
+  </div>
   <div class="bar-track"><div class="bar-fill" id="bar-fill" style="width:0%"></div></div>
 </div>
 
-<div class="info-bar" id="info-bar" style="display:none">
-  <span>Critério 1: <b>Valor + Data</b></span>
-  <span>Critério 2: <b>Valor + Nome</b> (fallback)</span>
-  <span>Extrato op.: <b id="i-ext">—</b></span>
-  <span>Proesc gastos: <b id="i-pro">—</b></span>
+<div class="controls" id="controls" style="display:none">
+  <div class="status-filter">
+    <button class="btn-sm active" id="btn-todos"     onclick="setFiltroStatus('TODOS')">Todos os dias</button>
+    <button class="btn-sm"        id="btn-pendentes" onclick="setFiltroStatus('PENDENTES')">⚠ Com pendências</button>
+    <button class="btn-sm"        id="btn-sempar"    onclick="toggleFiltroLinha()">🔴 Sem par no Proesc</button>
+    <button class="btn-sm"        id="btn-dup"       onclick="toggleFiltroDup()">⚠ Duplicatas Proesc</button>
+    <button class="btn-sm"        id="btn-ok"        onclick="setFiltroStatus('OK')">✅ 100% OK</button>
+  </div>
+  <button class="btn-sm" onclick="expandirTudo()">Expandir tudo</button>
+  <button class="btn-sm" onclick="recolherTudo()">Recolher tudo</button>
+  <input class="search-box" id="search" placeholder="Buscar data, hist., nome..." oninput="renderDias()">
+  <button class="btn-sm" onclick="exportarExcel()">⬇ Excel</button>
 </div>
 
-<div class="table-wrap">
-  <div class="state-box" id="state-empty" style="display:none">
-    <span>🔍</span><p>Nenhum registro com esses filtros.</p>
-  </div>
-  <div id="tbl-container" style="display:none">
-    <div class="tbl-header">
-      <h2>Débitos Operacionais do Extrato</h2>
-      <div class="tbl-right">
-        <input class="search-box" id="search" placeholder="Buscar histórico, nome..." oninput="renderTabela()">
-        <button class="btn-sec" onclick="exportarExcel()">⬇ Excel</button>
-      </div>
-    </div>
-    <table>
-      <thead>
-        <tr>
-          <th onclick="sortBy('data')" id="th-data">Data <span id="si-data"></span></th>
-          <th onclick="sortBy('empresa')" id="th-empresa">Empresa</th>
-          <th onclick="sortBy('banco')" id="th-banco">Banco</th>
-          <th onclick="sortBy('historico')" id="th-historico">Histórico</th>
-          <th onclick="sortBy('nomeRS')" id="th-nomeRS">Nome / Razão Social</th>
-          <th onclick="sortBy('valor')" id="th-valor">Valor <span id="si-valor"></span></th>
-          <th>Status</th>
-          <th>Match Proesc</th>
-        </tr>
-      </thead>
-      <tbody id="tbody"></tbody>
-    </table>
-    <div class="pagination" id="paginacao"></div>
-  </div>
+<div class="dias-wrap" id="dias-wrap" style="display:none">
+  <div class="state-box" id="state-empty" style="display:none"><p>Nenhum dia com esses filtros.</p></div>
+  <div id="dias-container"></div>
 </div>
 
 <script>
 const DRIVE_FILE_ID = '1uHgfvF8CU2qJSbYjv_MtmgRxJFJzJR-Z';
-const PAGE = 50;
-let DATA = null, resultado = [], sortCol = 'data', sortDir = 1, pg = 1;
+const DRIVE_DIRECT  = `https://drive.google.com/uc?export=download&id=${DRIVE_FILE_ID}`;
+const PROXIES = [
+  `https://api.allorigins.win/raw?url=${encodeURIComponent(DRIVE_DIRECT)}`,
+  `https://corsproxy.io/?${encodeURIComponent(DRIVE_DIRECT)}`,
+  `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(DRIVE_DIRECT)}`
+];
 
-// ── LOAD JSON ─────────────────────────────────────────────────────────────────
-async function loadJSON() {
-  const _ts = Date.now();
-  const base = `https://drive.google.com/uc?export=download&id=${DRIVE_FILE_ID}&_=${_ts}`;
-  const proxies = [
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(base)}`,
-    `https://corsproxy.io/?${encodeURIComponent(base)}`,
-    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(base)}`
-  ];
-  const timeout = ms => new Promise((_,rej) => setTimeout(() => rej(new Error('timeout '+ ms + 'ms')), ms));
+let DATA = null, diasConciliados = [], filtroStatus = 'TODOS', filtroLinha = 'TODOS', filtroLinhaDup = false;
 
-  // tenta sequencialmente com feedback de progresso
-  const erros = [];
-  for (const [i, url] of proxies.entries()) {
-    try {
-      setOverlayTxt(`Tentando proxy ${i+1}/3...`);
-      const resp = await Promise.race([fetch(url), timeout(10000)]);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const json = await resp.json();
-      // validação mínima
-      if (!json.mesesDisponiveis || !json._lancamentosCaixa) throw new Error('JSON inválido ou incompleto');
-      return json;
-    } catch(e) {
-      erros.push(`Proxy ${i+1}: ${e.message}`);
-    }
-  }
-  throw new Error('Todos os proxies falharam:\n' + erros.join('\n'));
-}
-
-function setOverlayTxt(msg) {
-  document.getElementById('ov-txt').textContent = msg;
-}
-
-async function init() {
+// ── FETCH ─────────────────────────────────────────────────────────────────────
+async function fetchWithTimeout(url, ms = 8000) {
+  const ctrl = new AbortController();
+  const tid  = setTimeout(() => ctrl.abort(), ms);
   try {
-    DATA = await loadJSON();
-
-    // SUCESSO — esconde overlay
-    document.getElementById('overlay').style.display = 'none';
-
-    const dt = DATA.geradoEm ? new Date(DATA.geradoEm).toLocaleString('pt-BR') : '—';
-    document.getElementById('status-txt').textContent = `Atualizado em ${dt}`;
-
-    // popula meses
-    const meses = DATA.mesesDisponiveis || [];
-    const selMes = document.getElementById('sel-mes');
-    selMes.innerHTML = meses.map(m => `<option value="${m}">${fmtMes(m)}</option>`).join('');
-    // seleciona último mês com dados no Proesc (máximo com gastosDetalhe)
-    const gd = DATA.gastosDetalhe || {};
-    const mesComDados = [...meses].reverse().find(m => gd[m] && Object.keys(gd[m]).length > 0) || meses[meses.length - 1];
-    if (mesComDados) selMes.value = mesComDados;
-
-    ['filters','kpis','bar-wrap','info-bar'].forEach(id => document.getElementById(id).style.display = '');
-    document.getElementById('tbl-container').style.display = '';
-
-    update();
+    const r = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(tid); if (!r.ok) throw new Error(r.status);
+    return await r.json();
+  } catch(e) { clearTimeout(tid); throw e; }
+}
+async function loadData() {
+  try {
+    DATA = await Promise.any(PROXIES.map(u => fetchWithTimeout(u)));
+    init();
   } catch(e) {
-    // ERRO — mostra mensagem clara
-    document.getElementById('ov-spinner').style.display = 'none';
-    const isLocalFile = location.protocol === 'file:';
-    document.getElementById('ov-txt').innerHTML = `
-      <b style="color:#ef4444;font-size:14px">Não foi possível carregar os dados</b><br><br>
-      ${isLocalFile
-        ? `<b>⚠ Você está abrindo o arquivo localmente (file:///).</b><br>
-           Os proxies CORS não funcionam em arquivos locais.<br><br>
-           <b>Solução:</b> acesse pelo GitHub Pages:<br>
-           <code>https://financeiroeinstein.github.io/bi-einstein/conciliacao.html</code>`
-        : `Erro ao conectar aos proxies CORS.<br>
-           <small style="color:#64748b">${e.message.replace(/\n/g,'<br>')}</small>`
-      }
-      <br><br>
-      <button class="btn-reload" onclick="location.reload()">↺ Tentar novamente</button>
-    `;
+    document.getElementById('loading-screen').style.display = 'none';
+    document.getElementById('dias-wrap').style.display = '';
+    document.getElementById('dias-container').innerHTML =
+      `<div class="error-msg">Erro ao carregar JSON: ${e.message}</div>`;
   }
 }
 
-// ── CONCILIAÇÃO ───────────────────────────────────────────────────────────────
-function conciliar(mes, empresa, banco) {
-  if (!DATA) return [];
+// ── INIT ──────────────────────────────────────────────────────────────────────
+function init() {
+  document.getElementById('loading-screen').style.display = 'none';
+  const dt = new Date(DATA.geradoEm);
+  document.getElementById('lastUpdate').textContent =
+    'Atualizado em ' + dt.toLocaleDateString('pt-BR') +
+    ' às ' + dt.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
 
-  // Extrato — operacional, valor negativo (débito)
+  const meses = DATA.mesesDisponiveis || [];
+  const selMes = document.getElementById('sel-mes');
+  selMes.innerHTML = meses.map(m => `<option value="${m}">${formatMes(m)}</option>`).join('');
+
+  // Detectar se _lancamentosProesc existe
+  if (!DATA._lancamentosProesc) {
+    document.getElementById('aviso-campo').style.display = '';
+  }
+
+  // Selecionar mês com dados no Proesc
+  const proescSrc = getProescSource();
+  const mesesComDados = meses.filter(m => proescSrc.some(p => (p.anoMes||p.data||'').substring(0,7) === m));
+  const mesAlvo = [...mesesComDados].pop() || meses[meses.length-1];
+  if (mesAlvo) selMes.value = mesAlvo;
+
+  ['filters','kpi-strip','bar-wrap','controls','dias-wrap'].forEach(id =>
+    document.getElementById(id).style.display = '');
+  onFiltroChange();
+}
+
+// ── FONTE DO PROESC ───────────────────────────────────────────────────────────
+// Usa _lancamentosProesc se disponível; fallback para gastosDetalhe
+function getProescSource() {
+  if (DATA._lancamentosProesc) return DATA._lancamentosProesc;
+
+  // Fallback: achatar gastosDetalhe
+  const gd = DATA.gastosDetalhe || {};
+  const flat = [];
+  for (const mes in gd)
+    for (const emp in gd[mes])
+      for (const p of (gd[mes][emp] || []))
+        flat.push({ ...p, anoMes: mes });
+  return flat;
+}
+
+function getProescDo(mes, empresa) {
+  const src = getProescSource();
+  return src.filter(p => {
+    const pMes = (p.anoMes || (p.data||p.dataCaixa||'').substring(0,7));
+    if (pMes !== mes) return false;
+    if (empresa !== 'TODAS' && p.empresa !== empresa) return false;
+    return true;
+  });
+}
+
+// ── ALGORITMO ─────────────────────────────────────────────────────────────────
+function conciliar(mes, empresa, banco) {
+  // Extrato
   const extrato = (DATA._lancamentosCaixa || []).filter(l => {
     if (!l.data || l.data.substring(0,7) !== mes) return false;
     if (l.tipo !== 'Operacional') return false;
@@ -345,235 +392,524 @@ function conciliar(mes, empresa, banco) {
     return true;
   });
 
-  // Proesc — gastosDetalhe do mês/empresa
-  const gd = DATA.gastosDetalhe || {};
-  let proesc = [];
-  if (gd[mes]) {
-    const emps = empresa === 'TODAS' ? Object.keys(gd[mes]) : (gd[mes][empresa] ? [empresa] : []);
-    for (const e of emps) if (gd[mes][e]) proesc.push(...gd[mes][e]);
+  // Proesc: mês atual + adjacentes para ±1d
+  const [ano, mesN] = mes.split('-').map(Number);
+  const mesAnt = mesN===1  ? `${ano-1}-12` : `${ano}-${String(mesN-1).padStart(2,'0')}`;
+  const mesPos = mesN===12 ? `${ano+1}-01` : `${ano}-${String(mesN+1).padStart(2,'0')}`;
+
+  const src = getProescSource();
+  const proescAdj = src.filter(p => {
+    const pMes = (p.anoMes || (p.data||p.dataCaixa||'').substring(0,7));
+    if (![mesAnt, mes, mesPos].includes(pMes)) return false;
+    if (empresa !== 'TODAS' && p.empresa !== empresa) return false;
+    return true;
+  }).map(p => ({
+    ...p,
+    _vAbs: Math.abs(parseFloat(p.valor || p.valorBase || p.valorOriginal || 0)),
+    _dia:  (p.data || p.dataCaixa || '').substring(0,10),
+    _used: false,
+  }));
+
+  // Detectar duplicatas no Proesc: mesma empresa+categoria+cliente+valor no mesmo mês
+  const _dupCount = {};
+  for (const p of proescAdj) {
+    const k = `${p.empresa}|${(p.categoria||'').trim().toUpperCase()}|${(p.cliente||'').trim().toUpperCase()}|${Math.round(p._vAbs*100)}|${(p._dia||'').substring(0,7)}`;
+    _dupCount[k] = (_dupCount[k]||0) + 1;
+  }
+  for (const p of proescAdj) {
+    const k = `${p.empresa}|${(p.categoria||'').trim().toUpperCase()}|${(p.cliente||'').trim().toUpperCase()}|${Math.round(p._vAbs*100)}|${(p._dia||'').substring(0,7)}`;
+    p._dupProesc = _dupCount[k] > 1;
   }
 
-  // Mapa 1: valor + data (exato)
-  const mapVD = {};
-  // Mapa 2: valor + cliente (fallback PIX)
-  const mapVC = {};
-  for (const p of proesc) {
-    const v = Math.abs(parseFloat(p.valor || p.valorBase || p.valorOriginal || 0)).toFixed(2);
-    const d = (p.dataCaixa || p.data || '').substring(0, 10);
-    const c = String(p.cliente || '').trim().toUpperCase();
-    if (d) (mapVD[`${v}|${d}`] = mapVD[`${v}|${d}`] || []).push(p);
-    if (c) (mapVC[`${v}|${c}`] = mapVC[`${v}|${c}`] || []).push(p);
+  // Proesc só do mês (para KPI)
+  const proescMes = proescAdj.filter(p =>
+    (p.anoMes || p._dia.substring(0,7)) === mes);
+
+  // Agrupar extrato por dia
+  const extByDay = {};
+  for (const l of extrato) {
+    const d = (l.data||'').substring(0,10);
+    (extByDay[d] = extByDay[d]||[]).push({ ...l, _vAbs:Math.abs(parseFloat(l.valor)), _matched:false, _matchRef:null, _chave:null });
   }
 
-  const consVD = {}, consVC = {};
-  return extrato.map(l => {
-    const v = Math.abs(parseFloat(l.valor)).toFixed(2);
-    const d = (l.data || '').substring(0, 10);
-    const nome = String(l.nomeRS || '').trim().toUpperCase();
+  // Agrupar Proesc por dia
+  const proByDay = {};
+  for (const p of proescAdj) {
+    if (!p._dia) continue;
+    (proByDay[p._dia] = proByDay[p._dia]||[]).push(p);
+  }
 
-    // Tentativa 1: valor + data
-    const kVD = `${v}|${d}`;
-    consVD[kVD] = (consVD[kVD] || 0) + 1;
-    const poolVD = mapVD[kVD] || [];
-    if (consVD[kVD] <= poolVD.length)
-      return { ...l, _st:'CONCILIADO', _match:poolVD[consVD[kVD]-1], _chave:'valor+data' };
-
-    // Tentativa 2: valor + nome
-    if (nome) {
-      const kVC = `${v}|${nome}`;
-      consVC[kVC] = (consVC[kVC] || 0) + 1;
-      const poolVC = mapVC[kVC] || [];
-      if (consVC[kVC] <= poolVC.length)
-        return { ...l, _st:'CONCILIADO', _match:poolVC[consVC[kVC]-1], _chave:'valor+nome' };
+  // ── Helpers de similaridade ──────────────────────────────────────────────
+  // Palavras muito comuns em nomes brasileiros que não devem contar como match
+  const NOME_STOPWORDS = new Set([
+    'DOS','DAS','DES','DEL','VON','VAN','LTDA','EIRELI','SILVA','SANTOS','SOUZA',
+    'LIMA','COSTA','FERREIRA','OLIVEIRA','PEREIRA','ALVES','NASCIMENTO','RODRIGUES',
+    'CARVALHO','GOMES','MARTINS','ARAUJO','MOREIRA','NUNES','SOUSA','JUNIOR','FILHO',
+    'NETO','FILHA','PAULO','MARIA','JOSE','JOAO','JOAO','PEDRO','FRANCISCO',
+    'ANTONIO','CARLOS','LUIS','LUIZ','MARCOS','RAFAEL','DANIEL','GABRIEL','LUCAS',
+    'SERGIO','PATRICIA','ROSA','BRAGA','MELO','BARBOSA','PINTO','RIBEIRO','MENDES'
+  ]);
+  function palavrasSignificativas(s) {
+    return (s||'').toUpperCase().split(/[\s\/\-\.]+/)
+      .filter(w => w.length > 3 && !NOME_STOPWORDS.has(w));
+  }
+  function simNome(nomeExt, nomePro) {
+    const we = palavrasSignificativas(nomeExt);
+    const wp = palavrasSignificativas(nomePro);
+    if (!we.length || !wp.length) return 50; // sem palavras significativas → neutro
+    const hits = we.filter(w => wp.some(p => p.includes(w) || w.includes(p)));
+    return Math.round(hits.length / Math.max(we.length, 1) * 100);
+  }
+  function melhorCandidato(e, lista) {
+    // Dentre candidatos de valor igual, escolhe o com maior sim de nome
+    // Retorna { idx, sim }
+    let best = -1, bestSim = -1;
+    for (let i = 0; i < lista.length; i++) {
+      const p = lista[i];
+      if (p._used) continue;
+      if (Math.abs(p._vAbs - e._vAbs) >= 0.02) continue;
+      const sim = simNome(e.nomeRS, p.cliente || p.nomeRS || '');
+      if (sim > bestSim || (sim === bestSim && best < 0)) { best = i; bestSim = sim; }
     }
-    return { ...l, _st:'PENDENTE', _match:null, _chave:null };
-  });
+    return best >= 0 ? { idx: best, sim: bestSim } : null;
+  }
+
+  // ── Match dentro de um dia ────────────────────────────────────────────────
+  function matchDia(exts, pros) {
+    const E = exts.map(e => ({...e}));
+    // Preserva _used existente (não resetar — itens de ±Nd de outros dias)
+    const P = pros.map(p => ({...p}));
+
+    const mesmaqtd = E.length === P.length;
+
+    // Passada 1: valor exato + melhor nome — mesma empresa
+    for (const e of E) {
+      if (e._matched) continue;
+      const cands = P.filter(p => !p._used && p.empresa === e.empresa && Math.abs(p._vAbs - e._vAbs) < 0.02);
+      if (!cands.length) continue;
+      // Escolhe maior similaridade de nome
+      const best = cands.reduce((a,b) => simNome(e.nomeRS, b.cliente||b.nomeRS||'') > simNome(e.nomeRS, a.cliente||a.nomeRS||'') ? b : a);
+      const sim = simNome(e.nomeRS, best.cliente||best.nomeRS||'');
+      // Se qtd igual: match obrigatório; se qtd diferente: só se sim >= 0 (sempre casa por valor quando empresa=mesma)
+      e._matched = true; e._matchRef = best; best._used = true;
+      e._chave = 'valor'; e._sim = sim;
+    }
+
+    // Passada 2: valor exato — qualquer empresa + melhor nome
+    for (const e of E) {
+      if (e._matched) continue;
+      const cands = P.filter(p => !p._used && Math.abs(p._vAbs - e._vAbs) < 0.02);
+      if (!cands.length) continue;
+      const best = cands.reduce((a,b) => simNome(e.nomeRS, b.cliente||b.nomeRS||'') > simNome(e.nomeRS, a.cliente||a.nomeRS||'') ? b : a);
+      const sim = simNome(e.nomeRS, best.cliente||best.nomeRS||'');
+      e._matched = true; e._matchRef = best; best._used = true;
+      e._chave = 'valor'; e._sim = sim;
+    }
+
+    // Passada 3: eliminação (1 de cada lado) — valor próximo (<15%) OU nome genuinamente similar
+    const eS = E.filter(e=>!e._matched), pS = P.filter(p=>!p._used);
+    if (eS.length === 1 && pS.length === 1) {
+      const valorProximo = Math.abs(eS[0]._vAbs - pS[0]._vAbs) / Math.max(eS[0]._vAbs, pS[0]._vAbs, 0.01) < 0.15;
+      const nomeExt = (eS[0].nomeRS||'').trim();
+      const nomePro = (pS[0].cliente||pS[0].nomeRS||'').trim();
+      // sim só conta se AMBOS têm nome (evita neutro=50 de um lado vazio casar tudo)
+      const sim = (nomeExt && nomePro) ? simNome(nomeExt, nomePro) : 0;
+      const nomeSimilar = sim >= 30;
+      if (valorProximo || nomeSimilar) {
+        eS[0]._matched = true; eS[0]._matchRef = pS[0]; pS[0]._used = true;
+        eS[0]._chave = 'elim'; eS[0]._sim = sim;
+      }
+    }
+
+    return { E, P };
+  }
+
+  // Dias a processar
+  const todosDias = new Set([
+    ...Object.keys(extByDay),
+    ...Object.keys(proByDay).filter(d => d.substring(0,7) === mes),
+  ]);
+  const resultado = [];
+
+  for (const dia of [...todosDias].sort()) {
+    const extsRaw = (extByDay[dia]||[]);
+    // Excluir do Proesc do dia itens já consumidos por ±Nd de outros dias
+    const prosRaw = (proByDay[dia]||[]).filter(p => !p._used);
+    if (!extsRaw.length && !prosRaw.length) continue;
+
+    const { E, P } = matchDia(extsRaw, prosRaw);
+    const proFromAdj = [];
+
+    // ±Nd: SOMENTE se o valor não existe no extrato do mesmo dia como não-matched
+    // (Se o valor existe no extrato mas não casou = o extrato já foi consumido por outro → buscar em dia adjacente)
+    for (const e of E.filter(e=>!e._matched)) {
+      // Existe algum P no mesmo dia com esse valor que ainda não foi usado?
+      // Se sim: o valor estava disponível no dia mas nomes divergiram completamente → pendente real, não ir para ±Nd
+      const temProescDisponivel = P.some(p => !p._used && Math.abs(p._vAbs - e._vAbs) < 0.02);
+      if (temProescDisponivel) continue; // ainda há candidato no dia → não usa ±Nd
+
+      for (const delta of [-1,1,-2,2,-3,3]) {
+        const dAdj = dateAddDays(dia, delta);
+        const prosAdj = (proByDay[dAdj]||[]).filter(p=>!p._used);
+        if (!prosAdj.length) continue;
+
+        const cands = prosAdj.filter(p => Math.abs(p._vAbs - e._vAbs) < 0.02 && p.empresa === e.empresa);
+        const candsAny = prosAdj.filter(p => Math.abs(p._vAbs - e._vAbs) < 0.02);
+        const pool = cands.length ? cands : candsAny;
+        if (!pool.length) continue;
+
+        // Lookahead: não consumir Proesc de dia futuro se existe extrato aguardando no mesmo dia do Proesc
+        const poolFiltrado = pool.filter(p => {
+          const diaPro = p._dia;
+          if (diaPro <= dia) return true; // dia anterior ou mesmo → ok consumir
+          // Dia futuro: verificar se há extrato com mesmo valor+empresa no dia do Proesc
+          const extsNoDiaPro = (extByDay[diaPro]||[]).filter(x =>
+            Math.abs(x._vAbs - p._vAbs) < 0.02 && x.empresa === p.empresa
+          );
+          return extsNoDiaPro.length === 0; // só usa se não há extrato esperando lá
+        });
+        if (!poolFiltrado.length) continue;
+
+        const best = poolFiltrado.reduce((a,b) =>
+          simNome(e.nomeRS, b.cliente||b.nomeRS||'') > simNome(e.nomeRS, a.cliente||a.nomeRS||'') ? b : a
+        );
+        const sim = simNome(e.nomeRS, best.cliente||best.nomeRS||'');
+
+        e._matched = true; e._matchRef = best;
+        e._chave = `±${Math.abs(delta)}d(${dAdj})`; e._sim = sim;
+        best._used = true; proFromAdj.push(best); break;
+      }
+    }
+
+    // Segunda rodada de eliminação após ±Nd
+    const eS2 = E.filter(e=>!e._matched);
+    const pS2 = P.filter(p=>!p._used);
+    if (eS2.length===1 && pS2.length===1) {
+      const valorProximo2 = Math.abs(eS2[0]._vAbs - pS2[0]._vAbs) / Math.max(eS2[0]._vAbs, pS2[0]._vAbs, 0.01) < 0.15;
+      const ne2 = (eS2[0].nomeRS||'').trim();
+      const np2 = (pS2[0].cliente||pS2[0].nomeRS||'').trim();
+      const sim2 = (ne2 && np2) ? simNome(ne2, np2) : 0;
+      if (valorProximo2 || sim2 >= 30) {
+        eS2[0]._matched=true; eS2[0]._matchRef=pS2[0]; eS2[0]._chave='elim'; eS2[0]._sim=sim2;
+        pS2[0]._used=true;
+      }
+    }
+
+    // Montar pares para render
+    // Pré-computar ambiguidade por empresa+valor (duplicata dentro da mesma empresa)
+    const valoresAmbiguos = new Set();
+    const contExt = {}, contPro = {};
+    for (const e of extsRaw) {
+      const k = `${e.empresa}|${Math.round(e._vAbs*100)}`;
+      contExt[k] = (contExt[k]||0)+1;
+    }
+    for (const p of prosRaw) {
+      const k = `${p.empresa}|${Math.round(p._vAbs*100)}`;
+      contPro[k] = (contPro[k]||0)+1;
+    }
+    for (const k in contExt) { if (contExt[k]>1 || (contPro[k]||0)>1) valoresAmbiguos.add(k); }
+    for (const k in contPro) { if (contPro[k]>1 || (contExt[k]||0)>1) valoresAmbiguos.add(k); }
+
+    const pares = [];
+    for (const e of E) {
+      let st;
+      if (!e._matched) {
+        st = 'none';
+      } else if (e._chave === 'valor') {
+        // Se o valor tinha duplicatas na mesma empresa → SEMPRE suspeito
+        const ambKey = `${e.empresa}|${Math.round(e._vAbs*100)}`;
+        st = valoresAmbiguos.has(ambKey) ? 'suspeito' : 'ok';
+      } else if (e._chave === 'elim') {
+        st = 'elim';
+      } else {
+        st = 'approx';
+      }
+      pares.push({ ext:e, pro:e._matchRef||null, st, sim:e._sim||0 });
+    }
+    for (const p of P.filter(p=>!p._used)) {
+      pares.push({ ext:null, pro:p, st:'pro-only' });
+    }
+    pares.sort((a,b) => {
+      const o = {ok:0,suspeito:1,approx:2,elim:2,none:4,'pro-only':3};
+      return (o[a.st]||9)-(o[b.st]||9);
+    });
+
+    const pendExt  = E.filter(e=>!e._matched).length;
+    const pendPro  = P.filter(p=>!p._used).length;
+    const pendApprox = E.filter(e => e._matched && (e._chave||'').includes('±')).length;
+    const pendSusp = E.filter(e =>
+      e._matched && e._chave === 'valor' &&
+      valoresAmbiguos.has(`${e.empresa}|${Math.round(e._vAbs*100)}`)
+    ).length;
+    const nConc    = E.filter(e=>e._matched).length;
+    const valExt   = extsRaw.reduce((s,e)=>s+e._vAbs,0);
+    const valPro   = prosRaw.reduce((s,p)=>s+p._vAbs,0);
+
+    resultado.push({ dia, pares,
+      nExt:extsRaw.length, nPro:prosRaw.length+proFromAdj.length,
+      valExt, valPro, pendExt, pendPro, pendApprox, pendSusp, nConc });
+  }
+
+  return { dias:resultado, extrato, proescMes };
 }
 
-// ── UPDATE ────────────────────────────────────────────────────────────────────
-function update() {
+// ── HANDLERS ──────────────────────────────────────────────────────────────────
+function onFiltroChange() {
   const mes   = document.getElementById('sel-mes').value;
   const emp   = document.getElementById('sel-emp').value;
   const banco = document.getElementById('sel-banco').value;
-  if (!mes || !DATA) return;
+  if (!mes||!DATA) return;
 
-  resultado = conciliar(mes, emp, banco);
+  const { dias, extrato, proescMes } = conciliar(mes, emp, banco);
+  diasConciliados = dias;
 
-  // contagem Proesc para info-bar
-  const gd = DATA.gastosDetalhe || {};
-  let nPro = 0;
-  if (gd[mes]) {
-    const emps = emp === 'TODAS' ? Object.keys(gd[mes]) : (gd[mes][emp] ? [emp] : []);
-    for (const e of emps) nPro += (gd[mes][e] || []).length;
+  // KPIs
+  const eQtd = extrato.length, eVal = extrato.reduce((s,l)=>s+Math.abs(parseFloat(l.valor)),0);
+  const pQtd = proescMes.length, pVal = proescMes.reduce((s,p)=>s+Math.abs(parseFloat(p.valor||p.valorBase||p.valorOriginal||0)),0);
+  document.getElementById('k-ext-qtd').textContent = eQtd;
+  document.getElementById('k-ext-val').textContent  = fmtBRL(eVal);
+  document.getElementById('k-pro-qtd').textContent  = pQtd;
+  document.getElementById('k-pro-val').textContent  = fmtBRL(pVal);
+
+  const dQ = eQtd - pQtd, dV = eVal - pVal;
+  const dQEl = document.getElementById('k-diff-qtd');
+  dQEl.textContent = (dQ===0?'=':dQ>0?'+':'')+dQ;
+  dQEl.className = dQ===0?'diff-ok':'diff-warn';
+  const dVEl = document.getElementById('k-diff-val');
+  dVEl.textContent = (dV>=0?'+':'')+fmtBRL(dV);
+  dVEl.className = Math.abs(dV)<1?'diff-ok':'diff-warn';
+
+  const totConc = dias.reduce((s,d)=>s+d.nConc,0);
+  const pct = eQtd>0?(totConc/eQtd*100).toFixed(1):'0.0';
+  document.getElementById('bar-fill').style.width = pct+'%';
+  document.getElementById('bar-pct-lbl').textContent = `${totConc}/${eQtd} conciliados (${pct}%)`;
+  document.getElementById('k-concil-pct').innerHTML = `<span class="${parseFloat(pct)>=95?'diff-ok':parseFloat(pct)>=80?'diff-warn':'diff-danger'}">${pct}% conciliado</span>`;
+
+  // ── Detectar lançamentos Proesc sem mapeamento no Mapa_DRE ──────────────
+  const empFiltro = emp === 'TODAS' ? null : emp;
+  const empresasList = empFiltro ? [empFiltro] : ['MD','SEL','SIGMA'];
+
+  // Categorias+empresa que existem em gastosDetalhe do mês (têm mapeamento)
+  const categoriasComMapa = new Set();
+  for (const empK of empresasList) {
+    const arr = DATA?.gastosDetalhe?.[mes]?.[empK] || [];
+    for (const item of arr) {
+      const cat = (item.categoriaProesc || item.categoria || '').trim().toUpperCase();
+      if (cat) categoriasComMapa.add(`${empK}|${cat}`);
+    }
   }
-  document.getElementById('i-ext').textContent = resultado.length;
-  document.getElementById('i-pro').textContent = nPro;
 
-  pg = 1;
-  atualizarKPIs();
-  renderTabela();
-}
-
-// ── KPIs ──────────────────────────────────────────────────────────────────────
-function atualizarKPIs() {
-  const tot  = resultado.length;
-  const conc = resultado.filter(r => r._st === 'CONCILIADO').length;
-  const pend = tot - conc;
-  const pct  = tot > 0 ? (conc / tot * 100).toFixed(1) : '0.0';
-  const totV  = resultado.reduce((s,r) => s + Math.abs(parseFloat(r.valor)), 0);
-  const concV = resultado.filter(r => r._st === 'CONCILIADO').reduce((s,r) => s + Math.abs(parseFloat(r.valor)), 0);
-
-  document.getElementById('kpi-total').textContent = tot;
-  document.getElementById('kpi-total-v').textContent = fmtBRL(totV);
-  document.getElementById('kpi-conc').textContent = conc;
-  document.getElementById('kpi-conc-v').textContent = fmtBRL(concV);
-  document.getElementById('kpi-pend').textContent = pend;
-  document.getElementById('kpi-pend-v').textContent = fmtBRL(totV - concV);
-
-  const pctN = parseFloat(pct);
-  const el = document.getElementById('kpi-pct');
-  el.textContent = pct + '%';
-  el.className = 'kpi-val ' + (pctN >= 95 ? 'kv-g' : pctN >= 80 ? 'kv-a' : 'kv-r');
-  document.getElementById('pct-card').className = 'kpi-card ' + (pctN >= 95 ? 'ac' : pctN >= 80 ? 'wn' : 'dn');
-  document.getElementById('bar-fill').style.width = pct + '%';
-  document.getElementById('bar-pct-lbl').textContent = pct + '%';
-}
-
-// ── TABELA ────────────────────────────────────────────────────────────────────
-function renderTabela() {
-  atualizarKPIs();
-  const status = document.getElementById('sel-status').value;
-  const busca  = (document.getElementById('search').value || '').toLowerCase();
-
-  let d = resultado.slice();
-  if (status !== 'TODOS') d = d.filter(r => r._st === status);
-  if (busca) d = d.filter(r =>
-    (r.historico || '').toLowerCase().includes(busca) ||
-    (r.nomeRS    || '').toLowerCase().includes(busca) ||
-    (r.documento || '').toLowerCase().includes(busca)
-  );
-
-  d.sort((a,b) => {
-    let va = a[sortCol] ?? '', vb = b[sortCol] ?? '';
-    if (sortCol === 'valor') { va = Math.abs(parseFloat(va)); vb = Math.abs(parseFloat(vb)); }
-    return va < vb ? -sortDir : va > vb ? sortDir : 0;
+  // Lançamentos Proesc do mês sem mapeamento
+  const proescMesAll = (DATA._lancamentosProesc || []).filter(p => {
+    const pMes = (p.anoMes || (p.data||'').substring(0,7));
+    if (pMes !== mes) return false;
+    if (empFiltro && p.empresa !== empFiltro) return false;
+    return true;
   });
 
-  const tot = d.length, pages = Math.max(1, Math.ceil(tot / PAGE));
-  if (pg > pages) pg = pages;
-  const page = d.slice((pg-1)*PAGE, pg*PAGE);
+  const semMapa = proescMesAll.filter(p => {
+    const chave = `${p.empresa}|${(p.categoria||'').trim().toUpperCase()}`;
+    return !categoriasComMapa.has(chave);
+  });
 
-  document.getElementById('state-empty').style.display = page.length ? 'none' : '';
-  document.getElementById('tbody').innerHTML = page.map(l => {
-    const ok = l._st === 'CONCILIADO';
-    const badge = ok
-      ? `<span class="badge ok">✅ Conciliado</span>`
-      : `<span class="badge pend">⚠ Pendente</span>`;
-    const viaLabel = ok && l._chave === 'valor+nome'
-      ? `<div class="via-nome">via nome</div>` : '';
+  const bannerEl = document.getElementById('banner-sem-mapa');
+  if (semMapa.length > 0) {
+    const totalVal = semMapa.reduce((s,p)=>s+Math.abs(p.valor||0),0);
+    // Agrupar por categoria para exibir resumo
+    const porCategoria = {};
+    semMapa.forEach(p => {
+      const cat = `${p.empresa} · ${p.categoria||'—'}`;
+      if (!porCategoria[cat]) porCategoria[cat] = { qtd:0, val:0 };
+      porCategoria[cat].qtd++;
+      porCategoria[cat].val += Math.abs(p.valor||0);
+    });
+    const linhas = Object.entries(porCategoria)
+      .sort((a,b) => b[1].val - a[1].val)
+      .map(([cat,v]) => `<div class="banner-linha"><span class="banner-cat">${cat}</span><span class="banner-info">${v.qtd} lançamento${v.qtd>1?'s':''} · ${fmtBRL(v.val)}</span></div>`)
+      .join('');
+    bannerEl.classList.remove('expandido');
+    bannerEl.innerHTML = `
+      <div class="banner-header">
+        ⚠ <strong>${semMapa.length} lançamento${semMapa.length>1?'s':''} do Proesc sem mapeamento no Mapa_DRE</strong>
+        <span class="banner-total">${fmtBRL(totalVal)} não contabilizados em Gastos</span>
+        <button class="banner-toggle" onclick="this.closest('.banner-sem-mapa').classList.toggle('expandido')">▼ detalhes</button>
+      </div>
+      <div class="banner-body">${linhas}</div>`;
+    bannerEl.style.display = 'block';
+  } else {
+    bannerEl.style.display = 'none';
+  }
 
-    const m = l._match;
-    const matchCell = ok && m
-      ? `<div>
-           <div class="match-cat">${esc(m.dreLinha || m.categoriaProesc || m.categoria || '—')}</div>
-           <div class="match-sub">${esc(m.cliente || '—')} · ${esc(m.formaPagamento || '')}</div>
-           ${m.descricao ? `<div class="match-sub" style="color:#334155">${esc(String(m.descricao).substring(0,55))}</div>` : ''}
-         </div>`
-      : `<span style="color:#2e3a52;font-size:11px;font-family:'JetBrains Mono',monospace">—</span>`;
+  renderDias();
+}
 
-    return `<tr class="${ok ? '' : 'pend'}">
-      <td style="font-family:'JetBrains Mono',monospace;font-size:12px">${(l.data||'').substring(0,10)}</td>
-      <td style="font-size:12px">${esc(l.empresa||'')}</td>
-      <td><span class="btag b-${l.banco}">${l.banco}</span></td>
-      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px"
-          title="${esc(l.historico)}">${esc(l.historico||'—')}</td>
-      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px"
-          title="${esc(l.nomeRS)}">${esc(l.nomeRS||'—')}</td>
-      <td class="val-neg">${fmtBRL(Math.abs(parseFloat(l.valor)))}</td>
-      <td>${badge}${viaLabel}</td>
-      <td>${matchCell}</td>
-    </tr>`;
+// ── RENDER DIAS ───────────────────────────────────────────────────────────────
+function renderDias() {
+  const busca = (document.getElementById('search').value||'').toLowerCase();
+  let dias = diasConciliados.slice();
+  if (filtroStatus==='PENDENTES') dias = dias.filter(d=>d.pendExt>0||(d.pendPro||0)>0||(d.pendSusp||0)>0||(d.pendApprox||0)>0);
+  if (filtroStatus==='OK')        dias = dias.filter(d=>d.pendExt===0&&(d.pendPro||0)===0&&(d.pendSusp||0)===0&&(d.pendApprox||0)===0&&d.nExt>0);
+  if (busca) dias = dias.filter(d => d.dia.includes(busca) ||
+    d.pares.some(p=>
+      (p.ext?.historico||'').toLowerCase().includes(busca)||
+      (p.ext?.nomeRS||'').toLowerCase().includes(busca)||
+      (p.pro?.cliente||'').toLowerCase().includes(busca)||
+      (p.pro?.categoria||p.pro?.dreLinha||'').toLowerCase().includes(busca)));
+
+  document.getElementById('state-empty').style.display = dias.length?'none':'';
+  document.getElementById('dias-container').innerHTML = dias.map(renderDiaBloco).join('');
+}
+
+function renderDiaBloco(d) {
+  const { dia, pares, nExt, nPro, valExt, valPro, pendExt, pendPro, pendApprox, pendSusp } = d;
+  const pendTotal = pendExt + (pendPro||0);
+  const temAlerta = pendTotal > 0 || pendSusp > 0 || pendApprox > 0;
+  const bc  = pendTotal > 0 ? (pendTotal<=2?'warn':'danger') : (pendSusp>0||pendApprox>0) ? 'ok' : 'ok';
+  let btx;
+  const partes = [];
+  if (pendExt > 0)    partes.push(`⚠ ${pendExt} extrato pendente${pendExt>1?'s':''}`);
+  if (pendPro > 0)    partes.push(`⚠ ${pendPro} Proesc pendente${pendPro>1?'s':''}`);
+  if (partes.length === 0) partes.push('✅ OK');
+  if (pendSusp > 0)   partes.push(`🔶 ${pendSusp} suspeito${pendSusp>1?'s':''}`);
+  if (pendApprox > 0) partes.push(`🟣 ${pendApprox} d±`);
+  btx = partes.join(' · ');
+  const [,mm,dd2] = dia.split('-');
+  const dsem = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][new Date(dia+'T12:00:00').getDay()];
+
+  const paresFiltrados = filtroLinhaDup
+    ? pares.filter(p => p.st === 'pro-only' && p.pro && p.pro._dupProesc)
+    : filtroLinha === 'SEM_PAR'
+      ? pares.filter(p => p.st === 'none')
+      : pares;
+  if (paresFiltrados.length === 0) return '';
+
+  const linhas = paresFiltrados.map(p => {
+    // Extrato
+    let extCell;
+    if (p.ext) {
+      extCell = `<div class="cell ext">
+        <div><span class="c-banco b-${p.ext.banco}">${p.ext.banco}</span><span class="c-emp">${p.ext.empresa}</span></div>
+        <div class="c-hist" title="${esc(p.ext.historico)}">${esc(p.ext.historico||'—')}</div>
+        <div class="c-nome" title="${esc(p.ext.nomeRS)}">${esc(p.ext.nomeRS||'—')}</div>
+        <div class="c-val ext">${fmtBRL(p.ext._vAbs)}</div>
+        ${p.ext._chave&&p.ext._chave!=='valor'?`<div class="c-tag">${p.ext._chave}</div>`:''}
+      </div>`;
+    } else {
+      extCell = `<div class="cell empty">— sem lançamento no extrato —</div>`;
+    }
+
+    // Dot
+    const dotCls = p.st==='ok'?'dot-ok':p.st==='suspeito'?'dot-suspeito':p.st==='approx'?'dot-approx':p.st==='elim'?'dot-elim':p.st==='pro-only'?'dot-proonly':'dot-none';
+    const dotCell = `<div class="cell center"><div class="match-dot ${dotCls}"></div></div>`;
+
+    // Proesc
+    let proCell;
+    if (p.pro) {
+      const label = p.pro.categoria||p.pro.dreLinha||p.pro.categoriaProesc||'—';
+      const dataPro = (p.pro.data||p.pro.dataCaixa||'').substring(0,10);
+      proCell = `<div class="cell">
+        <div class="c-cat" title="${esc(label)}">${esc(label)}</div>
+        <div class="c-cli" title="${esc(p.pro.cliente||'')}">${esc(p.pro.cliente||'—')} · ${esc(p.pro.formaPagamento||p.pro.forma||'')}</div>
+        ${p.pro.descricao?`<div class="c-cli" style="color:var(--muted2)">${esc(String(p.pro.descricao).substring(0,50))}</div>`:''}
+        <div class="c-val pro">${fmtBRL(p.pro._vAbs)}</div>
+        ${dataPro&&dataPro!==dia?`<div class="c-tag">data Proesc: ${dataPro}</div>`:''}
+        ${p.st==='pro-only'?`<div class="c-pro-warn">⚠ sem par no extrato</div>`:''}
+        ${p.st==='suspeito'?`<div class="c-susp-warn">🔶 nome divergente — verificar</div>`:''}
+        ${p.st==='approx'?`<div class="c-approx-warn">🟣 conciliado por data ${(p.ext&&p.ext._chave)||''}</div>`:''}
+        ${(p.st==='pro-only' && p.pro._dupProesc)?`<div class="c-dup-warn">⚠ possível duplicata no Proesc</div>`:''}
+      </div>`;
+    } else {
+      proCell = `<div class="cell empty">— sem lançamento no Proesc —</div>`;
+    }
+
+    const rowCls = p.st==='none'?'r-none':p.st==='approx'?'r-approx':p.st==='elim'?'r-elim':'r-ok';
+    return `<div class="match-row ${rowCls}">${extCell}${dotCell}${proCell}</div>`;
   }).join('');
 
-  renderPag(tot, pages);
+  return `<div class="dia-bloco" id="dia-${dia}">
+    <div class="dia-header" onclick="toggleDia('${dia}')">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="dia-date">${dd2}/${mm} <span style="color:var(--muted);font-size:11px">${dsem}</span></div>
+        <span class="dia-badge ${bc}">${btx}</span>
+      </div>
+      <div class="dia-stats">
+        <span>Extrato: <b>${nExt}</b> · ${fmtBRL(valExt)}</span>
+        <span>Proesc: <b>${nPro}</b> · ${fmtBRL(valPro)}</span>
+      </div>
+      <span class="dia-chevron">▼</span>
+    </div>
+    <div class="dia-body">
+      <div class="col-headers">
+        <div class="col-hdr ext"><span class="ext-label">📊 Extrato Bancário</span> — ${nExt} lanç · ${fmtBRL(valExt)}</div>
+        <div class="col-hdr" style="grid-column:2/4"><span class="pro-label">🧾 Proesc Pagas</span> — ${nPro} lanç · ${fmtBRL(valPro)}</div>
+      </div>
+      <div class="match-rows">${linhas}</div>
+    </div>
+  </div>`;
 }
 
-// ── SORT ──────────────────────────────────────────────────────────────────────
-function sortBy(col) {
-  if (sortCol === col) sortDir *= -1; else { sortCol = col; sortDir = 1; }
-  ['data','empresa','banco','historico','nomeRS','valor'].forEach(c => {
-    const th = document.getElementById('th-' + c);
-    if (!th) return;
-    th.classList.toggle('sorted', c === sortCol);
-    const si = document.getElementById('si-' + c);
-    if (si) si.textContent = c === sortCol ? (sortDir === 1 ? '↑' : '↓') : '';
-  });
-  renderTabela();
-}
-
-// ── PAGINAÇÃO ─────────────────────────────────────────────────────────────────
-function renderPag(tot, pages) {
-  const pag = document.getElementById('paginacao');
-  if (pages <= 1) { pag.innerHTML = ''; return; }
-  let h = `<span class="pi">${tot} registros</span>`;
-  h += `<button onclick="goPage(${pg-1})" ${pg===1?'disabled':''}>‹</button>`;
-  for (let p = 1; p <= pages; p++) {
-    if (pages > 7 && Math.abs(p-pg) > 2 && p !== 1 && p !== pages) {
-      if (p === 2 || p === pages-1) h += `<button disabled>…</button>`;
-      continue;
-    }
-    h += `<button class="${p===pg?'active':''}" onclick="goPage(${p})">${p}</button>`;
+// ── CONTROLES ─────────────────────────────────────────────────────────────────
+function toggleDia(d){ document.getElementById('dia-'+d).classList.toggle('collapsed'); }
+function expandirTudo(){ document.querySelectorAll('.dia-bloco').forEach(el=>el.classList.remove('collapsed')); }
+function recolherTudo(){ document.querySelectorAll('.dia-bloco').forEach(el=>el.classList.add('collapsed')); }
+function toggleFiltroDup(){
+  filtroLinhaDup = !filtroLinhaDup;
+  document.getElementById('btn-dup').classList.toggle('active', filtroLinhaDup);
+  renderDias();
+  if (filtroLinhaDup) {
+    document.querySelectorAll('.dia-bloco').forEach(el => el.classList.remove('collapsed'));
   }
-  h += `<button onclick="goPage(${pg+1})" ${pg===pages?'disabled':''}>›</button>`;
-  pag.innerHTML = h;
 }
-function goPage(p) { pg = p; renderTabela(); }
+function toggleFiltroLinha(){
+  filtroLinha = filtroLinha === 'SEM_PAR' ? 'TODOS' : 'SEM_PAR';
+  document.getElementById('btn-sempar').classList.toggle('active', filtroLinha === 'SEM_PAR');
+  renderDias();
+  if (filtroLinha === 'SEM_PAR') {
+    // Remover collapsed de todos os dias após renderizar
+    document.querySelectorAll('.dia-bloco').forEach(el => el.classList.remove('collapsed'));
+  }
+}
+
+function setFiltroStatus(v){
+  filtroStatus = v;
+  // Só atualiza os botões de status — nunca toca no btn-sempar
+  document.getElementById('btn-todos').classList.toggle('active', v==='TODOS');
+  document.getElementById('btn-pendentes').classList.toggle('active', v==='PENDENTES');
+  document.getElementById('btn-ok').classList.toggle('active', v==='OK');
+  renderDias();
+}
 
 // ── EXPORT ────────────────────────────────────────────────────────────────────
-function exportarExcel() {
-  if (!window.XLSX) {
-    const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-    s.onload = _doExport;
-    document.head.appendChild(s);
-  } else { _doExport(); }
+function exportarExcel(){
+  if(!window.XLSX){const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=_doExport;document.head.appendChild(s);}
+  else _doExport();
 }
-function _doExport() {
-  const mes = document.getElementById('sel-mes').value;
-  const rows = resultado.map(r => ({
-    'Data':               (r.data||'').substring(0,10),
-    'Empresa':            r.empresa,
-    'Banco':              r.banco,
-    'Histórico':          r.historico,
-    'Nome/Razão Social':  r.nomeRS,
-    'Valor':              Math.abs(parseFloat(r.valor)),
-    'Status':             r._st,
-    'Proesc DRE Linha':   r._match ? (r._match.dreLinha  || '') : '',
-    'Proesc Categoria':   r._match ? (r._match.categoriaProesc || r._match.categoria || '') : '',
-    'Proesc Cliente':     r._match ? (r._match.cliente   || '') : '',
-    'Proesc Forma Pag':   r._match ? (r._match.formaPagamento  || '') : '',
-    'Chave Match':        r._chave || '',
-  }));
-  const ws = XLSX.utils.json_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Conciliação');
-  XLSX.writeFile(wb, `conciliacao_${mes}.xlsx`);
+function _doExport(){
+  const mes=document.getElementById('sel-mes').value;
+  const rows=[];
+  for(const d of diasConciliados) for(const p of d.pares){
+    rows.push({
+      'Data':d.dia,'Banco':p.ext?.banco||'','Empresa':p.ext?.empresa||'',
+      'Extrato Histórico':p.ext?.historico||'','Extrato Nome':p.ext?.nomeRS||'',
+      'Extrato Valor':p.ext?p.ext._vAbs:'','Status':p.st==='none'?'PENDENTE':p.st==='pro-only'?'SÓ PROESC':'CONCILIADO',
+      'Chave Match':p.ext?._chave||'',
+      'Proesc Categoria':p.pro?.categoria||p.pro?.dreLinha||'',
+      'Proesc Cliente':p.pro?.cliente||'','Proesc Forma':p.pro?.formaPagamento||p.pro?.forma||'',
+      'Proesc Valor':p.pro?p.pro._vAbs:'','Proesc Data':p.pro?(p.pro.data||p.pro.dataCaixa||''):'',
+    });
+  }
+  const ws=XLSX.utils.json_to_sheet(rows),wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Conciliação');
+  XLSX.writeFile(wb,`conciliacao_${mes}.xlsx`);
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
-function fmtMes(m) {
-  if (!m) return m;
-  const [ano, mes] = m.split('-');
-  return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][parseInt(mes)-1] + '/' + ano;
-}
-function fmtBRL(v) {
-  return new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' }).format(v || 0);
-}
-function esc(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+function dateAddDays(s,n){const d=new Date(s+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().substring(0,10);}
+function formatMes(m){const[ano,mes]=m.split('-');return['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][+mes-1]+'/'+ano;}
+function fmtBRL(v){return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v||0);}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
-init();
+loadData();
 </script>
 </body>
 </html>

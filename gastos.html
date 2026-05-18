@@ -406,7 +406,8 @@
   <a href="dre.html">DRE</a><span class="sep">›</span>
   <span class="active">Gastos</span><span class="sep">›</span>
   <a href="receitas.html">Receitas</a><span class="sep">›</span>
-  <a href="ajustes.html">Ajustes</a>
+  <a href="ajustes.html">Ajustes</a><span class="sep">›</span>
+  <a href="conciliacao.html">Conciliação</a>
 </nav>
 
 <div class="page-header">
@@ -456,6 +457,8 @@
 <div class="kpi-strip" id="kpi-strip">
   <div class="loading" style="grid-column:1/-1"><div class="spinner"></div></div>
 </div>
+
+<div id="banner-sem-mapa" style="display:none"></div>
 
 <div class="content">
   <div id="main-content" class="loading">
@@ -678,10 +681,70 @@ function refreshFinalOptions() {
   sel.value = finais.includes(old) ? old : 'TODOS';
 }
 
+function renderBannerSemMapa(mes, empresa) {
+  const bannerEl = document.getElementById('banner-sem-mapa');
+  if (!DATA || !DATA._lancamentosProesc) { bannerEl.style.display='none'; return; }
+
+  const empFiltro = (empresa === 'Consolidado' || empresa === 'CONSOLIDADO') ? null : empresa;
+  const empresasList = empFiltro ? [empFiltro] : ['MD','SEL','SIGMA'];
+
+  const categoriasComMapa = new Set();
+  for (const emp of empresasList) {
+    const arr = DATA?.gastosDetalhe?.[mes]?.[emp] || [];
+    for (const item of arr) {
+      const cat = (item.categoriaProesc || item.categoria || '').trim().toUpperCase();
+      if (cat) categoriasComMapa.add(`${emp}|${cat}`);
+    }
+  }
+
+  const proescMes = (DATA._lancamentosProesc || []).filter(p => {
+    const pMes = (p.anoMes || (p.data||'').substring(0,7));
+    if (pMes !== mes) return false;
+    if (empFiltro && p.empresa !== empFiltro) return false;
+    return true;
+  });
+
+  const semMapa = proescMes.filter(p => {
+    const chave = `${p.empresa}|${(p.categoria||'').trim().toUpperCase()}`;
+    return !categoriasComMapa.has(chave);
+  });
+
+  if (!semMapa.length) { bannerEl.style.display='none'; return; }
+
+  const totalVal = semMapa.reduce((s,p)=>s+Math.abs(p.valor||0),0);
+  const fmtV = v => 'R$ ' + v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const porCategoria = {};
+  semMapa.forEach(p => {
+    const cat = `${p.empresa} · ${p.categoria||'—'}`;
+    if (!porCategoria[cat]) porCategoria[cat] = {qtd:0,val:0};
+    porCategoria[cat].qtd++; porCategoria[cat].val += Math.abs(p.valor||0);
+  });
+  const linhas = Object.entries(porCategoria)
+    .sort((a,b)=>b[1].val-a[1].val)
+    .map(([cat,v])=>`<div class="banner-linha"><span class="banner-cat">${cat}</span><span class="banner-info">${v.qtd} lançamento${v.qtd>1?'s':''} · ${fmtV(v.val)}</span></div>`)
+    .join('');
+
+  bannerEl.innerHTML = `
+    <div class="banner-header">
+      ⚠ <strong>${semMapa.length} lançamento${semMapa.length>1?'s':''} do Proesc sem mapeamento no Mapa_DRE</strong>
+      <span class="banner-total">${fmtV(totalVal)} não contabilizados aqui</span>
+      <button class="banner-toggle" onclick="
+        const b=document.getElementById('banner-body-mapa');
+        const open=b.style.display==='block';
+        b.style.display=open?'none':'block';
+        this.textContent=open?'▼ detalhes':'▲ fechar';
+      ">▼ detalhes</button>
+    </div>
+    <div id="banner-body-mapa" style="display:none;padding:0 14px 10px">${linhas}</div>`;
+  bannerEl.style.display = 'block';
+}
+
 function render() {
   const { empresa, mes } = getFilters();
   const raw = getDetalhe(mes, empresa);
   const itens = getDetalheFiltrado(mes, empresa);
+
+  renderBannerSemMapa(mes, empresa);
 
   if (!raw.length) {
     document.getElementById('kpi-strip').innerHTML = '<div class="kpi-card"><div class="kpi-label">Sem dados</div><div class="kpi-value zero">—</div></div>';
@@ -1227,6 +1290,16 @@ function exportPDF() {
       .sub2 { color: #777; font-size: 8px; }
       .total-row td { border-top: 2px solid #999; font-weight: 700; background: #f7f7f7; }
       @media print { body { padding: 14px; } .kpis { grid-template-columns: repeat(4,1fr); } }
+
+.banner-sem-mapa{margin:8px 16px 0;border-radius:8px;border:1px solid rgba(251,191,36,.4);background:rgba(251,191,36,.07);overflow:hidden}
+.banner-header{display:flex;align-items:center;gap:12px;padding:10px 14px;font-size:.82rem;color:#fbbf24;flex-wrap:wrap}
+.banner-header strong{color:#fde68a}
+.banner-total{margin-left:auto;font-family:monospace;font-size:.75rem;color:#94a3b8}
+.banner-toggle{background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.3);color:#fbbf24;border-radius:4px;padding:2px 8px;font-size:.72rem;cursor:pointer}
+.banner-linha{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(251,191,36,.1);font-size:.76rem}
+.banner-linha:last-child{border-bottom:none}
+.banner-cat{color:#fde68a;font-family:monospace}
+.banner-info{color:#94a3b8}
     </style></head><body>
       <div class="header">
         <div>
