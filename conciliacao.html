@@ -477,8 +477,12 @@ function conciliar(mes, empresa, banco) {
   // ── Match dentro de um dia ────────────────────────────────────────────────
   function matchDia(exts, pros) {
     const E = exts.map(e => ({...e}));
-    // Preserva _used existente (não resetar — itens de ±Nd de outros dias)
-    const P = pros.map(p => ({...p}));
+    // Não copiar P — trabalha por referência para que _used marcado por ±Nd
+    // de dias futuros (Fase 1) seja visível na Fase 2 ao checar pro-only.
+    // A cópia ({...p}) quebrava a propagação: o objeto em fase1[].P era
+    // independente do original em proByDay[], então _used=true setado pelo
+    // dia D+1 nunca chegava ao P do dia D — causando pro-only fantasma.
+    const P = pros;
 
     const mesmaqtd = E.length === P.length;
 
@@ -529,9 +533,17 @@ function conciliar(mes, empresa, banco) {
     ...Object.keys(extByDay),
     ...Object.keys(proByDay).filter(d => d.substring(0,7) === mes),
   ]);
-  const resultado = [];
+  const diasOrdenados = [...todosDias].sort();
 
-  for (const dia of [...todosDias].sort()) {
+  // ── FASE 1: match + ±Nd para todos os dias ────────────────────────────────
+  // Acumula contexto por dia sem montar pares ainda.
+  // Isso garante que _used propagado por ±Nd de dias futuros seja visível
+  // antes de decidir quais itens Proesc ficam realmente como "pro-only".
+  // Cenário corrigido: Proesc datado em D, extrato em D+1 — sem esse split,
+  // o Proesc era marcado pro-only no dia D antes do extrato D+1 ser processado.
+  const fase1 = [];
+
+  for (const dia of diasOrdenados) {
     const extsRaw = (extByDay[dia]||[]);
     // Excluir do Proesc do dia itens já consumidos por ±Nd de outros dias
     const prosRaw = (proByDay[dia]||[]).filter(p => !p._used);
@@ -559,8 +571,14 @@ function conciliar(mes, empresa, banco) {
         if (!pool.length) continue;
 
         // Lookahead: não consumir Proesc de dia futuro se existe extrato aguardando no mesmo dia do Proesc
+        // FIX: também bloquear Proesc de mês anterior com delta > 1 — evita consumir
+        // item que já tem par na conciliação do mês anterior (ex: Proesc 31/03
+        // casado em março sendo reutilizado por extrato de 02/04 via ±2d).
+        // delta=1 ainda é permitido para cruzamentos legítimos de virada de mês.
         const poolFiltrado = pool.filter(p => {
           const diaPro = p._dia;
+          // Bloquear Proesc de mês anterior se delta >= 2
+          if (diaPro.substring(0,7) < mes && Math.abs(delta) > 1) return false;
           if (diaPro <= dia) return true; // dia anterior ou mesmo → ok consumir
           // Dia futuro: verificar se há extrato com mesmo valor+empresa no dia do Proesc
           const extsNoDiaPro = (extByDay[diaPro]||[]).filter(x =>
@@ -595,7 +613,16 @@ function conciliar(mes, empresa, banco) {
       }
     }
 
-    // Montar pares para render
+    // Guardar contexto do dia para Fase 2 (sem montar pares ainda)
+    fase1.push({ dia, E, P, extsRaw, prosRaw, proFromAdj });
+  }
+
+  // ── FASE 2: montar pares — agora _used está propagado por todos os dias ───
+  // Um Proesc que estava "livre" no dia D mas foi consumido por ±Nd do dia D+1
+  // terá _used=true aqui, evitando aparecer como pro-only fantasma.
+  const resultado = [];
+
+  for (const { dia, E, P, extsRaw, prosRaw, proFromAdj } of fase1) {
     // Pré-computar ambiguidade por empresa+valor (duplicata dentro da mesma empresa)
     const valoresAmbiguos = new Set();
     const contExt = {}, contPro = {};
@@ -626,6 +653,7 @@ function conciliar(mes, empresa, banco) {
       }
       pares.push({ ext:e, pro:e._matchRef||null, st, sim:e._sim||0 });
     }
+    // pro-only: apenas itens que continuam sem par após todos os dias serem processados
     for (const p of P.filter(p=>!p._used)) {
       pares.push({ ext:null, pro:p, st:'pro-only' });
     }
