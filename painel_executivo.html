@@ -124,6 +124,53 @@
 
   .error-msg { padding:1rem 1.5rem; color:var(--danger); background:#1f0d12; border:1px solid var(--danger); border-radius:8px; font-size:.82rem; }
   .loading   { text-align:center; padding:3rem; color:var(--muted); }
+
+  /* ── TOOLTIP CONTEXTUAL ── */
+  .tip-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: rgba(107,114,128,.25); color: #9ca3af;
+    font-size: 9px; font-weight: 700; font-family: sans-serif;
+    cursor: default; vertical-align: middle; margin-left: 4px;
+    position: relative; flex-shrink: 0; line-height: 1;
+    transition: background .15s, color .15s; user-select: none;
+  }
+  .tip-icon:hover { background: rgba(0,229,160,.25); color: #00e5a0; }
+  .tip-bubble {
+    display: none; position: fixed; z-index: 9999;
+    background: #1a1e2a; border: 1px solid #3a4155;
+    border-radius: 8px; padding: .65rem .85rem;
+    max-width: 280px; min-width: 180px;
+    font-size: .74rem; line-height: 1.55;
+    color: #c9cfd9; font-family: 'Syne', sans-serif;
+    box-shadow: 0 4px 20px rgba(0,0,0,.5); pointer-events: none;
+  }
+  .tip-bubble.show { display: block; }
+  .tip-bubble strong { color: #e8eaf0; font-weight: 600; display: block; margin-bottom: .25rem; font-size: .76rem; }
+  .tip-bubble .tip-meta { color: #6b7280; font-size: .68rem; margin-top: .3rem; border-top: 1px solid #252b3b; padding-top: .3rem; }
+
+
+  /* ── ALERTAS INTELIGENTES ── */
+  .alert-painel {
+    margin: 1rem 0 0; padding: .75rem 1.1rem;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; display: flex; flex-direction: column; gap: .45rem;
+  }
+  .alert-painel-title {
+    font-size: .6rem; text-transform: uppercase; letter-spacing: .1em;
+    color: var(--muted); margin-bottom: .2rem;
+  }
+  .alert-item {
+    display: flex; align-items: flex-start; gap: .6rem;
+    font-size: .78rem; line-height: 1.45; color: var(--text);
+  }
+  .alert-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: .35rem; }
+  .alert-dot.ok      { background: #4ade80; }
+  .alert-dot.warn    { background: var(--warn); }
+  .alert-dot.danger  { background: var(--danger); }
+  .alert-dot.info    { background: var(--accent2); }
+  .alert-dot.neutral { background: var(--muted); }
+
 </style>
 </head>
 <body>
@@ -137,6 +184,8 @@
   <a href="receitas.html">Receitas</a><span class="sep">›</span>
   <a href="ajustes.html">Ajustes</a><span class="sep">›</span>
   <a href="conciliacao.html">Conciliação</a>
+<span class="sep">›</span>
+  <a href="glossario.html">Glossário</a>
 </nav>
 
 <div class="page-header">
@@ -226,6 +275,15 @@ function updateFilter(tipo) {
     document.getElementById('labelBanco').textContent = n===2?'Seleções múltiplas':n===0?'Nenhum':filtros.bancos.join(', ');
   }
   renderKPIs();
+  // Alertas inteligentes
+  const k2 = calcKPIs();
+  if (k2) {
+    const alertHtml = gerarAlertas(k2);
+    if (alertHtml) {
+      const el = document.getElementById('painelContent');
+      el.insertAdjacentHTML('beforeend', alertHtml);
+    }
+  }
 }
 
 function fmtBRL(val) {
@@ -274,15 +332,15 @@ function renderKPIs() {
       <div class="kpi-section">
         <div class="section-label">Entradas</div>
         <div class="kpi-grid-2">
-          <div class="kpi-card kc-green"><div class="kc-label">Bancárias</div><div class="kc-value">${fmtBRL(k.entradasCaixa)}</div></div>
-          <div class="kpi-card kc-green"><div class="kc-label">Operacionais</div><div class="kc-value">${fmtBRL(k.entOp)}</div></div>
+          <div class="kpi-card kc-green"><div class="kc-label">Bancárias<span class="tip-icon" data-title="Entradas Bancárias" data-tip="Total de créditos lançados no extrato bancário no período. Inclui recebimentos operacionais, transferências recebidas e outras entradas." data-meta="Fonte: extrato bancário">i</span></div><div class="kc-value">${fmtBRL(k.entradasCaixa)}</div></div>
+          <div class="kpi-card kc-green"><div class="kc-label">Operacionais<span class="tip-icon" data-title="Entradas Operacionais" data-tip="Receitas efetivamente ligadas à operação do grupo: mensalidades, matrículas e demais recebimentos classificados como operacionais." data-meta="Fonte: Proesc">i</span></div><div class="kc-value">${fmtBRL(k.entOp)}</div></div>
         </div>
       </div>
       <div class="kpi-section">
         <div class="section-label">Resultados</div>
         <div class="kpi-grid-2">
-          <div class="kpi-card kc-blue"><div class="kc-label">Resultado Bancário</div><div class="kc-value">${fmtBRL(k.resultadoBancario)}</div></div>
-          <div class="kpi-card kc-blue2"><div class="kc-label">Resultado Operacional</div><div class="kc-value large">${fmtBRL(k.resultadoOp)}</div></div>
+          <div class="kpi-card kc-blue"><div class="kc-label">Resultado Bancário<span class="tip-icon" data-title="Resultado Bancário" data-tip="Diferença entre todas as entradas e saídas bancárias do período. Reflete o fluxo líquido em conta — pode incluir transferências internas." data-meta="Entradas − Saídas bancárias">i</span></div><div class="kc-value">${fmtBRL(k.resultadoBancario)}</div></div>
+          <div class="kpi-card kc-blue2"><div class="kc-label">Resultado Operacional<span class="tip-icon" data-title="Resultado Operacional" data-tip="Diferença entre entradas e saídas operacionais. É o indicador mais limpo do desempenho financeiro real, excluindo transferências e aplicações." data-meta="Entradas op. − Saídas op.">i</span></div><div class="kc-value large">${fmtBRL(k.resultadoOp)}</div></div>
         </div>
       </div>
     </div>
@@ -291,33 +349,33 @@ function renderKPIs() {
       <div class="kpi-section">
         <div class="section-label">Saídas</div>
         <div class="kpi-grid-2">
-          <div class="kpi-card kc-red"><div class="kc-label">Bancárias</div><div class="kc-value">${fmtBRL(k.saidasCaixa)}</div></div>
-          <div class="kpi-card kc-red"><div class="kc-label">Operacionais</div><div class="kc-value">${fmtBRL(k.saiOp)}</div></div>
+          <div class="kpi-card kc-red"><div class="kc-label">Bancárias<span class="tip-icon" data-title="Entradas Bancárias" data-tip="Total de créditos lançados no extrato bancário no período. Inclui recebimentos operacionais, transferências recebidas e outras entradas." data-meta="Fonte: extrato bancário">i</span></div><div class="kc-value">${fmtBRL(k.saidasCaixa)}</div></div>
+          <div class="kpi-card kc-red"><div class="kc-label">Operacionais<span class="tip-icon" data-title="Entradas Operacionais" data-tip="Receitas efetivamente ligadas à operação do grupo: mensalidades, matrículas e demais recebimentos classificados como operacionais." data-meta="Fonte: Proesc">i</span></div><div class="kc-value">${fmtBRL(k.saiOp)}</div></div>
         </div>
       </div>
       <div class="kpi-section">
         <div class="section-label">Ajustes</div>
         <div class="kpi-grid-3">
-          <div class="kpi-card ${adjCls(k.transInternas)}"><div class="kc-label">Transf. Internas</div><div class="kc-value">${fmtBRL(k.transInternas)}</div></div>
-          <div class="kpi-card ${adjCls(k.intercompany)}"><div class="kc-label">Intercompany</div><div class="kc-value">${fmtBRL(k.intercompany)}</div></div>
-          <div class="kpi-card ${adjCls(k.aplicacoes)}"><div class="kc-label">Aplicações Fin.</div><div class="kc-value">${fmtBRL(k.aplicacoes)}</div></div>
+          <div class="kpi-card ${adjCls(k.transInternas)}"><div class="kc-label">Transf. Internas<span class="tip-icon" data-title="Transferências Internas" data-tip="Movimentações entre contas do próprio grupo (ex: SIGMA → MD). Não representam receita nem despesa real — são neutras no consolidado." data-meta="Valor líquido no período">i</span></div><div class="kc-value">${fmtBRL(k.transInternas)}</div></div>
+          <div class="kpi-card ${adjCls(k.intercompany)}"><div class="kc-label">Intercompany<span class="tip-icon" data-title="Intercompany" data-tip="Transações financeiras entre as empresas do grupo (MD, SEL, SIGMA). Valor positivo = o grupo recebeu mais do que pagou entre si." data-meta="Valor líquido no período">i</span></div><div class="kc-value">${fmtBRL(k.intercompany)}</div></div>
+          <div class="kpi-card ${adjCls(k.aplicacoes)}"><div class="kc-label">Aplicações Fin.<span class="tip-icon" data-title="Aplicações Financeiras" data-tip="Entradas e saídas em CDB e outros investimentos. Valor negativo = mais recursos foram aplicados do que resgatados." data-meta="CDB / aplicações no período">i</span></div><div class="kc-value">${fmtBRL(k.aplicacoes)}</div></div>
         </div>
       </div>
     </div>
 
     <div class="kpi-row-bottom">
       <div class="kpi-big kb-disp">
-        <div class="kb-label">Disponível em Conta</div>
+        <div class="kb-label">Disponível em Conta<span class="tip-icon" data-title="Disponível em Conta" data-tip="Saldo atual em conta corrente. Calculado a partir do saldo final do mês mais recente selecionado, considerando os bancos e empresas filtrados." data-meta="Saldo final do período">i</span></div>
         <div class="kb-value">${fmtBRL(k.disponivel)}</div>
         <div class="kb-sub">Saldo acumulado em conta</div>
       </div>
       <div class="kpi-big kb-inv">
-        <div class="kb-label">Investimentos</div>
+        <div class="kb-label">Investimentos<span class="tip-icon" data-title="Investimentos" data-tip="Saldo acumulado em CDB e aplicações financeiras. Representa recursos do grupo que estão rendendo fora da conta corrente." data-meta="Posição no final do período">i</span></div>
         <div class="kb-value">${fmtBRL(Math.abs(k.investimentos))}</div>
         <div class="kb-sub">CDB / Aplicações financeiras</div>
       </div>
       <div class="kpi-big kb-total">
-        <div class="kb-label">Total — Conta + Invest.</div>
+        <div class="kb-label">Total — Conta + Invest.<span class="tip-icon" data-title="Total — Conta + Investimentos" data-tip="Soma do saldo disponível em conta com o saldo investido. Representa o patrimônio financeiro total do grupo no período." data-meta="Disponível + Investimentos">i</span></div>
         <div class="kb-value">${fmtBRL(k.totalPatrimonio)}</div>
         <div class="kb-sub">Disponível + Investimentos</div>
       </div>
@@ -356,7 +414,90 @@ async function carregarDados() {
   }
 }
 
+
+function gerarAlertas(k, mesesAtivos) {
+  const items = [];
+
+  // Resultado operacional
+  if (k.resultadoOp > 0) {
+    items.push({ cls: 'ok', txt: `Resultado operacional positivo de <strong>${fmtBRL(k.resultadoOp)}</strong> no período.` });
+  } else if (k.resultadoOp < 0) {
+    items.push({ cls: 'danger', txt: `Resultado operacional negativo em <strong>${fmtBRL(k.resultadoOp)}</strong>. As saídas operacionais superam as entradas no período.` });
+  }
+
+  // Transferências internas
+  if (Math.abs(k.transInternas) > 0) {
+    const sinal = k.transInternas > 0 ? 'entrada líquida' : 'saída líquida';
+    items.push({ cls: 'neutral', txt: `Transferências internas: ${sinal} de <strong>${fmtBRL(Math.abs(k.transInternas))}</strong>. Esses valores não representam receita ou despesa real.` });
+  }
+
+  // Aplicações
+  if (k.aplicacoes < -1000) {
+    items.push({ cls: 'info', txt: `<strong>${fmtBRL(Math.abs(k.aplicacoes))}</strong> foram aplicados em CDB/investimentos no período. O patrimônio financeiro total é <strong>${fmtBRL(k.totalPatrimonio)}</strong>.` });
+  } else if (k.aplicacoes > 1000) {
+    items.push({ cls: 'warn', txt: `<strong>${fmtBRL(k.aplicacoes)}</strong> foram resgatados de aplicações financeiras no período.` });
+  }
+
+  // Disponível vs Investimentos
+  const ratioInv = k.investimentos / (k.totalPatrimonio || 1) * 100;
+  if (ratioInv > 60) {
+    items.push({ cls: 'info', txt: `<strong>${ratioInv.toFixed(0)}%</strong> do patrimônio financeiro está em investimentos. O saldo disponível em conta é <strong>${fmtBRL(k.disponivel)}</strong>.` });
+  }
+
+  // Intercompany desequilibrado
+  if (Math.abs(k.intercompany) > 5000) {
+    items.push({ cls: 'warn', txt: `Intercompany com saldo relevante: <strong>${fmtBRL(k.intercompany)}</strong>. Verificar se há créditos pendentes entre empresas do grupo.` });
+  }
+
+  if (items.length === 0) return '';
+
+  return `<div class="alert-painel">
+    <div class="alert-painel-title">Destaques do período</div>
+    ${items.map(i => `<div class="alert-item"><div class="alert-dot ${i.cls}"></div><div>${i.txt}</div></div>`).join('')}
+  </div>`;
+}
+
 carregarDados();
 </script>
+
+<div id="tipBubble" class="tip-bubble"></div>
+<script>
+(function(){
+  const bub = document.getElementById('tipBubble');
+  let activeIcon = null;
+  function showTip(icon, e) {
+    const txt = icon.dataset.tip || '';
+    const title = icon.dataset.title || '';
+    const meta = icon.dataset.meta || '';
+    bub.innerHTML = (title ? '<strong>'+title+'</strong>' : '') + txt + (meta ? '<div class="tip-meta">'+meta+'</div>' : '');
+    bub.classList.add('show');
+    positionTip(e);
+    activeIcon = icon;
+  }
+  function positionTip(e) {
+    const x = e.clientX, y = e.clientY;
+    const bw = bub.offsetWidth || 260, bh = bub.offsetHeight || 80;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let left = x + 14, top = y - 10;
+    if (left + bw > vw - 8) left = x - bw - 10;
+    if (top + bh > vh - 8) top = vh - bh - 8;
+    if (top < 8) top = 8;
+    bub.style.left = left + 'px';
+    bub.style.top  = top  + 'px';
+  }
+  document.addEventListener('mouseover', e => {
+    const icon = e.target.closest('.tip-icon');
+    if (icon) showTip(icon, e);
+  });
+  document.addEventListener('mousemove', e => {
+    if (activeIcon) positionTip(e);
+  });
+  document.addEventListener('mouseout', e => {
+    if (e.target.closest('.tip-icon')) { bub.classList.remove('show'); activeIcon = null; }
+  });
+  document.addEventListener('scroll', () => { bub.classList.remove('show'); activeIcon = null; }, true);
+})();
+</script>
+
 </body>
 </html>

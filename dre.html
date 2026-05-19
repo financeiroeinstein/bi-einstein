@@ -250,6 +250,53 @@
 
   /* empty state */
   .empty { color: var(--muted); font-size: .85rem; padding: 2rem 0; text-align: center; }
+
+  /* ── TOOLTIP CONTEXTUAL ── */
+  .tip-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: rgba(107,114,128,.25); color: #9ca3af;
+    font-size: 9px; font-weight: 700; font-family: sans-serif;
+    cursor: default; vertical-align: middle; margin-left: 4px;
+    position: relative; flex-shrink: 0; line-height: 1;
+    transition: background .15s, color .15s; user-select: none;
+  }
+  .tip-icon:hover { background: rgba(0,229,160,.25); color: #00e5a0; }
+  .tip-bubble {
+    display: none; position: fixed; z-index: 9999;
+    background: #1a1e2a; border: 1px solid #3a4155;
+    border-radius: 8px; padding: .65rem .85rem;
+    max-width: 280px; min-width: 180px;
+    font-size: .74rem; line-height: 1.55;
+    color: #c9cfd9; font-family: 'Syne', sans-serif;
+    box-shadow: 0 4px 20px rgba(0,0,0,.5); pointer-events: none;
+  }
+  .tip-bubble.show { display: block; }
+  .tip-bubble strong { color: #e8eaf0; font-weight: 600; display: block; margin-bottom: .25rem; font-size: .76rem; }
+  .tip-bubble .tip-meta { color: #6b7280; font-size: .68rem; margin-top: .3rem; border-top: 1px solid #252b3b; padding-top: .3rem; }
+
+
+  /* ── ALERTAS INTELIGENTES ── */
+  .alert-painel {
+    margin: 1rem 0 0; padding: .75rem 1.1rem;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; display: flex; flex-direction: column; gap: .45rem;
+  }
+  .alert-painel-title {
+    font-size: .6rem; text-transform: uppercase; letter-spacing: .1em;
+    color: var(--muted); margin-bottom: .2rem;
+  }
+  .alert-item {
+    display: flex; align-items: flex-start; gap: .6rem;
+    font-size: .78rem; line-height: 1.45; color: var(--text);
+  }
+  .alert-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: .35rem; }
+  .alert-dot.ok      { background: #4ade80; }
+  .alert-dot.warn    { background: var(--warn); }
+  .alert-dot.danger  { background: var(--danger); }
+  .alert-dot.info    { background: var(--accent2); }
+  .alert-dot.neutral { background: var(--muted); }
+
 </style>
 </head>
 <body>
@@ -263,6 +310,8 @@
   <a href="receitas.html">Receitas</a><span class="sep">›</span>
   <a href="ajustes.html">Ajustes</a><span class="sep">›</span>
   <a href="conciliacao.html">Conciliação</a>
+<span class="sep">›</span>
+  <a href="glossario.html">Glossário</a>
 </nav>
 
 <div class="page-header">
@@ -307,15 +356,15 @@
   <div id="tab-evolucao" class="tab-panel">
     <div class="chart-grid">
       <div class="chart-card full">
-        <div class="chart-title"><span>Receita Operacional</span> vs <span>Despesas Operacionais</span></div>
+        <div class="chart-title"><span>Receita Operacional</span> vs <span>Despesas Operacionais</span><span class="tip-icon" data-title="Receita vs Despesas" data-tip="Comparativo mensal entre a receita gerada e o total de despesas operacionais. Quando as barras de despesa superam as de receita, o período opera no vermelho.">i</span></div>
         <div class="chart-container"><canvas id="chart-receita" height="90"></canvas></div>
       </div>
       <div class="chart-card">
-        <div class="chart-title"><span>Resultado Operacional</span> vs <span>Resultado Final</span></div>
+        <div class="chart-title"><span>Resultado Operacional</span> vs <span>Resultado Final</span><span class="tip-icon" data-title="Resultado Op. vs Final" data-tip="A diferença entre as duas barras representa o impacto do resultado financeiro (juros pagos, rendimentos recebidos). Quando o Final é melhor que o Operacional, os investimentos estão contribuindo.">i</span></div>
         <div class="chart-container"><canvas id="chart-resultado" height="140"></canvas></div>
       </div>
       <div class="chart-card">
-        <div class="chart-title"><span>Margens</span> · % sobre Receita Líquida</div>
+        <div class="chart-title"><span>Margens</span> · % sobre Receita Líquida <span class="tip-icon" data-title="Margens" data-tip="Margem Bruta = eficiência do serviço. Margem Operacional = eficiência total da operação. Pessoal/RL = peso da folha. Todos calculados sobre a Receita Líquida.">i</span></div>
         <div class="chart-container"><canvas id="chart-margens" height="140"></canvas></div>
       </div>
     </div>
@@ -442,6 +491,18 @@ function renderKPIs(empresa, mes) {
       <div class="kpi-value ${c.cls}">${c.value}</div>
     </div>`
   ).join('');
+
+  // Remove alerta anterior se existir
+  const prevAlert = document.getElementById('dre-alert-box');
+  if (prevAlert) prevAlert.remove();
+
+  const alertHtml = gerarAlertasDRE(dre.kpis, empresa, mes);
+  if (alertHtml) {
+    const wrapper = document.createElement('div');
+    wrapper.id = 'dre-alert-box';
+    wrapper.innerHTML = alertHtml;
+    document.getElementById('kpi-strip').insertAdjacentElement('afterend', wrapper);
+  }
 }
 
 // ── DRE TABLE ─────────────────────────────────────────────────────────────────
@@ -909,7 +970,91 @@ function renderCharts() {
 }
 
 // ── START ─────────────────────────────────────────────────────────────────────
+
+function gerarAlertasDRE(kpis, empresa, mes) {
+  if (!kpis) return '';
+  const k = kpis;
+  const items = [];
+  const fmtK2 = v => v == null ? '—' : (Math.abs(v) >= 1000 ? 'R$ ' + (Math.abs(v)/1000).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}) + ' Mil' : 'R$ ' + Math.abs(v).toLocaleString('pt-BR',{minimumFractionDigits:2}));
+  const fmtP2 = v => v == null ? '—' : v.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}) + '%';
+
+  // Margem bruta
+  if (k.margemBruta != null) {
+    if (k.margemBruta >= 40) items.push({ cls: 'ok', txt: `Margem Bruta em <strong>${fmtP2(k.margemBruta)}</strong> — dentro da faixa saudável para o setor educacional (≥ 40%).` });
+    else if (k.margemBruta >= 20) items.push({ cls: 'warn', txt: `Margem Bruta em <strong>${fmtP2(k.margemBruta)}</strong> — abaixo do ideal (40%). Os custos operacionais estão consumindo uma parcela elevada da receita.` });
+    else items.push({ cls: 'danger', txt: `Margem Bruta crítica: <strong>${fmtP2(k.margemBruta)}</strong>. Custos operacionais muito elevados em relação à receita.` });
+  }
+
+  // Margem operacional
+  if (k.margemOperacional != null) {
+    if (k.margemOperacional >= 10) items.push({ cls: 'ok', txt: `Margem Operacional de <strong>${fmtP2(k.margemOperacional)}</strong> — operação autossustentável.` });
+    else if (k.margemOperacional >= 0) items.push({ cls: 'warn', txt: `Margem Operacional baixa: <strong>${fmtP2(k.margemOperacional)}</strong>. A operação cobre custos mas não gera folga.` });
+    else items.push({ cls: 'danger', txt: `Margem Operacional negativa: <strong>${fmtP2(k.margemOperacional)}</strong>. As despesas superam o resultado bruto — operação deficitária.` });
+  }
+
+  // Pessoal/RL
+  if (k.pessoalSobreRL != null) {
+    const abs = Math.abs(k.pessoalSobreRL);
+    if (abs > 40) items.push({ cls: 'warn', txt: `Gastos com pessoal representam <strong>${fmtP2(abs)}</strong> da Receita Líquida — acima de 40%, limite de referência para o setor.` });
+    else if (abs <= 25) items.push({ cls: 'ok', txt: `Pessoal / RL em <strong>${fmtP2(abs)}</strong> — dentro da faixa eficiente (≤ 25%).` });
+  }
+
+  // Resultado final vs operacional
+  if (k.resultadoFinal != null && k.resultadoOperacional != null) {
+    const delta = k.resultadoFinal - k.resultadoOperacional;
+    if (delta > 1000) items.push({ cls: 'info', txt: `O resultado financeiro contribuiu com <strong>${fmtK2(delta)}</strong> positivos — rendimentos de aplicações acima dos encargos bancários.` });
+    else if (delta < -1000) items.push({ cls: 'warn', txt: `O resultado financeiro reduziu o resultado em <strong>${fmtK2(Math.abs(delta))}</strong> — encargos e juros acima dos rendimentos.` });
+  }
+
+  if (items.length === 0) return '';
+
+  return `<div class="alert-painel" style="margin: 1rem 2rem;">
+    <div class="alert-painel-title">Destaques — ${empresa === 'CONSOLIDADO' ? 'Consolidado' : empresa} · ${mes}</div>
+    ${items.map(i => `<div class="alert-item"><div class="alert-dot ${i.cls}"></div><div>${i.txt}</div></div>`).join('')}
+  </div>`;
+}
+
 loadData();
 </script>
+
+<div id="tipBubble" class="tip-bubble"></div>
+<script>
+(function(){
+  const bub = document.getElementById('tipBubble');
+  let activeIcon = null;
+  function showTip(icon, e) {
+    const txt = icon.dataset.tip || '';
+    const title = icon.dataset.title || '';
+    const meta = icon.dataset.meta || '';
+    bub.innerHTML = (title ? '<strong>'+title+'</strong>' : '') + txt + (meta ? '<div class="tip-meta">'+meta+'</div>' : '');
+    bub.classList.add('show');
+    positionTip(e);
+    activeIcon = icon;
+  }
+  function positionTip(e) {
+    const x = e.clientX, y = e.clientY;
+    const bw = bub.offsetWidth || 260, bh = bub.offsetHeight || 80;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let left = x + 14, top = y - 10;
+    if (left + bw > vw - 8) left = x - bw - 10;
+    if (top + bh > vh - 8) top = vh - bh - 8;
+    if (top < 8) top = 8;
+    bub.style.left = left + 'px';
+    bub.style.top  = top  + 'px';
+  }
+  document.addEventListener('mouseover', e => {
+    const icon = e.target.closest('.tip-icon');
+    if (icon) showTip(icon, e);
+  });
+  document.addEventListener('mousemove', e => {
+    if (activeIcon) positionTip(e);
+  });
+  document.addEventListener('mouseout', e => {
+    if (e.target.closest('.tip-icon')) { bub.classList.remove('show'); activeIcon = null; }
+  });
+  document.addEventListener('scroll', () => { bub.classList.remove('show'); activeIcon = null; }, true);
+})();
+</script>
+
 </body>
 </html>

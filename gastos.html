@@ -395,6 +395,31 @@
     td { border-bottom: 1px solid #ddd; color: #111 !important; }
     .toggle, .grupo-tag, .dot { display:none; }
   }
+
+  /* ── TOOLTIP CONTEXTUAL ── */
+  .tip-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: rgba(107,114,128,.25); color: #9ca3af;
+    font-size: 9px; font-weight: 700; font-family: sans-serif;
+    cursor: default; vertical-align: middle; margin-left: 4px;
+    position: relative; flex-shrink: 0; line-height: 1;
+    transition: background .15s, color .15s; user-select: none;
+  }
+  .tip-icon:hover { background: rgba(0,229,160,.25); color: #00e5a0; }
+  .tip-bubble {
+    display: none; position: fixed; z-index: 9999;
+    background: #1a1e2a; border: 1px solid #3a4155;
+    border-radius: 8px; padding: .65rem .85rem;
+    max-width: 280px; min-width: 180px;
+    font-size: .74rem; line-height: 1.55;
+    color: #c9cfd9; font-family: 'Syne', sans-serif;
+    box-shadow: 0 4px 20px rgba(0,0,0,.5); pointer-events: none;
+  }
+  .tip-bubble.show { display: block; }
+  .tip-bubble strong { color: #e8eaf0; font-weight: 600; display: block; margin-bottom: .25rem; font-size: .76rem; }
+  .tip-bubble .tip-meta { color: #6b7280; font-size: .68rem; margin-top: .3rem; border-top: 1px solid #252b3b; padding-top: .3rem; }
+
 </style>
 </head>
 <body>
@@ -408,6 +433,8 @@
   <a href="receitas.html">Receitas</a><span class="sep">›</span>
   <a href="ajustes.html">Ajustes</a><span class="sep">›</span>
   <a href="conciliacao.html">Conciliação</a>
+<span class="sep">›</span>
+  <a href="glossario.html">Glossário</a>
 </nav>
 
 <div class="page-header">
@@ -866,28 +893,28 @@ function renderMain(itens, raw) {
   const html = `
     <div class="grid-charts">
       <div class="card">
-        <div class="card-title"><span>Participação</span><small>Top 6 por grupo final</small></div>
+        <div class="card-title"><span>Participação</span><span class="tip-icon" data-title="Participação por Grupo" data-tip="Distribuição percentual dos gastos por grupo final. Identifica quais categorias consomem mais recursos.">i</span><small>Top 6 por grupo final</small></div>
         <div class="chart-wrap short"><canvas id="chart-donut"></canvas></div>
       </div>
       <div class="card">
-        <div class="card-title"><span>Evolução mensal</span><small>Total gasto — todos os meses</small></div>
+        <div class="card-title"><span>Evolução mensal</span><span class="tip-icon" data-title="Evolução Mensal" data-tip="Total gasto em cada mês, independente do filtro de período. Permite ver sazonalidade e tendências de longo prazo.">i</span><small>Total gasto — todos os meses</small></div>
         <div class="chart-wrap short"><canvas id="chart-total"></canvas></div>
       </div>
     </div>
 
     <div class="grid-evol">
       <div class="card">
-        <div class="card-title"><span>Composição mensal</span><small>Top 6 grupos — todos os meses</small></div>
+        <div class="card-title"><span>Composição mensal</span><span class="tip-icon" data-title="Composição Mensal" data-tip="Gráfico de barras empilhadas mostrando a participação de cada grupo no total mensal. Identifica mudanças na estrutura de custos ao longo do tempo.">i</span><small>Top 6 grupos — todos os meses</small></div>
         <div class="chart-wrap short"><canvas id="chart-stack"></canvas></div>
       </div>
       <div class="card">
-        <div class="card-title"><span>Evolução por grupo macro</span><small>Todos os meses</small></div>
+        <div class="card-title"><span>Evolução por grupo macro</span><span class="tip-icon" data-title="Por Grupo Macro" data-tip="Separação por grande categoria (Custos Op., Despesas Op., Desp. Financeiras, Fora DRE) ao longo dos meses. Mostra qual bloco de gastos está crescendo.">i</span><small>Todos os meses</small></div>
         <div class="chart-wrap short"><canvas id="chart-grupos-macro"></canvas></div>
       </div>
     </div>
 
     <div class="card">
-      <div class="card-title"><span>Detalhamento de gastos</span><small>Drill individual: Grupo → Grupo Final → Categoria → Descrição → Lançamentos</small></div>
+      <div class="card-title"><span>Detalhamento de gastos</span><span class="tip-icon" data-title="Drill-down de Gastos" data-tip="Clique em qualquer linha para expandir: Grupo → Grupo Final → Categoria → Descrição → Lançamentos individuais. Permite rastrear qualquer gasto até a nota de origem.">i</span><small>Drill individual: Grupo → Grupo Final → Categoria → Descrição → Lançamentos</small></div>
       <div class="table-wrap">
         <table>
           <thead>
@@ -1368,7 +1395,7 @@ function exportPDF() {
           </tr>
         </tbody>
       </table>
-    </body></html>
+    
   `;
 
   const w = window.open('', '_blank');
@@ -1410,6 +1437,46 @@ function escapeAttr(s) {
 }
 
 loadData();
+</script>
+
+
+<div id="tipBubble" class="tip-bubble"></div>
+<script>
+(function(){
+  const bub = document.getElementById('tipBubble');
+  let activeIcon = null;
+  function showTip(icon, e) {
+    const txt = icon.dataset.tip || '';
+    const title = icon.dataset.title || '';
+    const meta = icon.dataset.meta || '';
+    bub.innerHTML = (title ? '<strong>'+title+'</strong>' : '') + txt + (meta ? '<div class="tip-meta">'+meta+'</div>' : '');
+    bub.classList.add('show');
+    positionTip(e);
+    activeIcon = icon;
+  }
+  function positionTip(e) {
+    const x = e.clientX, y = e.clientY;
+    const bw = bub.offsetWidth || 260, bh = bub.offsetHeight || 80;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let left = x + 14, top = y - 10;
+    if (left + bw > vw - 8) left = x - bw - 10;
+    if (top + bh > vh - 8) top = vh - bh - 8;
+    if (top < 8) top = 8;
+    bub.style.left = left + 'px';
+    bub.style.top  = top  + 'px';
+  }
+  document.addEventListener('mouseover', e => {
+    const icon = e.target.closest('.tip-icon');
+    if (icon) showTip(icon, e);
+  });
+  document.addEventListener('mousemove', e => {
+    if (activeIcon) positionTip(e);
+  });
+  document.addEventListener('mouseout', e => {
+    if (e.target.closest('.tip-icon')) { bub.classList.remove('show'); activeIcon = null; }
+  });
+  document.addEventListener('scroll', () => { bub.classList.remove('show'); activeIcon = null; }, true);
+})();
 </script>
 
 </body>

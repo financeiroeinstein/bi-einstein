@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Glossário — Einstein Palmas</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14; --surface: #13161e; --surface2: #1a1e2a;
+    --border: #252b3b; --accent: #00e5a0; --accent2: #4f8fff;
+    --danger: #ff4d6a; --warn: #ffb547; --text: #e8eaf0; --muted: #6b7280;
+    --font-h: 'Syne', sans-serif; --font-m: 'JetBrains Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-h); background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  nav {
+    display: flex; align-items: center; gap: .75rem;
+    padding: .65rem 2rem; background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+  }
+  nav a { color: var(--muted); text-decoration: none; font-size: .74rem; letter-spacing: .07em; text-transform: uppercase; transition: color .15s; }
+  nav a:hover { color: var(--accent); }
+  nav .sep { color: var(--border); }
+  nav .active { color: var(--accent); font-size: .74rem; letter-spacing: .07em; text-transform: uppercase; }
+
+  .page-header {
+    padding: 1.75rem 2rem 1.4rem; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;
+  }
+  .page-title { font-size: 1.55rem; font-weight: 800; letter-spacing: -.02em; }
+  .page-title span { color: var(--accent); }
+  .page-sub { font-size: .8rem; color: var(--muted); margin-top: .3rem; }
+
+  .search-bar {
+    padding: 1rem 2rem; border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .search-input {
+    width: 100%; max-width: 460px; background: var(--surface2);
+    border: 1px solid var(--border); color: var(--text);
+    font-family: var(--font-h); font-size: .84rem;
+    padding: .5rem 1rem; border-radius: 8px; outline: none;
+    transition: border-color .15s;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--muted); }
+
+  .content { padding: 1.5rem 2rem 3rem; max-width: 960px; }
+
+  .section-block { margin-bottom: 2.5rem; }
+  .section-header {
+    display: flex; align-items: center; gap: .75rem;
+    margin-bottom: 1rem; padding-bottom: .5rem;
+    border-bottom: 2px solid var(--border);
+  }
+  .section-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .section-title { font-size: .95rem; font-weight: 700; letter-spacing: .02em; }
+  .section-page { font-size: .68rem; color: var(--muted); font-family: var(--font-m); margin-left: auto; }
+
+  .term-grid { display: flex; flex-direction: column; gap: .5rem; }
+
+  .term-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: .85rem 1.1rem;
+    display: grid; grid-template-columns: 220px 1fr auto;
+    gap: .75rem; align-items: start;
+    transition: border-color .15s;
+  }
+  .term-card:hover { border-color: #3a4155; }
+  .term-card.hidden { display: none; }
+
+  .term-name { font-size: .84rem; font-weight: 700; color: var(--text); line-height: 1.3; }
+  .term-formula { font-size: .67rem; color: var(--muted); font-family: var(--font-m); margin-top: .2rem; }
+
+  .term-desc { font-size: .78rem; color: #b0b8c8; line-height: 1.6; }
+  .term-desc strong { color: var(--text); font-weight: 600; }
+
+  .term-badge {
+    font-size: .62rem; padding: .2rem .55rem; border-radius: 5px;
+    font-weight: 600; white-space: nowrap; align-self: start; margin-top: 2px;
+  }
+  .badge-ok     { background: rgba(74,222,128,.15); color: #4ade80; }
+  .badge-warn   { background: rgba(255,181,71,.15);  color: var(--warn); }
+  .badge-danger { background: rgba(255,77,106,.15);  color: var(--danger); }
+  .badge-info   { background: rgba(79,143,255,.15);  color: var(--accent2); }
+  .badge-neutral{ background: rgba(107,114,128,.15); color: var(--muted); }
+
+  .leitura-rapida {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.1rem 1.4rem; margin-bottom: 2rem;
+  }
+  .lr-title { font-size: .62rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: .8rem; }
+  .lr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: .6rem; }
+  .lr-item { display: flex; align-items: flex-start; gap: .5rem; font-size: .76rem; line-height: 1.45; color: #b0b8c8; }
+  .lr-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: .35rem; }
+
+  .como-ler {
+    background: rgba(0,229,160,.04); border: 1px solid rgba(0,229,160,.15);
+    border-radius: 12px; padding: 1.1rem 1.4rem; margin-bottom: 2rem;
+  }
+  .como-ler-title { font-size: .62rem; text-transform: uppercase; letter-spacing: .1em; color: var(--accent); margin-bottom: .8rem; }
+  .como-ler-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .8rem; }
+  .cor-item { display: flex; align-items: center; gap: .6rem; font-size: .75rem; color: #b0b8c8; }
+  .cor-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  @media (max-width: 700px) {
+    .term-card { grid-template-columns: 1fr; }
+    .content { padding: 1rem 1rem 2rem; }
+  }
+
+  .no-results { color: var(--muted); font-size: .85rem; padding: 2rem 0; text-align: center; display: none; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html">Menu</a><span class="sep">›</span>
+  <a href="painel_executivo.html">Painel</a><span class="sep">›</span>
+  <a href="fluxo_caixa.html">Fluxo</a><span class="sep">›</span>
+  <a href="dre.html">DRE</a><span class="sep">›</span>
+  <a href="gastos.html">Gastos</a><span class="sep">›</span>
+  <a href="receitas.html">Receitas</a><span class="sep">›</span>
+  <a href="ajustes.html">Ajustes</a><span class="sep">›</span>
+  <a href="conciliacao.html">Conciliação</a><span class="sep">›</span>
+  <span class="active">Glossário</span>
+</nav>
+
+<div class="page-header">
+  <div>
+    <div class="page-title">Glossário <span>Financeiro</span></div>
+    <div class="page-sub">Referência rápida para leitura dos indicadores — Einstein Palmas</div>
+  </div>
+</div>
+
+<div class="search-bar">
+  <input class="search-input" id="searchInput" placeholder="Buscar indicador..." oninput="filtrar(this.value)" autocomplete="off">
+</div>
+
+<div class="content">
+
+  <!-- LEITURA RÁPIDA DE CORES -->
+  <div class="como-ler">
+    <div class="como-ler-title">Como ler as cores do painel</div>
+    <div class="como-ler-grid">
+      <div class="cor-item"><div class="cor-dot" style="background:#4ade80"></div> Verde — resultado positivo ou dentro da meta</div>
+      <div class="cor-item"><div class="cor-dot" style="background:#ffb547"></div> Amarelo — atenção, abaixo do ideal mas sem risco imediato</div>
+      <div class="cor-item"><div class="cor-dot" style="background:#ff4d6a"></div> Vermelho — resultado negativo ou acima do limite crítico</div>
+      <div class="cor-item"><div class="cor-dot" style="background:#4f8fff"></div> Azul — valor informativo (neutro, sem julgamento de bom/ruim)</div>
+      <div class="cor-item"><div class="cor-dot" style="background:#6b7280"></div> Cinza — zero ou sem dados disponíveis</div>
+    </div>
+  </div>
+
+  <!-- LEITURA RÁPIDA DE REFERÊNCIAS -->
+  <div class="leitura-rapida">
+    <div class="lr-title">Referências rápidas — setor educacional privado</div>
+    <div class="lr-grid">
+      <div class="lr-item"><div class="lr-dot" style="background:#4ade80"></div>Margem Bruta saudável: ≥ 40%</div>
+      <div class="lr-item"><div class="lr-dot" style="background:#4ade80"></div>Margem Operacional saudável: ≥ 10%</div>
+      <div class="lr-item"><div class="lr-dot" style="background:#4ade80"></div>Pessoal / RL eficiente: ≤ 25%</div>
+      <div class="lr-item"><div class="lr-dot" style="background:#ffb547"></div>Pessoal / RL atenção: entre 25% e 40%</div>
+      <div class="lr-item"><div class="lr-dot" style="background:#4ade80"></div>Inadimplência aceitável: ≤ 3%</div>
+      <div class="lr-item"><div class="lr-dot" style="background:#ffb547"></div>Inadimplência atenção: entre 3% e 8%</div>
+      <div class="lr-item"><div class="lr-dot" style="background:#4ade80"></div>% Realização meta: ≥ 95%</div>
+      <div class="lr-item"><div class="lr-dot" style="background:#ffb547"></div>% Realização atenção: entre 85% e 95%</div>
+    </div>
+  </div>
+
+  <!-- SEÇÃO 1: CAIXA -->
+  <div class="section-block">
+    <div class="section-header">
+      <div class="section-dot" style="background:#4f8fff"></div>
+      <div class="section-title">Indicadores de Caixa</div>
+      <div class="section-page">Painel Executivo · Fluxo de Caixa</div>
+    </div>
+    <div class="term-grid">
+
+      <div class="term-card" data-search="entradas bancárias extrato caixa">
+        <div><div class="term-name">Entradas Bancárias</div><div class="term-formula">Fonte: extrato bancário</div></div>
+        <div class="term-desc">Total de <strong>créditos lançados no extrato</strong> no período. Inclui recebimentos operacionais, transferências recebidas de outras contas e qualquer outro crédito. É o número bruto — pode incluir movimentações que não são receita real (ex: transferências internas).</div>
+        <span class="term-badge badge-info">informativo</span>
+      </div>
+
+      <div class="term-card" data-search="saídas bancárias extrato débitos">
+        <div><div class="term-name">Saídas Bancárias</div><div class="term-formula">Fonte: extrato bancário</div></div>
+        <div class="term-desc">Total de <strong>débitos no extrato</strong> no período. Inclui pagamentos operacionais, transferências para outras contas e aplicações financeiras. É o número bruto — pode incluir movimentações que não são despesa real.</div>
+        <span class="term-badge badge-info">informativo</span>
+      </div>
+
+      <div class="term-card" data-search="entradas operacionais proesc receita">
+        <div><div class="term-name">Entradas Operacionais</div><div class="term-formula">Fonte: Proesc</div></div>
+        <div class="term-desc">Receitas efetivamente <strong>ligadas à operação</strong>: mensalidades, matrículas, serviços educacionais. São classificadas pelo Proesc como operacionais. Exclui transferências internas, intercompany e resgates de aplicação.</div>
+        <span class="term-badge badge-ok">positivo</span>
+      </div>
+
+      <div class="term-card" data-search="saídas operacionais proesc despesas pagamentos">
+        <div><div class="term-name">Saídas Operacionais</div><div class="term-formula">Fonte: Proesc</div></div>
+        <div class="term-desc">Pagamentos <strong>classificados como despesas ou custos operacionais</strong>: fornecedores, folha, serviços. Exclui transferências internas, intercompany e aplicações financeiras. É a base para o cálculo do Resultado Operacional.</div>
+        <span class="term-badge badge-neutral">despesa</span>
+      </div>
+
+      <div class="term-card" data-search="resultado bancário líquido fluxo">
+        <div><div class="term-name">Resultado Bancário</div><div class="term-formula">Entradas Bancárias − Saídas Bancárias</div></div>
+        <div class="term-desc">Diferença entre <strong>todos os créditos e débitos bancários</strong>. Reflete o fluxo líquido em conta, mas pode incluir transferências internas e aplicações. <strong>Não usar para avaliar resultado real</strong> — use o Resultado Operacional para isso.</div>
+        <span class="term-badge badge-info">informativo</span>
+      </div>
+
+      <div class="term-card" data-search="resultado operacional caixa desempenho">
+        <div><div class="term-name">Resultado Operacional (Caixa)</div><div class="term-formula">Entradas Op. − Saídas Op.</div></div>
+        <div class="term-desc">Diferença entre entradas e saídas operacionais. É o <strong>indicador mais limpo do desempenho financeiro de caixa</strong>, pois exclui transferências internas, intercompany e aplicações. Positivo = a operação está gerando caixa.</div>
+        <span class="term-badge badge-ok">principal</span>
+      </div>
+
+      <div class="term-card" data-search="disponível conta saldo corrente">
+        <div><div class="term-name">Disponível em Conta</div><div class="term-formula">Saldo final do último mês do período</div></div>
+        <div class="term-desc">Saldo atual em <strong>conta corrente</strong>, calculado a partir do extrato bancário. Representa o dinheiro disponível imediatamente para uso. Varia conforme empresa e banco selecionados no filtro.</div>
+        <span class="term-badge badge-info">posição atual</span>
+      </div>
+
+      <div class="term-card" data-search="investimentos CDB aplicações financeiras">
+        <div><div class="term-name">Investimentos</div><div class="term-formula">Saldo em CDB e aplicações no período</div></div>
+        <div class="term-desc">Saldo aplicado em <strong>CDB e outros instrumentos financeiros</strong>. Não está disponível imediatamente — requer resgate. Gera rendimento sobre o capital aplicado. Valor cresce com aportes e rendimentos.</div>
+        <span class="term-badge badge-info">posição atual</span>
+      </div>
+
+      <div class="term-card" data-search="patrimônio total conta investimentos">
+        <div><div class="term-name">Total — Conta + Investimentos</div><div class="term-formula">Disponível + Investimentos</div></div>
+        <div class="term-desc">Soma do saldo em conta corrente com o saldo investido. Representa o <strong>patrimônio financeiro total do grupo</strong>. É a melhor medida da saúde financeira — mostra quanto o grupo tem disponível ou acessível.</div>
+        <span class="term-badge badge-ok">visão total</span>
+      </div>
+
+      <div class="term-card" data-search="transferências internas entre contas neutrala">
+        <div><div class="term-name">Transferências Internas</div><div class="term-formula">Valor líquido no período</div></div>
+        <div class="term-desc">Movimentações <strong>entre contas do próprio grupo</strong> (ex: SIGMA → MD). São neutras no consolidado — não representam receita nem despesa real. Distorcem os números bancários brutos, por isso são separadas.</div>
+        <span class="term-badge badge-neutral">neutro</span>
+      </div>
+
+      <div class="term-card" data-search="intercompany entre empresas grupo crédito">
+        <div><div class="term-name">Intercompany</div><div class="term-formula">Valor líquido do período</div></div>
+        <div class="term-desc">Transações financeiras <strong>entre as três empresas do grupo</strong> (MD, SEL, SIGMA). Valor positivo = o grupo recebeu mais do que pagou internamente. Precisa ser monitorado para evitar descasamentos entre os demonstrativos individuais.</div>
+        <span class="term-badge badge-neutral">monitorar</span>
+      </div>
+
+      <div class="term-card" data-search="aplicações financeiras CDB resgate aporte">
+        <div><div class="term-name">Aplicações Financeiras (fluxo)</div><div class="term-formula">Resgates − Aportes no período</div></div>
+        <div class="term-desc">Entradas e saídas em CDB no período. <strong>Valor negativo = mais foi aplicado do que resgatado</strong> — o grupo está poupando. Valor positivo = resgate líquido — pode indicar necessidade de caixa ou estratégia de desinvestimento.</div>
+        <span class="term-badge badge-info">fluxo</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SEÇÃO 2: DRE -->
+  <div class="section-block">
+    <div class="section-header">
+      <div class="section-dot" style="background:#00e5a0"></div>
+      <div class="section-title">Indicadores da DRE (por competência)</div>
+      <div class="section-page">DRE Gerencial</div>
+    </div>
+    <div class="term-grid">
+
+      <div class="term-card" data-search="receita líquida bruta deduções base cálculo">
+        <div><div class="term-name">Receita Líquida</div><div class="term-formula">Receita Bruta − Deduções</div></div>
+        <div class="term-desc">Receita operacional bruta depois de subtrair <strong>descontos, devoluções e impostos sobre receita</strong>. É a base de cálculo para todos os percentuais (margens). Diferente do caixa — inclui valores a receber, não apenas o que já foi pago.</div>
+        <span class="term-badge badge-info">base de cálculo</span>
+      </div>
+
+      <div class="term-card" data-search="resultado bruto custos operacionais serviço">
+        <div><div class="term-name">Resultado Bruto</div><div class="term-formula">Receita Líquida − Custos Operacionais</div></div>
+        <div class="term-desc">Receita Líquida menos <strong>Custos Operacionais diretos</strong> (pessoal docente, material didático, estrutura de ensino). Mede a eficiência do serviço educacional prestado antes das despesas administrativas.</div>
+        <span class="term-badge badge-ok">≥ 0 desejado</span>
+      </div>
+
+      <div class="term-card" data-search="resultado operacional DRE despesas administrativo">
+        <div><div class="term-name">Resultado Operacional (DRE)</div><div class="term-formula">Resultado Bruto − Despesas Operacionais</div></div>
+        <div class="term-desc">Resultado Bruto menos <strong>Despesas Operacionais</strong> (administrativo, RH, marketing, TI). Indica se a operação como um todo — incluindo a estrutura de suporte — é autossustentável. É o principal indicador de gestão.</div>
+        <span class="term-badge badge-ok">principal</span>
+      </div>
+
+      <div class="term-card" data-search="resultado final financeiro juros lucro prejuízo">
+        <div><div class="term-name">Resultado Final</div><div class="term-formula">Resultado Operacional ± Resultado Financeiro</div></div>
+        <div class="term-desc">Resultado Operacional ajustado pelo <strong>resultado financeiro</strong> (rendimentos de aplicações, juros pagos, encargos bancários). É o lucro ou prejuízo líquido do período. Quando melhor que o Operacional, os investimentos estão contribuindo.</div>
+        <span class="term-badge badge-ok">lucro/prejuízo</span>
+      </div>
+
+      <div class="term-card" data-search="margem bruta percentual custos eficiência serviço">
+        <div><div class="term-name">Margem Bruta</div><div class="term-formula">Resultado Bruto / Receita Líquida × 100</div></div>
+        <div class="term-desc">Percentual da receita que sobra <strong>após os custos diretos do ensino</strong>. Acima de 40%: saudável. Entre 20% e 40%: atenção. Abaixo de 20%: custos operacionais estão muito elevados em relação à receita gerada.</div>
+        <span class="term-badge badge-ok">meta ≥ 40%</span>
+      </div>
+
+      <div class="term-card" data-search="margem operacional percentual eficiência total gestão">
+        <div><div class="term-name">Margem Operacional</div><div class="term-formula">Resultado Operacional / Receita Líquida × 100</div></div>
+        <div class="term-desc">Percentual da receita que sobra <strong>após todos os custos e despesas operacionais</strong>. Acima de 10%: operação saudável. Entre 0% e 10%: operação frágil. Negativa: as despesas superam o resultado bruto.</div>
+        <span class="term-badge badge-ok">meta ≥ 10%</span>
+      </div>
+
+      <div class="term-card" data-search="pessoal folha receita líquida percentual">
+        <div><div class="term-name">Pessoal / Receita Líquida</div><div class="term-formula">Gastos com Pessoal / Receita Líquida × 100</div></div>
+        <div class="term-desc">Percentual da receita consumido pela <strong>folha de pagamento</strong> (docentes + administrativo). Abaixo de 25%: eficiente. Entre 25% e 40%: razoável. Acima de 40%: folha pesada — pode comprometer a sustentabilidade.</div>
+        <span class="term-badge badge-warn">meta ≤ 25%</span>
+      </div>
+
+      <div class="term-card" data-search="despesas operacionais administrativo overhead">
+        <div><div class="term-name">Despesas Operacionais</div><div class="term-formula">Fonte: DRE Gerencial</div></div>
+        <div class="term-desc">Total das <strong>despesas de suporte à operação</strong>: administrativo, comercial, marketing, TI, serviços gerais. Não inclui custos diretos de ensino (que são Custos Operacionais) nem resultado financeiro.</div>
+        <span class="term-badge badge-neutral">monitorar</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SEÇÃO 3: RECEITAS E INADIMPLÊNCIA -->
+  <div class="section-block">
+    <div class="section-header">
+      <div class="section-dot" style="background:#ffb547"></div>
+      <div class="section-title">Receitas e Inadimplência</div>
+      <div class="section-page">Receitas e Inadimplência</div>
+    </div>
+    <div class="term-grid">
+
+      <div class="term-card" data-search="receita prevista contratos mensalidades">
+        <div><div class="term-name">Receita Prevista</div><div class="term-formula">Fonte: Proesc / Educbank</div></div>
+        <div class="term-desc">Total de <strong>mensalidades e recebimentos esperados</strong> conforme contratos vigentes. Representa o potencial máximo de receita do mês — o que seria recebido se todos pagassem em dia.</div>
+        <span class="term-badge badge-info">potencial</span>
+      </div>
+
+      <div class="term-card" data-search="receita recebida pago confirmado">
+        <div><div class="term-name">Receita Recebida</div><div class="term-formula">Pagamentos confirmados no período</div></div>
+        <div class="term-desc">Valor <strong>efetivamente pago</strong> pelos alunos e responsáveis no mês. Pode ser menor que o previsto (inadimplência) ou diferente por antecipações e acordos de parcelamento.</div>
+        <span class="term-badge badge-ok">realizado</span>
+      </div>
+
+      <div class="term-card" data-search="gap diferença previsto recebido não pago">
+        <div><div class="term-name">Gap Previsto × Recebido</div><div class="term-formula">Receita Prevista − Receita Recebida</div></div>
+        <div class="term-desc">Diferença entre o esperado e o realizado. <strong>Valor alto indica inadimplência ou atraso relevante</strong>. Parte desse gap pode ser recuperada nos meses seguintes (pagamentos em atraso) ou ser perdida definitivamente.</div>
+        <span class="term-badge badge-warn">monitorar</span>
+      </div>
+
+      <div class="term-card" data-search="realização percentual meta 100% conversão">
+        <div><div class="term-name">% de Realização</div><div class="term-formula">Recebido / Previsto × 100</div></div>
+        <div class="term-desc">Percentual do previsto que foi efetivamente recebido. <strong>Meta: 100%.</strong> Acima de 95%: excelente. Entre 85% e 95%: atenção. Abaixo de 85%: problema de cobrança a ser investigado.</div>
+        <span class="term-badge badge-ok">meta ≥ 95%</span>
+      </div>
+
+      <div class="term-card" data-search="inadimplência mês vencido não pago atraso">
+        <div><div class="term-name">% Inadimplência do Mês</div><div class="term-formula">Vencidos não pagos / Total previsto × 100</div></div>
+        <div class="term-desc">Percentual de contratos com pagamento <strong>vencido e não pago no mês selecionado</strong>. Até 3%: aceitável. Entre 3% e 8%: requer atenção e cobrança ativa. Acima de 8%: crítico — impacto relevante no fluxo.</div>
+        <span class="term-badge badge-warn">meta ≤ 3%</span>
+      </div>
+
+      <div class="term-card" data-search="inadimplência YTD acumulada ano tendência">
+        <div><div class="term-name">% Inadimplência YTD</div><div class="term-formula">Média acumulada desde jan até hoje</div></div>
+        <div class="term-desc">Percentual médio de inadimplência <strong>desde o início do ano</strong> até a data atual. Permite comparar com meses anteriores e identificar se o problema está se agravando ou sendo controlado ao longo do ano.</div>
+        <span class="term-badge badge-info">tendência</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SEÇÃO 4: CONCILIAÇÃO -->
+  <div class="section-block">
+    <div class="section-header">
+      <div class="section-dot" style="background:#a78bfa"></div>
+      <div class="section-title">Conciliação Bancária</div>
+      <div class="section-page">Conciliação Bancária</div>
+    </div>
+    <div class="term-grid">
+
+      <div class="term-card" data-search="conciliado OK extrato proesc par encontrado">
+        <div><div class="term-name">Conciliado (OK)</div><div class="term-formula">Extrato ↔ Proesc — par encontrado</div></div>
+        <div class="term-desc">Lançamento do extrato bancário que encontrou um <strong>lançamento correspondente no Proesc</strong> com valor e data compatíveis. Dia OK = todos os lançamentos estão conciliados.</div>
+        <span class="term-badge badge-ok">conciliado</span>
+      </div>
+
+      <div class="term-card" data-search="suspeito nome divergente duplicata atenção">
+        <div><div class="term-name">Suspeito</div><div class="term-formula">Par encontrado mas com divergência</div></div>
+        <div class="term-desc">Lançamento que encontrou par por valor, mas o <strong>nome ou data apresenta divergência relevante</strong>. Pode ser um registro duplicado ou um lançamento mal classificado. Deve ser verificado manualmente.</div>
+        <span class="term-badge badge-warn">verificar</span>
+      </div>
+
+      <div class="term-card" data-search="data aproximada ±1d ±2d ±3d adjacente">
+        <div><div class="term-name">Conciliado por data ±Nd</div><div class="term-formula">Par encontrado em D±1, D±2 ou D±3</div></div>
+        <div class="term-desc">Lançamento do extrato que casou com um lançamento do Proesc em uma data <strong>próxima (1 a 3 dias de diferença)</strong>. É normal em viradas de mês ou quando o banco processa um pagamento no dia seguinte ao do lançamento no sistema.</div>
+        <span class="term-badge badge-info">normal</span>
+      </div>
+
+      <div class="term-card" data-search="proesc pendente sem par extrato faltando">
+        <div><div class="term-name">Proesc Pendente</div><div class="term-formula">Lançamento no Proesc sem par no extrato</div></div>
+        <div class="term-desc">Pagamento registrado no Proesc que <strong>não tem lançamento correspondente no extrato bancário</strong>. Pode indicar: pagamento ainda não processado pelo banco, erro de lançamento no sistema ou pagamento cancelado.</div>
+        <span class="term-badge badge-danger">verificar</span>
+      </div>
+
+      <div class="term-card" data-search="extrato sem par proesc lançamento não identificado">
+        <div><div class="term-name">Extrato sem par</div><div class="term-formula">Lançamento no extrato sem par no Proesc</div></div>
+        <div class="term-desc">Débito no extrato bancário que <strong>não tem registro correspondente no Proesc</strong>. Pode indicar: pagamento não lançado no sistema, tarifa bancária não registrada ou pagamento indevido que deve ser investigado.</div>
+        <span class="term-badge badge-danger">investigar</span>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="no-results" id="noResults">Nenhum indicador encontrado para "<span id="searchTerm"></span>".</div>
+
+</div>
+
+<script>
+function filtrar(q) {
+  const termo = q.trim().toLowerCase();
+  const cards = document.querySelectorAll('.term-card');
+  let visivel = 0;
+  cards.forEach(c => {
+    const texto = (c.dataset.search + ' ' + c.textContent).toLowerCase();
+    const show = !termo || texto.includes(termo);
+    c.classList.toggle('hidden', !show);
+    if (show) visivel++;
+  });
+  const nr = document.getElementById('noResults');
+  const st = document.getElementById('searchTerm');
+  nr.style.display = (!visivel && termo) ? 'block' : 'none';
+  if (st) st.textContent = q;
+
+  // Esconde sections sem itens visíveis
+  document.querySelectorAll('.section-block').forEach(sec => {
+    const temVisivel = Array.from(sec.querySelectorAll('.term-card')).some(c => !c.classList.contains('hidden'));
+    sec.style.display = (!temVisivel && termo) ? 'none' : '';
+  });
+}
+document.getElementById('searchInput').focus();
+</script>
+</body>
+</html>
