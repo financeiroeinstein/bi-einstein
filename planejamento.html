@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planejamento de Gastos — Einstein Palmas</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0d0f14;--sf:#13161e;--sf2:#1a1e2a;--sf3:#10131b;--bd:#252b3b;
+  --ac:#00e5a0;--ac2:#4f8fff;--dg:#ff4d6a;--wn:#ffb547;--gn:#4ade80;
+  --rd:#f87171;--tx:#e8eaf0;--mu:#6b7280;
+  --cap:#1a1000;--cap-bd:#7a5200;--cap-tx:#ffcc66;--cap-hv:#221500;
+  --fh:'Syne',sans-serif;--fm:'JetBrains Mono',monospace
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--fh);background:var(--bg);color:var(--tx);min-height:100vh}
+
+nav{display:flex;align-items:center;gap:.6rem;padding:.6rem 2rem;background:var(--sf);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:100}
+nav a{color:var(--mu);text-decoration:none;font-size:.73rem;letter-spacing:.07em;text-transform:uppercase}
+nav a:hover{color:var(--ac)}
+.sep{color:var(--bd)}
+.na{color:var(--ac);font-size:.73rem;letter-spacing:.07em;text-transform:uppercase}
+
+.ph{padding:1.5rem 2rem 1.25rem;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:.8rem}
+.ph-t{font-size:1.45rem;font-weight:800;letter-spacing:-.02em}
+.ph-t span{color:var(--ac)}
+.ph-s{font-size:.77rem;color:var(--mu);margin-top:.25rem}
+
+.tabs{display:flex;border-bottom:1px solid var(--bd);padding:0 2rem;background:var(--sf)}
+.tb{padding:.65rem 1.15rem;font-family:var(--fh);font-size:.75rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;background:none;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer;transition:all .15s;margin-bottom:-1px}
+.tb:hover{color:var(--tx)}
+.tb.on{color:var(--ac);border-bottom-color:var(--ac)}
+
+.tc{display:none;padding:1.3rem 2rem 3rem}
+.tc.on{display:block}
+
+/* KPI */
+.ks{display:grid;grid-template-columns:repeat(5,1fr);gap:.65rem;margin-bottom:1.3rem}
+@media(max-width:900px){.ks{grid-template-columns:repeat(3,1fr)}}
+.kc{background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:.8rem .9rem}
+.kl{font-size:.59rem;text-transform:uppercase;letter-spacing:.1em;color:var(--mu);margin-bottom:.28rem}
+.kv{font-family:var(--fm);font-size:1rem;font-weight:500}
+.ks2{font-size:.61rem;color:var(--mu);margin-top:.15rem;font-family:var(--fm)}
+.kt{font-size:.61rem;margin-top:.15rem;font-family:var(--fm)}
+.kc.ac{border-color:var(--ac)}.kc.ac .kv{color:var(--ac)}
+.kc.wn{border-color:var(--wn)}.kc.wn .kv{color:var(--wn)}
+.kc.dg{border-color:var(--dg)}.kc.dg .kv{color:var(--dg)}
+.up{color:var(--rd)}.dn{color:var(--gn)}
+
+/* CHARTS */
+.cr{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.3rem}
+@media(max-width:800px){.cr{grid-template-columns:1fr}}
+.cc{background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:.9rem}
+.ct{font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;color:var(--mu);margin-bottom:.65rem;font-weight:700}
+.cw{position:relative;height:210px}
+.cwt{position:relative;height:295px}
+
+/* SECTION */
+.st{font-size:.63rem;text-transform:uppercase;letter-spacing:.12em;color:var(--mu);margin:1.3rem 0 .65rem;font-weight:700;display:flex;align-items:center;gap:.45rem}
+.st::after{content:'';flex:1;height:1px;background:var(--bd)}
+
+/* INSIGHT */
+.ins{display:grid;grid-template-columns:repeat(3,1fr);gap:.65rem;margin-bottom:1.3rem}
+@media(max-width:800px){.ins{grid-template-columns:1fr}}
+.ic{background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:.9rem}
+.ic.red{border-color:rgba(248,113,113,.4)}
+.ic.yel{border-color:rgba(255,181,71,.4)}
+.ic.grn{border-color:rgba(74,222,128,.3)}
+.il{font-size:.59rem;text-transform:uppercase;letter-spacing:.1em;color:var(--mu);margin-bottom:.42rem;font-weight:700}
+.it{font-size:.79rem;line-height:1.52}
+.it strong{color:var(--ac)}
+.iv{font-family:var(--fm);font-size:.75rem}
+
+/* FILTER */
+.fr{display:flex;gap:.42rem;margin-bottom:.9rem;flex-wrap:wrap;align-items:center}
+.fb{background:var(--sf2);border:1px solid var(--bd);color:var(--mu);font-family:var(--fh);font-size:.68rem;padding:.28rem .6rem;border-radius:5px;cursor:pointer;transition:all .15s}
+.fb:hover,.fb.on{background:rgba(0,229,160,.08);border-color:var(--ac);color:var(--ac)}
+.fb.cap-fb.on{background:rgba(255,204,102,.08);border-color:var(--cap-bd);color:var(--cap-tx)}
+
+/* TABLE */
+.tw{overflow-x:auto;border-radius:8px;border:1px solid var(--bd)}
+table{width:100%;border-collapse:collapse;font-size:.79rem}
+
+thead th{
+  background:var(--sf);padding:.52rem .75rem;text-align:right;
+  font-size:.59rem;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--mu);border-bottom:1px solid var(--bd);white-space:nowrap
+}
+thead th:nth-child(1){width:20px;padding:.52rem .35rem}
+thead th:nth-child(2){width:20px;padding:.52rem .35rem}
+thead th:nth-child(3){text-align:left;min-width:185px}
+thead th:nth-child(4){text-align:left;min-width:95px}
+thead th.fut{color:var(--ac2)}
+thead th.cap-hdr{color:var(--cap-tx)}
+
+tbody tr{border-bottom:1px solid var(--bd);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+
+/* NÍVEL 1 — Grupo */
+tr.g1{cursor:pointer;user-select:none}
+tr.g1:hover td{background:rgba(255,255,255,.025)}
+tr.g1 td{background:var(--sf3);padding:.4rem .75rem;font-size:.59rem;text-transform:uppercase;letter-spacing:.12em;color:var(--mu);font-weight:700;border-top:1px solid var(--bd)}
+tr.g1 td:nth-child(1),tr.g1 td:nth-child(2){padding:.4rem .38rem}
+.ti{display:inline-block;transition:transform .18s;font-size:.65rem;color:var(--mu);width:12px}
+tr.g1.open .ti{transform:rotate(90deg)}
+
+/* NÍVEL 2 — Categoria PROESC */
+tr.g2{display:none;cursor:pointer;user-select:none}
+tr.g2.vis{display:table-row}
+tr.g2:hover td{background:rgba(255,255,255,.02)}
+tr.g2 td{background:var(--sf);padding:.38rem .75rem;border-top:none}
+tr.g2 td:nth-child(1){padding:.38rem .38rem}
+tr.g2 td:nth-child(2){padding:.38rem .38rem}
+tr.g2.open .ti2{transform:rotate(90deg)}
+.ti2{display:inline-block;transition:transform .18s;font-size:.62rem;color:var(--mu);width:11px}
+td.cat-nm{font-size:.78rem;font-weight:600;padding-left:.6rem!important}
+
+/* NÍVEL 3 — Item detalhado (CAP ou manual) */
+tr.g3{display:none}
+tr.g3.vis{display:table-row}
+tr.g3:hover td{background:rgba(255,255,255,.015)}
+tr.g3 td{padding:.36rem .75rem}
+
+/* CAP highlight */
+tr.g3.cap-row td{background:var(--cap)}
+tr.g3.cap-row:hover td{background:var(--cap-hv)}
+tr.g3.cap-row td.nm{color:var(--cap-tx)}
+tr.g3.cap-row td.val{color:var(--cap-tx);opacity:.85}
+tr.g3.cap-row td.vf{color:var(--cap-tx)}
+tr.g3.cap-row td.ve input{color:var(--wn);background:rgba(255,181,71,.08)}
+tr.g3.cap-row td.ve input:focus{background:rgba(255,181,71,.18)}
+
+/* Linhas adicionadas pelo usuário */
+tr.g3.user-row td{background:rgba(79,143,255,.04)}
+tr.g3.user-row td.nm input{color:var(--ac2)}
+tr.g3.user-row td.val-edit-nm input{
+  width:100%;background:transparent;border:none;outline:none;
+  font-family:var(--fh);font-size:.77rem;color:var(--ac2);padding:.36rem .75rem;
+}
+tr.g3.user-row td.val-edit-nm input::placeholder{color:#3a4a6a}
+
+/* Botão adicionar linha */
+tr.add-row{display:none}
+tr.add-row.vis{display:table-row}
+tr.add-row td{padding:.3rem .75rem;border-top:1px dashed var(--bd)}
+.btn-add{background:transparent;border:1px dashed var(--bd);color:var(--mu);font-family:var(--fh);font-size:.65rem;padding:.22rem .6rem;border-radius:4px;cursor:pointer;transition:all .15s}
+.btn-add:hover{border-color:var(--ac2);color:var(--ac2)}
+.btn-del{background:transparent;border:none;color:#3a4060;font-size:.7rem;cursor:pointer;padding:.1rem .3rem;transition:color .15s}
+.btn-del:hover{color:var(--dg)}
+
+/* Cell types */
+td.nm{font-size:.77rem;padding-left:2.2rem!important}
+td.grp{font-size:.68rem;color:var(--mu)}
+td.val{text-align:right;font-family:var(--fm);font-size:.77rem;white-space:nowrap}
+td.vf{text-align:right;font-family:var(--fm);font-size:.77rem;color:var(--ac2);white-space:nowrap}
+td.ve{padding:0}
+td.ve input{width:100%;min-width:72px;background:rgba(255,181,71,.055);border:none;outline:none;font-family:var(--fm);font-size:.77rem;color:var(--wn);text-align:right;padding:.36rem .75rem}
+td.ve input:focus{background:rgba(255,181,71,.13)}
+td.ve.ch input{color:var(--gn)}
+
+/* Subtotal + total */
+tr.sr td{background:var(--sf);padding:.45rem .75rem;font-weight:700;font-family:var(--fm);font-size:.75rem;border-top:1px solid var(--bd)}
+tr.sr td:nth-child(1),tr.sr td:nth-child(2){padding:.45rem .38rem}
+tr.sr td:nth-child(3){color:var(--mu);font-family:var(--fh);font-size:.68rem;text-transform:uppercase;letter-spacing:.06em}
+tr.tr td{background:var(--sf2);padding:.58rem .75rem;font-weight:800;font-family:var(--fm);font-size:.84rem;border-top:2px solid var(--bd)}
+tr.tr td:nth-child(3){color:var(--tx);font-family:var(--fh);font-size:.76rem;text-transform:uppercase;letter-spacing:.06em}
+
+.bsv{font-size:.56rem;background:#1e2230;border:1px dashed #3a3f55;color:#4a5068;border-radius:3px;padding:.06rem .26rem;font-family:var(--fm)}
+.bal{font-size:.56rem;background:rgba(255,77,106,.1);border:1px solid rgba(255,77,106,.3);color:var(--dg);border-radius:3px;padding:.06rem .26rem;font-family:var(--fm)}
+.bwn{font-size:.56rem;background:rgba(255,181,71,.1);border:1px solid rgba(255,181,71,.3);color:var(--wn);border-radius:3px;padding:.06rem .26rem;font-family:var(--fm)}
+.cap-badge{font-size:.55rem;background:rgba(255,204,102,.12);border:1px solid var(--cap-bd);color:var(--cap-tx);border-radius:3px;padding:.05rem .28rem;font-family:var(--fm);letter-spacing:.04em}
+
+/* LEGENDA */
+.legend{display:flex;gap:1.2rem;align-items:center;margin-bottom:.9rem;flex-wrap:wrap;font-size:.65rem;color:var(--mu)}
+.leg-item{display:flex;align-items:center;gap:.38rem}
+.leg-dot{width:10px;height:10px;border-radius:2px}
+.leg-proesc{background:var(--sf2);border:1px solid var(--bd)}
+.leg-cap{background:var(--cap);border:1px solid var(--cap-bd)}
+.leg-user{background:rgba(79,143,255,.12);border:1px solid rgba(79,143,255,.3)}
+
+/* SAVE BAR */
+.sv{display:none;position:fixed;bottom:1.3rem;right:2rem;z-index:200;background:var(--sf);border:1px solid var(--wn);border-radius:8px;padding:.55rem .95rem;font-size:.75rem;align-items:center;gap:.65rem;box-shadow:0 8px 28px rgba(0,0,0,.5)}
+.sv.on{display:flex}
+.bs{background:var(--wn);color:#000;border:none;border-radius:4px;font-family:var(--fh);font-weight:700;font-size:.75rem;padding:.35rem .82rem;cursor:pointer}
+.bs:hover{opacity:.85}
+.br{background:transparent;color:var(--mu);border:1px solid var(--bd);border-radius:4px;font-family:var(--fh);font-size:.75rem;padding:.35rem .82rem;cursor:pointer}
+.status-ok{font-size:.62rem;color:var(--gn);font-family:var(--fm)}
+.status-live{font-size:.62rem;color:var(--wn);font-family:var(--fm);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html">Menu</a><span class="sep">›</span>
+  <a href="painel_executivo.html">Painel</a><span class="sep">›</span>
+  <a href="fluxo_caixa.html">Fluxo</a><span class="sep">›</span>
+  <a href="dre.html">DRE</a><span class="sep">›</span>
+  <a href="gastos.html">Gastos</a><span class="sep">›</span>
+  <a href="receitas.html">Receitas</a><span class="sep">›</span>
+  <a href="ajustes.html">Ajustes</a><span class="sep">›</span>
+  <a href="conciliacao.html">Conciliação</a><span class="sep">›</span>
+  <span class="na">Planejamento</span>
+  <a href="glossario.html" style="margin-left:auto">Glossário</a>
+  <span style="margin-left:.6rem" id="dSt"></span>
+</nav>
+
+<div class="ph">
+  <div>
+    <div class="ph-t">Planejamento de <span>Gastos</span></div>
+    <div class="ph-s" id="phS">Carregando…</div>
+  </div>
+  <div style="font-size:.68rem;color:var(--mu);font-family:var(--fm)" id="lastUp"></div>
+</div>
+
+<div class="tabs">
+  <button class="tb on" onclick="switchTab('hist')">Histórico &amp; Padrões</button>
+  <button class="tb" onclick="switchTab('plan')">Planejamento Mai–Dez</button>
+</div>
+
+<!-- ══ TAB HISTÓRICO ══════════════════════════════════════════════ -->
+<div class="tc on" id="tab-hist">
+  <div class="ks" id="kpi1"></div>
+  <div class="ins" id="ins"></div>
+  <div class="cr">
+    <div class="cc"><div class="ct">Evolução por Grupo — período histórico</div><div class="cw"><canvas id="cGrupos"></canvas></div></div>
+    <div class="cc"><div class="ct">Composição Média Mensal</div><div class="cw"><canvas id="cDonut"></canvas></div></div>
+  </div>
+  <div class="st">Detalhamento · clique no grupo para expandir</div>
+  <div class="tw">
+    <table id="tHist">
+      <thead><tr>
+        <th></th><th></th>
+        <th style="text-align:left">Categoria / Item</th>
+        <th style="text-align:left">Grupo</th>
+        <th>Jan/26</th><th>Fev/26</th><th>Mar/26</th>
+        <th>Média/mês</th><th>Tend.</th>
+      </tr></thead>
+      <tbody id="tbH"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══ TAB PLANEJAMENTO ══════════════════════════════════════════ -->
+<div class="tc" id="tab-plan">
+  <div class="ks" id="kpi2"></div>
+  <div class="cr">
+    <div class="cc" style="grid-column:1/-1">
+      <div class="ct">Projeção Mai–Dez/26 — empilhado por grupo</div>
+      <div class="cwt"><canvas id="cProj"></canvas></div>
+    </div>
+  </div>
+
+  <div class="fr">
+    <span style="font-size:.59rem;text-transform:uppercase;letter-spacing:.1em;color:var(--mu)">Grupos:</span>
+    <button class="fb on" onclick="tog('Pessoas',this)">Pessoas</button>
+    <button class="fb on" onclick="tog('Despesas fixas',this)">Desp. Fixas</button>
+    <button class="fb on" onclick="tog('Despesas variáveis',this)">Desp. Variáveis</button>
+    <button class="fb on" onclick="tog('Impostos',this)">Impostos</button>
+  </div>
+
+  <div class="legend">
+    <span style="font-weight:700;color:var(--tx)">Legenda:</span>
+    <div class="leg-item"><div class="leg-dot leg-proesc"></div> PROESC (automático)</div>
+    <div class="leg-item"><div class="leg-dot leg-cap"></div> <span style="color:var(--cap-tx)">Contas a Pagar (atenção manual)</span></div>
+    <div class="leg-item"><div class="leg-dot leg-user"></div> Linha adicionada manualmente</div>
+    <div class="leg-item" style="margin-left:auto;font-size:.62rem">células <span style="color:var(--wn)">amarelas</span> = editáveis · <span style="color:var(--gn)">verdes</span> = ajustado</div>
+  </div>
+
+  <div class="st">Projeção por Categoria · expanda grupo → categoria → itens</div>
+  <div class="tw">
+    <table id="tPlan">
+      <thead><tr>
+        <th></th><th></th>
+        <th style="text-align:left">Categoria / Item</th>
+        <th style="text-align:left">Grupo</th>
+        <th>Média</th>
+        <th class="fut">Mai</th><th class="fut">Jun</th><th class="fut">Jul</th>
+        <th class="fut">Ago</th><th class="fut">Set</th><th class="fut">Out</th>
+        <th class="fut">Nov</th><th class="fut">Dez</th>
+      </tr></thead>
+      <tbody id="tbP"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="sv" id="svBar">
+  <span style="color:var(--wn)">⚠</span>
+  <span>Edições não salvas</span>
+  <button class="bs" onclick="salvar()">Salvar</button>
+  <button class="br" onclick="resetar()">Resetar</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════════
+const JSON_URL = 'https://drive.google.com/uc?export=download&id=1uHgfvF8CU2qJSbYjv_MtmgRxJFJzJR-Z';
+
+// ── Dados históricos (fallback jan–mar/26, atualizado pelo JSON) ─
+let H = [
+  ['Salários – Administrativo','Pessoas',86660,79323,78980],
+  ['Salários – Professores','Pessoas',65232,63285,56261],
+  ['Material Didático / Apostilas (custo)','Despesas variáveis',229,76112,77330],
+  ['Simples – IRPJ / CSLL','Impostos',37822,50745,63168],
+  ['Manutenção Predial','Despesas variáveis',16699,22458,13365],
+  ['Pagamento da fatura (principal)','Despesas variáveis',16357,16684,18004],
+  ['Retiradas de Sócios','Pessoas',9529,15972,22788],
+  ['Benefícios – Administrativo','Pessoas',11466,11888,20515],
+  ['Encargos – Administrativo (INSS/FGTS)','Pessoas',15441,11572,12132],
+  ['Mercado e alimentação','Despesas variáveis',9302,9067,20558],
+  ['DARF','Impostos',8860,7408,8584],
+  ['Materiais de Manutenção','Despesas variáveis',7477,13955,8847],
+  ['Empréstimos – principal','Despesas fixas',7590,13201,16687],
+  ['Adiantamento Salarial – Adm.','Pessoas',11252,6850,8956],
+  ['Juros de empréstimos','Despesas variáveis',13084,1583,102],
+  ['Pró-labore','Pessoas',6679,12660,3986],
+  ['Honorários Contábeis','Despesas fixas',10100,7100,4100],
+  ['Ajustes Internos','Despesas variáveis',4319,9817,3150],
+  ['Água e esgoto','Despesas fixas',4820,7585,7282],
+  ['Consórcios','Despesas fixas',5286,5418,5439],
+  ['Benefícios – Professores','Pessoas',3750,5950,3000],
+  ['Honorários jurídicos','Despesas variáveis',4000,4000,4000],
+  ['Custos de Eventos Escolaress','Despesas variáveis',3797,3786,4244],
+  ['Tarifas Bancárias','Despesas fixas',189,189,189],
+  ['Tarifas Bancárias (variável)','Despesas variáveis',4340,2408,2405],
+  ['Seguros','Despesas fixas',3760,3756,3728],
+  ['Serviços Terceirizados','Despesas variáveis',2468,1666,3202],
+  ['Taxas e Licenças','Impostos',7520,399,1003],
+  ['Devoluções / Estornos','Despesas variáveis',3233,5190,400],
+  ['Energia elétrica','Despesas fixas',3186,2084,2213],
+  ['Outras Despesas Operacionais','Despesas variáveis',989,124,1093],
+  ['Transporte e deslocamento','Despesas variáveis',2371,1257,1050],
+  ['IPTU','Impostos',0,0,4548],
+  ['Papelaria','Despesas variáveis',1486,875,1811],
+  ['Sistema de gestão','Despesas fixas',2909,2589,4377],
+  ['Parcelamentos (qualquer origem)','Impostos',4970,4983,5009],
+  ['Internet e telefone','Despesas fixas',1062,1006,1140],
+  ['Encargos – Professores (INSS/FGTS)','Pessoas',1792,1179,0],
+  ['Adiantamento Salarial – Prof.','Pessoas',400,1330,801],
+  ['Treinamentos e Capacitação','Despesas variáveis',670,600,0],
+  ['Segurança e monitoramento','Despesas fixas',233,235,242],
+  ['Marketing e Divulgação','Despesas variáveis',0,500,300],
+  ['Hospedagem / Domínios / TI','Despesas fixas',100,361,100],
+  ['Associações e Mensalidades','Despesas fixas',90,90,90],
+  ['Doações','Despesas variáveis',75,2298,6324],
+  ['Estagiários','Pessoas',7962,0,0],
+  ['Cotas Sicoob','Despesas fixas',1606,2080,1726],
+  ['Sindicato','Impostos',65,64,49],
+];
+
+// ── Contas a pagar: itens que precisam de atenção manual ─────────
+// Organizados por categoria PROESC pai (ou grupo se não tem pai)
+// isCap:true = destaque laranja
+// valor_base = referência mensal (mai/26)
+const CAP = [
+  {cat:'Seguros', grupo:'Despesas fixas', nome:'SEGURO ALUNOS (PORTO SEGUROS)', forma:'E-MAIL', valor:1216.19, dia:5},
+  {cat:'Serviços Terceirizados', grupo:'Despesas variáveis', nome:'SURI- zoop', forma:'E-MAIL', valor:261.0, dia:5},
+  {cat:'Sistema de gestão', grupo:'Despesas fixas', nome:'VINDI', forma:'—', valor:509.26, dia:5},
+  {cat:'Consórcios', grupo:'Despesas fixas', nome:'CARRO HB20  52/64', forma:'BOLETO', valor:null, dia:5},
+  {cat:'Energia elétrica', grupo:'Despesas fixas', nome:'ENERGISA CASA CDC_8/3021405-0', forma:'boleto', valor:764.68, dia:6},
+  {cat:'Energia elétrica', grupo:'Despesas fixas', nome:'ENERGISA CASA CDC_8/3021407-6', forma:'boleto', valor:1519.09, dia:6},
+  {cat:'Pagamento da fatura (principal)', grupo:'Despesas variáveis', nome:'FATURA ARMARINHOS', forma:'E-MAIL', valor:null, dia:7},
+  {cat:'Parcelamentos (qualquer origem)', grupo:'Impostos', nome:'PARCELA MAXIMUS 7/48', forma:'BOLETO', valor:null, dia:9},
+  {cat:'Parcelamentos (qualquer origem)', grupo:'Impostos', nome:'PARCELA CALCEDONIA 7/36', forma:'BOLETO', valor:null, dia:9},
+  {cat:'Serviços Terceirizados', grupo:'Despesas variáveis', nome:'SAENFO INFORMATICA', forma:'E-MAIL', valor:804.58, dia:9},
+  {cat:'Pagamento da fatura (principal)', grupo:'Despesas fixas', nome:'CARTÃO PORTO SEGURO', forma:'—', valor:null, dia:10},
+  {cat:'Serviços Terceirizados', grupo:'Despesas variáveis', nome:'Shopping das Impressoras', forma:'e-mail', valor:650.0, dia:10},
+  {cat:'Associações e Mensalidades', grupo:'Despesas fixas', nome:'ACIPA (BR CONDOS)', forma:'E-MAIL', valor:90.0, dia:10},
+  {cat:'Associações e Mensalidades', grupo:'Despesas variáveis', nome:'IEL- INSTITUTO EUVALDO LODI', forma:'E-MAIL', valor:105.0, dia:10},
+  {cat:'Serviços Terceirizados', grupo:'Despesas variáveis', nome:'TRESEG SIGMA', forma:'E-MAIL', valor:500.0, dia:10},
+  {cat:'Benefícios – Administrativo', grupo:'Pessoas', nome:'UNIMED FUNCIONÁRIOS', forma:'SITE/E-MAIL', valor:null, dia:10},
+  {cat:'Seguros', grupo:'Despesas fixas', nome:'ALLIANZ SEGUROS FUNC.', forma:'E-MAIL', valor:594.44, dia:10},
+  {cat:'Benefícios – Administrativo', grupo:'Pessoas', nome:'LUCAS PAZ_FACULDADE', forma:'BERILO', valor:1259.0, dia:10},
+  {cat:'Hospedagem / Domínios / TI', grupo:'Despesas fixas', nome:'IDEIA SITES', forma:'E-MAIL', valor:100.0, dia:10},
+  {cat:'Honorários Contábeis', grupo:'Despesas fixas', nome:'HONORÁRIOS CONTABILIDADE_MARCIO', forma:'E-MAIL', valor:1500.0, dia:10},
+  {cat:'Honorários jurídicos', grupo:'Despesas variáveis', nome:'HONORÁRIOS ADVOGADO FÁBIO MARÇAL 5/35', forma:'—', valor:2000.0, dia:10},
+  {cat:'Honorários jurídicos', grupo:'Despesas variáveis', nome:'HONORÁRIOS ADVOGADO LOYS MYLLE 5/35', forma:'—', valor:2000.0, dia:10},
+  {cat:'Honorários Contábeis', grupo:'Despesas fixas', nome:'HONORÁRIOS CONTADOR 6/48', forma:'—', valor:600.0, dia:12},
+  {cat:'Internet e telefone', grupo:'Despesas fixas', nome:'TEL. RECEPÇÃO 9901-8118', forma:'SITE', valor:58.74, dia:12},
+  {cat:'Internet e telefone', grupo:'Despesas fixas', nome:'TEL. RECEPÇÃO 9919-7474', forma:'SITE', valor:58.74, dia:12},
+  {cat:'Internet e telefone', grupo:'Despesas fixas', nome:'TEL. RECEPÇÃO 99126-2323', forma:'SITE', valor:118.84, dia:12},
+  {cat:'Internet e telefone', grupo:'Despesas fixas', nome:'CONTA CLARO FINANCEIRO', forma:'DÉBITO', valor:null, dia:12},
+  {cat:'Custos de Eventos Escolaress', grupo:'Despesas variáveis', nome:'MARCOS PAULO_ALUGUEL 1/5', forma:'—', valor:907.4, dia:12},
+  {cat:'Energia elétrica', grupo:'Despesas fixas', nome:'ENERGISA COLÉGIO CDC_8/2928450-2', forma:'boleto', valor:2452.47, dia:14},
+  {cat:'Marketing e Divulgação', grupo:'Despesas fixas', nome:'FACEBOOK', forma:'PIX', valor:500.0, dia:13},
+  {cat:'Honorários Contábeis', grupo:'Despesas fixas', nome:'HONORÁRIOS CONTADOR PREFE 4/48', forma:'—', valor:1200.0, dia:15},
+  {cat:'Sindicato', grupo:'Impostos', nome:'SIND. DOS TRAB. ESCOLAS SENEP', forma:'E-MAIL', valor:null, dia:15},
+  {cat:'Benefícios – Administrativo', grupo:'Pessoas', nome:'VR 1° ETAPA', forma:'boleto', valor:null, dia:15},
+  {cat:'Internet e telefone', grupo:'Despesas fixas', nome:'CLARO SIGMA NET', forma:'—', valor:558.01, dia:15},
+  {cat:'Serviços Terceirizados', grupo:'Despesas variáveis', nome:'MASTERMAQ', forma:'MARCIO', valor:901.63, dia:15},
+  {cat:'Serviços Terceirizados', grupo:'Despesas variáveis', nome:'CONECT SERASA', forma:'E-MAIL', valor:71.47, dia:15},
+  {cat:'IPTU', grupo:'Impostos', nome:'IPTU LOTE COLÉGIO', forma:'BOLETO', valor:1074.09, dia:15},
+  {cat:'Ajustes Internos', grupo:'Despesas variáveis', nome:'JM UNIFORME 2/14', forma:'JÚNIOR', valor:2300.0, dia:16},
+  {cat:'Internet e telefone', grupo:'Despesas fixas', nome:'OI EMPRESA', forma:'—', valor:103.04, dia:16},
+  {cat:'Salários – Administrativo', grupo:'Pessoas', nome:'GLEIBY 1/5', forma:'—', valor:1473.64, dia:17},
+  {cat:'Internet e telefone', grupo:'Despesas fixas', nome:'CONTA OI FINAL 8093', forma:'BOLETO', valor:119.98, dia:19},
+  {cat:'Internet e telefone', grupo:'Despesas fixas', nome:'CONTA CLARO FIXO 33220850', forma:'BOLETO', valor:192.74, dia:20},
+  {cat:'Benefícios – Administrativo', grupo:'Pessoas', nome:'COOPARTICIPAÇÃO UNIMED', forma:'boleto _SITE', valor:null, dia:20},
+  {cat:'Simples – IRPJ / CSLL', grupo:'Impostos', nome:'SIMPLES NACIONAL SIGMA', forma:'ROGÉRIO', valor:null, dia:20},
+  {cat:'Encargos – Administrativo (INSS/FGTS)', grupo:'Pessoas', nome:'FGTS SIGMA', forma:'MARCIO', valor:null, dia:20},
+  {cat:'Encargos – Administrativo (INSS/FGTS)', grupo:'Pessoas', nome:'DARF SIGMA', forma:'MARCIO', valor:null, dia:20},
+  {cat:'Honorários Contábeis', grupo:'Despesas fixas', nome:'HONORÁRIOS CONTABILIDADE_ROGÉRIO', forma:'—', valor:1040.02, dia:20},
+  {cat:'Segurança e monitoramento', grupo:'Despesas fixas', nome:'ORG SEGURANÇA ELETRONICA LTDA-ME', forma:'BOLETO', valor:232.75, dia:20},
+  {cat:'Água e esgoto', grupo:'Despesas fixas', nome:'BRK ESCOLA CDC_131195-6', forma:'site', valor:2053.53, dia:23},
+  {cat:'Água e esgoto', grupo:'Despesas fixas', nome:'BRK ESCOLA CDC_3057641-5', forma:'BOLETO', valor:4792.85, dia:23},
+  {cat:'Água e esgoto', grupo:'Despesas fixas', nome:'BRK CASA CDC_96514-6', forma:'BOLETO', valor:212.14, dia:23},
+  {cat:'Benefícios – Administrativo', grupo:'Pessoas', nome:'ODONTOPREV', forma:'BOLETO', valor:null, dia:23},
+  {cat:'Ajustes Internos', grupo:'Despesas variáveis', nome:'JM UNIFORME 1/6', forma:'PIX', valor:2000.0, dia:25},
+  {cat:'Benefícios – Administrativo', grupo:'Pessoas', nome:'VR ALIMENTAÇÃO 2° ETAPA', forma:'SITE VR', valor:null, dia:25},
+  {cat:'Parcelamentos (qualquer origem)', grupo:'Impostos', nome:'PARCELAMENTOS DIVERSOS_ROGÉRIO', forma:'—', valor:null, dia:null},
+  {cat:'Parcelamentos (qualquer origem)', grupo:'Impostos', nome:'DARF MARIA_134/180', forma:'ROGÉRIO', valor:null, dia:28},
+  {cat:'Parcelamentos (qualquer origem)', grupo:'Impostos', nome:'SIMPLES NACIONAL CAL_92/101', forma:'ROGÉRIO', valor:null, dia:28},
+  {cat:'Parcelamentos (qualquer origem)', grupo:'Impostos', nome:'DARF CAL_29/145', forma:'ROGÉRIO', valor:null, dia:28},
+  {cat:'Parcelamentos (qualquer origem)', grupo:'Impostos', nome:'DARF PENTAGONO_44/145', forma:'ROGÉRIO', valor:null, dia:28},
+  {cat:'Parcelamentos (qualquer origem)', grupo:'Impostos', nome:'DARF PENTAGONO_134/180', forma:'ROGÉRIO', valor:null, dia:28},
+  {cat:'Parcelamentos (qualquer origem)', grupo:'Impostos', nome:'DARF PENTAGONO_134/180', forma:'ROGÉRIO', valor:null, dia:28},
+  {cat:'Parcelamentos (qualquer origem)', grupo:'Impostos', nome:'DARF PENTAGONO_134/180', forma:'ROGÉRIO', valor:null, dia:28},
+  {cat:'Parcelamentos (qualquer origem)', grupo:'Impostos', nome:'SIMPLES NACIONAL PENTAGONO 92/109', forma:'ROGÉRIO', valor:null, dia:28},
+];
+
+// ─── MESES / CAIXA ────────────────────────────────────────────────
+let MESES_DISP = ['2026-01','2026-02','2026-03'];
+let geradoEm   = null;
+let CAIXA      = {'2026-01':{total:413440,custos:75200},'2026-02':{total:491682,custos:151642},'2026-03':{total:503278,custos:141635}};
+
+const MP     = ['mai','jun','jul','ago','set','out','nov','dez'];
+const ML     = {mai:'Mai',jun:'Jun',jul:'Jul',ago:'Ago',set:'Set',out:'Out',nov:'Nov',dez:'Dez'};
+const GRUPOS = ['Pessoas','Despesas fixas','Despesas variáveis','Impostos'];
+const CG     = {'Pessoas':'#4f8fff','Despesas variáveis':'#ffb547','Impostos':'#ff4d6a','Despesas fixas':'#00e5a0'};
+
+// ─── STORAGE ─────────────────────────────────────────────────────
+// ED  = edições de valores projetados  {slug__mes: valor}
+// UR  = linhas adicionadas pelo usuário {grupoSlug__catSlug: [{nome,forma,dia,vals:{mes:v}}]}
+let ED = {}, UR = {};
+const SK = 'plan_v5';
+function loadSt(){
+  try{ const s=JSON.parse(localStorage.getItem(SK)||'{}'); ED=s.ed||{}; UR=s.ur||{}; }
+  catch{ ED={}; UR={}; }
+}
+function saveSt(){ localStorage.setItem(SK,JSON.stringify({ed:ED,ur:UR})); document.getElementById('svBar').classList.remove('on'); renderKPI2(); renderCProj(); }
+function resetar(){ if(!confirm('Resetar todas as edições e linhas adicionadas?')) return; ED={}; UR={}; localStorage.removeItem(SK); document.getElementById('svBar').classList.remove('on'); renderAll(); }
+function dirty(){ document.getElementById('svBar').classList.add('on'); }
+
+// ─── HELPERS ─────────────────────────────────────────────────────
+const fmt  = (v,d=0) => v==null?'—':Number(v).toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]/g,'_');
+function hIdx(mes){ return 2 + MESES_DISP.indexOf(mes); }
+function hVal(row,mes){ const i=hIdx(mes); return (i>=2&&i<row.length)?row[i]:0; }
+function medH(row){ const a=MESES_DISP.map(m=>hVal(row,m)).filter(x=>x>0); return a.length?a.reduce((s,x)=>s+x,0)/a.length:0; }
+function tendH(row){ const a=MESES_DISP.map(m=>hVal(row,m)).filter(x=>x>0); return a.length>=2?(a[a.length-1]-a[0])/a[0]*100:0; }
+function totalMesH(mes){ return H.reduce((s,r)=>s+hVal(r,mes),0); }
+
+function getProj(cat,mes){
+  const k=slug(cat)+'__'+mes;
+  if(ED[k]!==undefined) return ED[k];
+  const r=H.find(x=>x[0]===cat);
+  if(!r) return 0;
+  const a=MESES_DISP.map(m=>hVal(r,m)).filter(x=>x>0);
+  return a.length?Math.round(a.slice(-2).reduce((s,x)=>s+x,0)/Math.min(2,a.length)):0;
+}
+function getCAPProj(item,mes){
+  const k='cap_'+slug(item.nome)+'__'+mes;
+  if(ED[k]!==undefined) return ED[k];
+  return item.valor??0;
+}
+function getURProj(grp,cat,idx,mes){
+  const k=slug(grp)+'__'+slug(cat)+'__ur'+idx+'__'+mes;
+  if(ED[k]!==undefined) return ED[k];
+  return 0;
+}
+
+let filtros=new Set(GRUPOS);
+function totalProjMes(mes){
+  let t=0;
+  // PROESC
+  H.filter(r=>filtros.has(r[1])).forEach(r=>{ t+=getProj(r[0],mes); });
+  // CAP (por grupo)
+  CAP.filter(c=>filtros.has(c.grupo)).forEach(c=>{ t+=getCAPProj(c,mes)||0; });
+  // Linhas manuais
+  for(const k in UR){
+    const[grpSl,catSl]=k.split('__');
+    const g=GRUPOS.find(g=>slug(g)===grpSl)||'';
+    if(!filtros.has(g)) continue;
+    (UR[k]||[]).forEach((_,i)=>{ t+=getURProj(g,catSl,i,mes)||0; });
+  }
+  return t;
+}
+
+// ─── TAB / FILTRO ────────────────────────────────────────────────
+function switchTab(id){
+  document.querySelectorAll('.tb').forEach((b,i)=>b.classList.toggle('on',['hist','plan'][i]===id));
+  document.querySelectorAll('.tc').forEach(c=>c.classList.toggle('on',c.id==='tab-'+id));
+}
+function tog(g,btn){ btn.classList.toggle('on'); filtros.has(g)?filtros.delete(g):filtros.add(g); renderTbP(); renderKPI2(); renderCProj(); }
+
+// ─── CARREGAR JSON ───────────────────────────────────────────────
+async function carregarJSON(){
+  document.getElementById('dSt').innerHTML='<span class="status-live">● buscando…</span>';
+  try{
+    const resp=await fetch(JSON_URL,{cache:'no-store'});
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const data=await resp.json();
+    geradoEm=data.geradoEm;
+    MESES_DISP=data.mesesDisponiveis||MESES_DISP;
+
+    // Reconstruir H de _lancamentosProesc
+    if(data._lancamentosProesc&&data._lancamentosProesc.length>0){
+      const cm={};
+      const nc=cat=>String(cat||'').replace(/\s*-\s*(SIGMA|SEL|MD|Sigma)\s*$/i,'').trim();
+      for(const l of data._lancamentosProesc){
+        const cat=nc(l.categoria), grp=l.grupo||'', mes=l.anoMes||'', val=Math.abs(Number(l.valor)||0);
+        if(!cat||!mes||!val) continue;
+        if(!cm[cat]) cm[cat]={grupo:grp,vals:{}};
+        cm[cat].vals[mes]=(cm[cat].vals[mes]||0)+val;
+      }
+      if(Object.keys(cm).length>0){
+        H=Object.entries(cm)
+          .map(([cat,d])=>[cat,d.grupo,...MESES_DISP.map(m=>Math.round(d.vals[m]||0))])
+          .filter(r=>r.slice(2).some(v=>v>0))
+          .sort((a,b)=>b.slice(2).reduce((s,x)=>s+x,0)-a.slice(2).reduce((s,x)=>s+x,0));
+      }
+    }
+
+    // Caixa
+    if(data.kpisPorMes){
+      CAIXA={};
+      for(const mes of MESES_DISP){
+        const k=data.kpisPorMes[mes]; if(!k) continue;
+        CAIXA[mes]={total:Math.abs(k.saidasCaixa||0),custos:Math.abs(k.saiOp||0)};
+      }
+    }
+
+    const dt=geradoEm?new Date(geradoEm):new Date();
+    document.getElementById('dSt').innerHTML='<span class="status-ok">● atualizado</span>';
+    document.getElementById('lastUp').textContent='JSON: '+dt.toLocaleDateString('pt-BR')+' '+dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('phS').textContent=`Histórico ${MESES_DISP[0]?.slice(5)}–${MESES_DISP[MESES_DISP.length-1]?.slice(5)}/${MESES_DISP[0]?.slice(2,4)} · ${H.length} categorias PROESC · ${CAP.length} itens contas a pagar`;
+    renderAll();
+  }catch(e){
+    document.getElementById('dSt').innerHTML='<span style="color:var(--dg);font-size:.62rem;font-family:var(--fm)">● offline</span>';
+    document.getElementById('phS').textContent='Histórico jan–mar/26 · dados locais (JSON indisponível)';
+    renderAll();
+  }
+}
+
+// ─── KPI 1 ───────────────────────────────────────────────────────
+function renderKPI1(){
+  const cv=Object.values(CAIXA);
+  const avg=cv.length?cv.reduce((s,c)=>s+c.total,0)/cv.length:0;
+  const p=cv[0]?.total||0,u=cv[cv.length-1]?.total||0;
+  const vp=p?(u-p)/p*100:0;
+  const avgC=cv.length?cv.reduce((s,c)=>s+c.custos,0)/cv.length:0;
+  document.getElementById('kpi1').innerHTML=`
+    <div class="kc ac"><div class="kl">Média Total/Mês</div><div class="kv">R$${fmt(avg/1000,1)}k</div><div class="ks2">${MESES_DISP.length} meses · caixa real</div></div>
+    <div class="kc ${vp>8?'dg':''}"><div class="kl">Variação Período</div><div class="kv ${vp>0?'up':'dn'}">${vp>0?'+':''}${fmt(vp,1)}%</div><div class="ks2">${MESES_DISP[0]?.slice(5)}→${MESES_DISP[MESES_DISP.length-1]?.slice(5)}</div></div>
+    <div class="kc"><div class="kl">Média Custos Op.</div><div class="kv">R$${fmt(avgC/1000,1)}k</div><div class="ks2">por mês</div></div>
+    <div class="kc"><div class="kl">Categorias PROESC</div><div class="kv">${H.filter(r=>medH(r)>0).length}</div><div class="ks2">automáticas</div></div>
+    <div class="kc wn"><div class="kl">Contas a Pagar</div><div class="kv">${CAP.length}</div><div class="ks2">itens c/ atenção manual</div></div>
+  `;
+}
+
+// ─── KPI 2 ───────────────────────────────────────────────────────
+function renderKPI2(){
+  const tM=totalProjMes('mai'),tD=totalProjMes('dez');
+  const t8=MP.reduce((s,m)=>s+totalProjMes(m),0);
+  const cv=Object.values(CAIXA);
+  const mH=cv.length?cv.reduce((s,c)=>s+c.total,0)/cv.length:0;
+  const vm=mH?(tM-mH)/mH*100:0;
+  const ed=Object.keys(ED).length;
+  const capSV=CAP.filter(c=>!c.valor).length;
+  document.getElementById('kpi2').innerHTML=`
+    <div class="kc ac"><div class="kl">Projeção Mai/26</div><div class="kv">R$${fmt(tM/1000,1)}k</div><div class="kt ${vm>0?'up':'dn'}">${vm>0?'↑':'↓'} ${Math.abs(vm).toFixed(1)}% vs histórico</div></div>
+    <div class="kc"><div class="kl">Projeção Dez/26</div><div class="kv">R$${fmt(tD/1000,1)}k</div><div class="ks2">tendência final</div></div>
+    <div class="kc"><div class="kl">Total Mai–Dez</div><div class="kv">R$${fmt(t8/1000,0)}k</div><div class="ks2">8 meses</div></div>
+    <div class="kc ${ed>0?'wn':''}"><div class="kl">Ajustes Manuais</div><div class="kv">${ed}</div><div class="ks2">células editadas</div></div>
+    <div class="kc ${capSV>0?'dg':''}"><div class="kl">CAP s/ Valor</div><div class="kv">${capSV}</div><div class="ks2">requerem atenção</div></div>
+  `;
+}
+
+// ─── INSIGHTS ────────────────────────────────────────────────────
+function renderInsights(){
+  const al=H.filter(r=>tendH(r)>25&&medH(r)>2000).sort((a,b)=>tendH(b)-tendH(a)).slice(0,4);
+  const es=H.filter(r=>Math.abs(tendH(r))<8&&medH(r)>2000).sort((a,b)=>medH(b)-medH(a)).slice(0,4);
+  const qd=H.filter(r=>tendH(r)<-20&&medH(r)>2000).sort((a,b)=>tendH(a)-tendH(b)).slice(0,4);
+  document.getElementById('ins').innerHTML=`
+    <div class="ic red"><div class="il">⚠ Em Alta — Monitorar</div><div class="it">${al.map(r=>`<div style="margin-bottom:.4rem"><strong>${r[0]}</strong><br><span class="iv">R$${fmt(medH(r))}/mês · <span style="color:var(--rd)">+${fmt(tendH(r),0)}%</span></span></div>`).join('')||'<span style="color:var(--mu);font-size:.77rem">Nenhuma</span>'}</div></div>
+    <div class="ic yel"><div class="il">📊 Estáveis — Confiáveis</div><div class="it">${es.map(r=>`<div style="margin-bottom:.4rem"><strong>${r[0]}</strong><br><span class="iv">R$${fmt(medH(r))}/mês · var ${fmt(Math.abs(tendH(r)),1)}%</span></div>`).join('')}</div></div>
+    <div class="ic grn"><div class="il">↓ Em Queda</div><div class="it">${qd.map(r=>`<div style="margin-bottom:.4rem"><strong>${r[0]}</strong><br><span class="iv">R$${fmt(medH(r))}/mês · <span style="color:var(--gn)">${fmt(tendH(r),0)}%</span></span></div>`).join('')||'<span style="color:var(--mu);font-size:.77rem">Nenhuma</span>'}</div></div>
+  `;
+}
+
+// ─── CHARTS ──────────────────────────────────────────────────────
+function renderCGrupos(){
+  const lbls=MESES_DISP.map(m=>{const[y,mo]=m.split('-');return['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][+mo-1]+'/'+y.slice(2);});
+  new Chart(document.getElementById('cGrupos'),{
+    type:'line',
+    data:{labels:lbls,datasets:GRUPOS.map(g=>({label:g,data:MESES_DISP.map(m=>H.filter(r=>r[1]===g).reduce((s,r)=>s+hVal(r,m),0)),backgroundColor:CG[g]+'33',borderColor:CG[g],borderWidth:2,tension:.35,fill:true,pointRadius:4}))},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#6b7280',font:{family:'JetBrains Mono',size:11}}}},scales:{x:{grid:{color:'#252b3b'},ticks:{color:'#6b7280',font:{family:'JetBrains Mono',size:10}}},y:{grid:{color:'#252b3b'},ticks:{color:'#6b7280',font:{family:'JetBrains Mono',size:10},callback:v=>'R$'+(v/1000).toFixed(0)+'k'}}}}
+  });
+}
+function renderCDonut(){
+  const data=GRUPOS.map(g=>H.filter(r=>r[1]===g).reduce((s,r)=>s+MESES_DISP.reduce((ss,m)=>ss+hVal(r,m),0),0)/MESES_DISP.length);
+  new Chart(document.getElementById('cDonut'),{
+    type:'doughnut',
+    data:{labels:GRUPOS,datasets:[{data,backgroundColor:GRUPOS.map(g=>CG[g]+'cc'),borderColor:GRUPOS.map(g=>CG[g]),borderWidth:1}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'right',labels:{color:'#6b7280',font:{family:'JetBrains Mono',size:10},padding:10}}}}
+  });
+}
+let cpI=null;
+function renderCProj(){
+  const lbls=MP.map(m=>ML[m]+'/26');
+  const gs=[...filtros];
+  const ds=gs.map(g=>({
+    label:g,type:'bar',
+    data:MP.map(m=>{
+      let t=H.filter(r=>r[1]===g).reduce((s,r)=>s+getProj(r[0],m),0);
+      t+=CAP.filter(c=>c.grupo===g).reduce((s,c)=>s+(getCAPProj(c,m)||0),0);
+      for(const k in UR){
+        const[gSl,cSl]=k.split('__');
+        if(GRUPOS.find(gg=>slug(gg)===gSl)!==g) continue;
+        (UR[k]||[]).forEach((_,i)=>{ t+=getURProj(g,cSl,i,m)||0; });
+      }
+      return t;
+    }),
+    backgroundColor:(CG[g]||'#888')+'55',borderColor:CG[g]||'#888',borderWidth:1
+  }));
+  ds.push({label:'TOTAL',type:'line',data:MP.map(m=>totalProjMes(m)),backgroundColor:'transparent',borderColor:'#fff',borderWidth:2,tension:.3,fill:false,pointRadius:4});
+  if(cpI){cpI.destroy();}
+  cpI=new Chart(document.getElementById('cProj'),{
+    data:{labels:lbls,datasets:ds},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#6b7280',font:{family:'JetBrains Mono',size:10}}}},scales:{x:{stacked:true,grid:{color:'#252b3b'},ticks:{color:'#6b7280',font:{family:'JetBrains Mono',size:10}}},y:{stacked:true,grid:{color:'#252b3b'},ticks:{color:'#6b7280',font:{family:'JetBrains Mono',size:10},callback:v=>'R$'+(v/1000).toFixed(0)+'k'}}}}
+  });
+}
+
+// ─── ESTADO DE EXPANSÃO ───────────────────────────────────────────
+// Estrutura: { grupoNivel1: bool, grupoNivel1+catNivel2: bool }
+const EXP_H = {}, EXP_P = {};
+
+// ─── TABELA HISTÓRICO ─────────────────────────────────────────────
+function renderTbH(){
+  const colH=MESES_DISP.length;
+  let html='';
+  for(const g of GRUPOS){
+    const itens=H.filter(r=>r[1]===g&&medH(r)>50).sort((a,b)=>medH(b)-medH(a));
+    if(!itens.length) continue;
+    const g1open=!!EXP_H[g];
+    // subtotais do grupo
+    const sv=MESES_DISP.map(m=>H.filter(r=>r[1]===g).reduce((s,r)=>s+hVal(r,m),0));
+    const sm=sv.reduce((s,x)=>s+x,0)/Math.max(1,sv.length);
+    html+=`<tr class="g1${g1open?' open':''}" onclick="togH('${esc(g)}')">
+      <td><span class="ti">▶</span></td><td></td>
+      <td colspan="2" style="font-weight:700;color:var(--tx)">${g} <span style="color:var(--mu);font-weight:400;font-size:.68rem">(${itens.length})</span></td>
+      ${sv.map(v=>`<td class="val" style="color:var(--mu)">R$${fmt(v)}</td>`).join('')}
+      ${Array(Math.max(0,3-colH)).fill('<td></td>').join('')}
+      <td class="val" style="color:var(--ac2)">R$${fmt(sm)}</td><td></td>
+    </tr>`;
+    for(const row of itens){
+      const catOpen=!!EXP_H[g+'__'+row[0]];
+      const capItens=CAP.filter(c=>c.cat===row[0]&&c.grupo===g);
+      const hasDetail=capItens.length>0;
+      const vs=MESES_DISP.map(m=>hVal(row,m));
+      const med=medH(row);
+      const t=tendH(row);
+      const badge=t>25?`<span class="bal">↑${fmt(t,0)}%</span>`:t>8?`<span class="bwn">↑${fmt(t,0)}%</span>`:t<-20?`<span style="font-size:.56rem;color:var(--gn);font-family:var(--fm)">↓${fmt(Math.abs(t),0)}%</span>`:`<span style="font-size:.56rem;color:var(--mu);font-family:var(--fm)">~${fmt(Math.abs(t),0)}%</span>`;
+      html+=`<tr class="g2${g1open?' vis':''} ${catOpen?' open':''}" ${hasDetail?`onclick="togH('${esc(g)}__${esc(row[0])}')"`:''} style="${hasDetail?'cursor:pointer':''}">
+        <td></td>
+        <td>${hasDetail?`<span class="ti2">▶</span>`:''}</td>
+        <td class="cat-nm">${row[0]}${hasDetail?` <span class="cap-badge">CAP</span>`:''}</td>
+        <td class="grp">${g}</td>
+        ${vs.map(v=>`<td class="val">${v?'R$'+fmt(v):'<span class="bsv">s/v</span>'}</td>`).join('')}
+        ${Array(Math.max(0,3-colH)).fill('<td></td>').join('')}
+        <td class="val" style="color:var(--ac2);font-weight:600">R$${fmt(med)}</td>
+        <td class="val">${badge}</td>
+      </tr>`;
+      if(hasDetail){
+        for(const cap of capItens){
+          html+=`<tr class="g3 cap-row${(g1open&&catOpen)?' vis':''}">
+            <td></td><td></td>
+            <td class="nm">${cap.nome} ${cap.dia?`<span style="font-size:.58rem;color:var(--mu);font-family:var(--fm)">dia ${cap.dia}</span>`:''}</td>
+            <td class="grp">${cap.forma||'—'}</td>
+            ${MESES_DISP.map(()=>`<td class="val" style="color:var(--cap-tx)">${cap.valor!=null?'R$'+fmt(cap.valor,2):'<span class="bsv">s/v</span>'}</td>`).join('')}
+            ${Array(Math.max(0,3-colH)).fill('<td></td>').join('')}
+            <td class="val" style="color:var(--cap-tx)">${cap.valor!=null?'R$'+fmt(cap.valor,2):'—'}</td>
+            <td></td>
+          </tr>`;
+        }
+      }
+    }
+    html+=`<tr class="sr"><td></td><td></td><td>Subtotal ${g}</td><td></td>
+      ${sv.map(v=>`<td class="val">R$${fmt(v)}</td>`).join('')}
+      ${Array(Math.max(0,3-colH)).fill('<td></td>').join('')}
+      <td class="val" style="color:var(--ac)">R$${fmt(sm)}</td><td></td>
+    </tr>`;
+  }
+  const tj=MESES_DISP.map(m=>totalMesH(m));
+  const tm=tj.reduce((s,x)=>s+x,0)/Math.max(1,tj.length);
+  html+=`<tr class="tr"><td></td><td></td><td>TOTAL PROESC</td><td></td>
+    ${tj.map(v=>`<td class="val">R$${fmt(v)}</td>`).join('')}
+    ${Array(Math.max(0,3-colH)).fill('<td></td>').join('')}
+    <td class="val" style="color:var(--ac)">R$${fmt(tm)}</td><td></td>
+  </tr>`;
+  document.getElementById('tbH').innerHTML=html;
+}
+function togH(key){ EXP_H[key]=!EXP_H[key]; renderTbH(); }
+
+// ─── TABELA PLANEJAMENTO ──────────────────────────────────────────
+function renderTbP(){
+  const nMes=MP.length;
+  let html='';
+  for(const g of GRUPOS){
+    if(!filtros.has(g)) continue;
+    const itens=H.filter(r=>r[1]===g&&medH(r)>50).sort((a,b)=>medH(b)-medH(a));
+    const g1open=!!EXP_P[g];
+    // subtotais do grupo (PROESC + CAP + UR)
+    const spj=MP.map(m=>{
+      let t=itens.reduce((s,r)=>s+getProj(r[0],m),0);
+      t+=CAP.filter(c=>c.grupo===g).reduce((s,c)=>s+(getCAPProj(c,m)||0),0);
+      return t;
+    });
+    const spm=spj.reduce((s,x)=>s+x,0)/nMes;
+    const medG=itens.reduce((s,r)=>s+medH(r),0);
+    html+=`<tr class="g1${g1open?' open':''}" onclick="togP('${esc(g)}')">
+      <td><span class="ti">▶</span></td><td></td>
+      <td colspan="2" style="font-weight:700;color:var(--tx)">${g} <span style="color:var(--mu);font-weight:400;font-size:.68rem">(${itens.length} cat.)</span></td>
+      <td class="val" style="color:var(--mu)">R$${fmt(medG)}</td>
+      ${spj.map(v=>`<td class="vf">R$${fmt(v)}</td>`).join('')}
+    </tr>`;
+
+    for(const row of itens){
+      const cat=row[0];
+      const catOpen=!!EXP_P[g+'__'+cat];
+      const capItens=CAP.filter(c=>c.cat===cat&&c.grupo===g);
+      const urKey=slug(g)+'__'+slug(cat);
+      const urItens=UR[urKey]||[];
+      const hasDetail=capItens.length>0||urItens.length>0;
+
+      // projeção da categoria (PROESC + CAP + UR)
+      const catProj=MP.map(m=>{
+        let t=getProj(cat,m);
+        t+=capItens.reduce((s,c)=>s+(getCAPProj(c,m)||0),0);
+        urItens.forEach((_,i)=>{ t+=getURProj(g,cat,i,m)||0; });
+        return t;
+      });
+
+      html+=`<tr class="g2${g1open?' vis':''} ${catOpen?' open':''}" onclick="togP('${esc(g)}__${esc(cat)}')" style="cursor:pointer">
+        <td></td>
+        <td><span class="ti2">▶</span></td>
+        <td class="cat-nm">${cat}${capItens.length?` <span class="cap-badge">CAP</span>`:''}</td>
+        <td class="grp">${g}</td>
+        <td class="val" style="color:var(--mu)">R$${fmt(medH(row))}</td>
+        ${catProj.map(v=>`<td class="vf">R$${fmt(v)}</td>`).join('')}
+      </tr>`;
+
+      // PROESC (linha editável para a projeção da categoria)
+      {
+        const k=slug(cat)+'__';
+        html+=`<tr class="g3${(g1open&&catOpen)?' vis':''}">
+          <td></td><td></td>
+          <td class="nm" style="color:var(--mu);font-style:italic;font-size:.73rem">↳ PROESC (automático)</td>
+          <td class="grp"></td>
+          <td class="val" style="color:var(--mu)">R$${fmt(medH(row))}</td>
+          ${MP.map(mes=>{
+            const ek=slug(cat)+'__'+mes;
+            const v=getProj(cat,mes);
+            const ch=ED[ek]!==undefined;
+            return `<td class="ve${ch?' ch':''}" data-k="${ek}"><input type="text" value="${v?fmt(v):''}" placeholder="—" onchange="onEdit(this,'${ek}')"></td>`;
+          }).join('')}
+        </tr>`;
+      }
+
+      // CAP items
+      for(const cap of capItens){
+        html+=`<tr class="g3 cap-row${(g1open&&catOpen)?' vis':''}">
+          <td></td><td></td>
+          <td class="nm">${cap.nome} ${cap.dia?`<span style="font-size:.57rem;color:var(--mu);font-family:var(--fm)">dia ${cap.dia}</span>`:''} <span class="cap-badge">⚡ pagar</span></td>
+          <td class="grp">${cap.forma||'—'}</td>
+          <td class="val" style="color:var(--cap-tx)">${cap.valor!=null?'R$'+fmt(cap.valor,2):'<span class="bsv">s/v</span>'}</td>
+          ${MP.map(mes=>{
+            const ck='cap_'+slug(cap.nome)+'__'+mes;
+            const v=getCAPProj(cap,mes);
+            const ch=ED[ck]!==undefined;
+            return `<td class="ve${ch?' ch':''}" data-k="${ck}"><input type="text" value="${v!=null&&v>0?fmt(v,2):''}" placeholder="—" onchange="onEdit(this,'${ck}')"></td>`;
+          }).join('')}
+        </tr>`;
+      }
+
+      // Linhas adicionadas pelo usuário
+      const urKey2=slug(g)+'__'+slug(cat);
+      (UR[urKey2]||[]).forEach((ur,i)=>{
+        html+=`<tr class="g3 user-row${(g1open&&catOpen)?' vis':''}" id="ur_${urKey2}_${i}">
+          <td></td><td></td>
+          <td class="val-edit-nm" style="padding:0"><input type="text" value="${ur.nome||''}" placeholder="Descrição…" onchange="onURNome('${urKey2}',${i},this.value)"></td>
+          <td class="grp" style="font-size:.65rem;color:var(--mu)">${ur.forma||'manual'}</td>
+          <td class="val"></td>
+          ${MP.map(mes=>{
+            const uk=slug(g)+'__'+slug(cat)+'__ur'+i+'__'+mes;
+            const v=ED[uk]||0;
+            const ch=v>0;
+            return `<td class="ve${ch?' ch':''}" data-k="${uk}"><input type="text" value="${v?fmt(v):''}" placeholder="—" onchange="onEdit(this,'${uk}')"></td>`;
+          }).join('')}
+          <td style="padding:.25rem .4rem"><button class="btn-del" onclick="delUR('${urKey2}',${i})" title="Remover">✕</button></td>
+        </tr>`;
+      });
+
+      // Botão adicionar linha
+      html+=`<tr class="add-row${(g1open&&catOpen)?' vis':''}">
+        <td colspan="5" style="padding:.28rem .75rem .28rem 2.3rem">
+          <button class="btn-add" onclick="addUR('${esc(g)}','${esc(cat)}')">+ adicionar linha em ${cat}</button>
+        </td>
+        ${MP.map(()=>'<td></td>').join('')}
+      </tr>`;
+    }
+
+    // Subtotal grupo
+    html+=`<tr class="sr"><td></td><td></td><td>Subtotal ${g}</td><td></td>
+      <td class="val" style="color:var(--mu)">R$${fmt(medG)}</td>
+      ${spj.map(v=>`<td class="vf">R$${fmt(v)}</td>`).join('')}
+    </tr>`;
+
+    // Botão adicionar categoria no grupo
+    html+=`<tr class="add-row${g1open?' vis':''}">
+      <td colspan="5" style="padding:.28rem .75rem .28rem 1.2rem;border-top:none">
+        <button class="btn-add" onclick="addCat('${esc(g)}')">+ nova categoria em ${g}</button>
+      </td>
+      ${MP.map(()=>'<td></td>').join('')}
+    </tr>`;
+  }
+
+  // TOTAL GERAL
+  const cv=Object.values(CAIXA); const mH=cv.length?cv.reduce((s,c)=>s+c.total,0)/cv.length:0;
+  html+=`<tr class="tr"><td></td><td></td><td>TOTAL PROJETADO</td><td></td>
+    <td class="val" style="color:var(--mu)">R$${fmt(mH)}</td>
+    ${MP.map(m=>`<td class="val" style="color:var(--ac);font-weight:800">R$${fmt(totalProjMes(m))}</td>`).join('')}
+  </tr>`;
+
+  document.getElementById('tbP').innerHTML=html;
+}
+
+function togP(key){ EXP_P[key]=!EXP_P[key]; renderTbP(); }
+
+function esc(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+function onEdit(input,k){
+  const raw=input.value.replace(/\./g,'').replace(',','.').trim();
+  const num=parseFloat(raw);
+  const td=input.closest('td');
+  if(raw===''||isNaN(num)){delete ED[k];td.classList.remove('ch');}
+  else{ED[k]=num;td.classList.add('ch');}
+  dirty(); renderKPI2(); renderCProj();
+}
+
+function onURNome(urKey,i,val){
+  if(!UR[urKey]) return;
+  UR[urKey][i].nome=val;
+  dirty();
+}
+
+function addUR(g,cat){
+  const key=slug(g)+'__'+slug(cat);
+  if(!UR[key]) UR[key]=[];
+  UR[key].push({nome:'',forma:'manual',dia:null});
+  // Garantir que o grupo e categoria estejam abertos
+  EXP_P[g]=true; EXP_P[g+'__'+cat]=true;
+  dirty(); renderTbP();
+}
+
+function delUR(urKey,i){
+  if(!UR[urKey]) return;
+  // Limpar edições dessa linha
+  MP.forEach(mes=>{ const k=urKey+'__ur'+i+'__'+mes; delete ED[k]; });
+  UR[urKey].splice(i,1);
+  if(UR[urKey].length===0) delete UR[urKey];
+  dirty(); renderTbP();
+}
+
+function addCat(g){
+  const nome=prompt(`Nome da nova categoria em "${g}":`)?.trim();
+  if(!nome) return;
+  // Adiciona em H como linha vazia para esse grupo
+  H.push([nome, g, ...MESES_DISP.map(()=>0)]);
+  EXP_P[g]=true;
+  dirty(); renderTbP();
+}
+
+// ─── RENDER ALL ───────────────────────────────────────────────────
+let chartsOk=false;
+function renderAll(){
+  renderKPI1(); renderKPI2(); renderInsights();
+  if(!chartsOk){
+    renderCGrupos(); renderCDonut(); renderCProj();
+    chartsOk=true;
+  } else {
+    ['cGrupos','cDonut'].forEach(id=>{Chart.getChart(id)?.destroy();});
+    renderCGrupos(); renderCDonut(); renderCProj();
+  }
+  renderTbH(); renderTbP();
+}
+
+loadSt(); carregarJSON();
+setInterval(carregarJSON, 5*60*1000);
+</script>
+</body>
+</html>
