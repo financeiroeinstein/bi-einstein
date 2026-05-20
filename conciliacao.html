@@ -235,8 +235,6 @@ nav .sep{color:#2a3040}
   <a href="ajustes.html">Ajustes</a><span class="sep">›</span>
   <a href="conciliacao.html" class="active">Conciliação</a>
 <span class="sep">›</span>
-  <a href="planejamento.html">Planejamento</a>
-<span class="sep">›</span>
   <a href="glossario.html">Glossário</a>
 </nav>
 
@@ -325,12 +323,49 @@ nav .sep{color:#2a3040}
 
 <script>
 const DRIVE_FILE_ID = '1uHgfvF8CU2qJSbYjv_MtmgRxJFJzJR-Z';
-const DRIVE_DIRECT  = `https://drive.google.com/uc?export=download&id=${DRIVE_FILE_ID}`;
-const PROXIES = [
-  `https://api.allorigins.win/raw?url=${encodeURIComponent(DRIVE_DIRECT)}`,
-  `https://corsproxy.io/?${encodeURIComponent(DRIVE_DIRECT)}`,
-  `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(DRIVE_DIRECT)}`
+// ─── FONTE DE DADOS ────────────────────────────────────────────────────────
+// Primary: Apps Script (serve o JSON diretamente, sem CORS)
+// Fallback: proxies públicos (Drive) — usados só se o AS falhar
+const _AS_URL       = 'https://script.google.com/macros/s/AKfycbxb6AWl5weYzZjR9uveLtUG8HhLYIIw3GasBSZZpGbcUnv6vKK792GD4nDBDqk3yF43/exec?action=json&_=';
+const _DRIVE_ID     = typeof DRIVE_FILE_ID !== 'undefined' ? DRIVE_FILE_ID : (typeof _driveId !== 'undefined' ? _driveId : '');
+const _DRIVE_BASE   = `https://drive.google.com/uc?export=download&id=${_DRIVE_ID}`;
+const _DRIVE_PROXIES = [
+  `https://api.allorigins.win/raw?url=${encodeURIComponent(_DRIVE_BASE)}`,
+  `https://corsproxy.io/?${encodeURIComponent(_DRIVE_BASE)}`,
+  `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(_DRIVE_BASE)}`
 ];
+
+function _fetchTimeout(url, ms=10000) {
+  return new Promise((res, rej) => {
+    const t = setTimeout(() => rej(new Error('Timeout')), ms);
+    fetch(url).then(r => { clearTimeout(t); r.ok ? res(r) : rej(new Error('HTTP ' + r.status)); }).catch(e => { clearTimeout(t); rej(e); });
+  });
+}
+
+async function _fetchJSON() {
+  // 1) Apps Script direto (sem proxy, sem CORS problem pois AS retorna CORS header)
+  try {
+    const r = await _fetchTimeout(_AS_URL + Date.now(), 12000);
+    return await r.json();
+  } catch(e1) {
+    console.warn('AS falhou (' + e1.message + '), tentando proxies…');
+  }
+  // 2) Proxies sequenciais (fallback)
+  for (const url of _DRIVE_PROXIES) {
+    try {
+      const r = await _fetchTimeout(url, 10000);
+      return await r.json();
+    } catch(e2) {
+      console.warn('Proxy falhou: ' + url.split('?')[0]);
+    }
+  }
+  throw new Error('Todas as fontes falharam');
+}
+// ────────────────────────────────────────────────────────────────────────────
+
+
+// (PROXIES substituídos por _fetchJSON — veja bloco abaixo)
+
 
 let DATA = null, diasConciliados = [], filtroStatus = 'TODOS', filtroLinha = 'TODOS', filtroLinhaDup = false;
 
@@ -346,7 +381,7 @@ async function fetchWithTimeout(url, ms = 8000) {
 }
 async function loadData() {
   try {
-    DATA = await Promise.any(PROXIES.map(u => fetchWithTimeout(u)));
+    DATA = await _fetchJSON();
     init();
   } catch(e) {
     document.getElementById('loading-screen').style.display = 'none';
