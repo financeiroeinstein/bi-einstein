@@ -485,9 +485,10 @@ function updateTipo(radio) {
 function getReceita(mes, emp) {
   const r = DATA?.receitas?.[mes]?.[emp];
   if (!r) return null;
-  if (filtros.tipo === 'TODOS') return r;
-  // Para Recorrente/Não Recorrente, filtra os lancamentos e recalcula
-  const itens = r.lancamentos?.filter(l => l.tipoGrupo === filtros.tipo) || [];
+  // Sempre recalcula a partir dos lançamentos para garantir consistência com o filtro
+  const itens = filtros.tipo === 'TODOS'
+    ? (r.lancamentos || [])
+    : (r.lancamentos?.filter(l => l.tipoGrupo === filtros.tipo) || []);
   const previsto  = itens.reduce((s,l)=>s+l.valorLiquido,0);
   const recebido  = itens.filter(l=>l.status==='Pago').reduce((s,l)=>s+l.valorLiquido,0);
   const emAberto  = itens.filter(l=>l.status==='Em Aberto').reduce((s,l)=>s+l.valorLiquido,0);
@@ -508,6 +509,21 @@ function getReceita(mes, emp) {
   const inadimplenciaFechamento = previsto !== 0
     ? Math.round(((previsto - recebidoNoPrazoMes) / previsto) * 10000) / 100 : 0;
 
+  // Recalcula porTipo a partir dos lançamentos filtrados
+  const porTipoMap = {};
+  itens.forEach(l => {
+    const key = l.tipoReceita || l.tipo || l.tipoGrupo || 'Outros';
+    if (!porTipoMap[key]) porTipoMap[key] = { tipo: key, tipoGrupo: l.tipoGrupo, previsto: 0, recebido: 0 };
+    porTipoMap[key].previsto += l.valorLiquido;
+    if (l.status === 'Pago') porTipoMap[key].recebido += l.valorLiquido;
+  });
+  const porTipoFiltrado = Object.values(porTipoMap).map(t => ({
+    ...t,
+    previsto:   Math.round(t.previsto*100)/100,
+    recebido:   Math.round(t.recebido*100)/100,
+    realizacao: t.previsto !== 0 ? Math.round((t.recebido/t.previsto)*10000)/100 : 0
+  }));
+
   return {
     previsto:     Math.round(previsto*100)/100,
     recebido:     Math.round(recebido*100)/100,
@@ -518,7 +534,7 @@ function getReceita(mes, emp) {
     inadimplencia:previsto!==0 ? Math.round((gap/previsto)*10000)/100 : 0,
     inadimplenciaFechamento,
     pagaramNoPrazo,
-    porTipo: r.porTipo,
+    porTipo: porTipoFiltrado,
     lancamentos: itens
   };
 }
@@ -579,7 +595,7 @@ function renderKPIs(empresa, mes) {
   const inadYTD = calcInadYTD(empresa);
 
   const items = [
-    { label:'Receita Prevista',     value: fmtBRL(r.previsto),      kc:'var(--accent2)',  sub: 'Recorrente no mês' },
+    { label:'Receita Prevista',     value: fmtBRL(r.previsto),      kc:'var(--accent2)',  sub: filtros.tipo==='TODOS'?'Todos os tipos':filtros.tipo+' no mês' },
     { label:'Receita Recebida',     value: fmtBRL(r.recebido),      kc:'var(--green)',    sub: 'Pago no mês' },
     { label:'Gap Previsto × Recebido', value: fmtBRL(r.gap),        kc: r.gap>0?'var(--warn)':'var(--accent)', sub: 'Diferença mês' },
     { label:'% Realização',         value: fmtPct(r.realizacao),    kc: r.realizacao>=95?'var(--accent)':r.realizacao>=85?'var(--warn)':'var(--red)', sub: 'Meta: 100%' },
@@ -606,7 +622,7 @@ function renderVisaoGeral(empresa, mes) {
 
   // Por tipo — barra de progresso
   const sec = document.getElementById('porTipoSection');
-  const tipos = (r.porTipo||[]).filter(t => filtros.tipo === 'TODOS' || t.tipoGrupo === filtros.tipo);
+  const tipos = r.porTipo || [];
   if (!tipos.length) { sec.innerHTML='<div class="empty">Sem dados</div>'; }
   else {
     sec.innerHTML = tipos.map(t => {
