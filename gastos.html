@@ -109,6 +109,49 @@
     border-bottom: 1px solid var(--border);
   }
 
+  .view-toggle-wrap {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .view-btn {
+    background: var(--surface2);
+    color: var(--muted);
+    border: none;
+    padding: .46rem .85rem;
+    font-family: var(--font-head);
+    font-size: .76rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: .15s;
+    letter-spacing: .03em;
+  }
+
+  .view-btn + .view-btn {
+    border-left: 1px solid var(--border);
+  }
+
+  .view-btn:hover {
+    color: var(--accent);
+    background: rgba(0,229,160,.06);
+  }
+
+  .view-btn.active {
+    background: rgba(0,229,160,.12);
+    color: var(--accent);
+  }
+
+  .toolbar-sep {
+    width: 1px;
+    height: 22px;
+    background: var(--border);
+    flex-shrink: 0;
+    margin: 0 .15rem;
+  }
+
   .btn {
     background: var(--surface2);
     color: var(--text);
@@ -474,6 +517,11 @@
 </div>
 
 <div class="toolbar">
+  <div class="view-toggle-wrap">
+    <button class="view-btn active" id="btn-visao-dre"    onclick="setVisao('dre')">Visão DRE</button>
+    <button class="view-btn"        id="btn-visao-proesc" onclick="setVisao('proesc')">Visão Grupo Proesc</button>
+  </div>
+  <div class="toolbar-sep"></div>
   <button class="btn primary" onclick="expandAll()">Expandir tudo</button>
   <button class="btn" onclick="collapseAll()">Recolher tudo</button>
   <button class="btn" onclick="exportExcel()">Exportar Excel</button>
@@ -549,6 +597,7 @@ const MESES_LABEL = {
 let DATA = null;
 let charts = {};
 let expanded = new Set();
+let visaoAtual = 'dre'; // 'dre' | 'proesc'
 
 const PALETTE = ['#155b9a','#14d9a1','#60a5fa','#7c4dce','#b56af2','#ff4d6a','#ffb547','#34d399','#f472b6','#93c5fd'];
 
@@ -696,6 +745,7 @@ function getDetalhe(mes, empresa) {
     grupoGastos: i.grupoGastos || 'OUTROS',
     grupoGastosFinal: i.grupoGastosFinal || i.dreLinha || i.categoriaProesc || 'SEM GRUPO',
     categoriaProesc: i.categoriaProesc || i.categoria || 'SEM CATEGORIA',
+    grupo: i.grupo || i.grupoProesc || 'SEM GRUPO PROESC',
     descricao: i.descricao || i['Descrição do Lançamento'] || '',
     documento: i.documento || '',
     cliente: i.cliente || '',
@@ -705,8 +755,9 @@ function getDetalhe(mes, empresa) {
 
 function getDetalheFiltrado(mes, empresa) {
   const { grupo, final } = getFilters();
+  const groupField = visaoAtual === 'proesc' ? 'grupo' : 'grupoGastos';
   return getDetalhe(mes, empresa).filter(i => {
-    if (grupo !== 'TODOS' && i.grupoGastos !== grupo) return false;
+    if (grupo !== 'TODOS' && (i[groupField] || 'SEM GRUPO') !== grupo) return false;
     if (final !== 'TODOS' && i.grupoGastosFinal !== final) return false;
     return true;
   });
@@ -724,12 +775,19 @@ function sortDetalhe(a,b) {
 function refreshFilterOptions() {
   const { empresa, mes } = getFilters();
   const itens = getDetalhe(mes, empresa);
-  const grupos = [...new Set(itens.map(i => i.grupoGastos))].sort((a,b) => a.localeCompare(b, 'pt-BR'));
+
+  // Visão DRE: filtro por grupoGastos / Visão Proesc: filtro por grupo (Grupo Proesc)
+  const groupField = visaoAtual === 'proesc' ? 'grupo' : 'grupoGastos';
+  const grupos = [...new Set(itens.map(i => i[groupField] || 'SEM GRUPO'))].sort((a,b) => a.localeCompare(b, 'pt-BR'));
 
   const selGrupo = document.getElementById('sel-grupo');
   const old = selGrupo.value;
   selGrupo.innerHTML = '<option value="TODOS">Todos</option>' + grupos.map(g => `<option value="${escapeAttr(g)}">${escapeHtml(g)}</option>`).join('');
   selGrupo.value = grupos.includes(old) ? old : 'TODOS';
+
+  // Atualiza label
+  const lbl = document.querySelector('#sel-grupo').closest('.filter-group')?.querySelector('label');
+  if (lbl) lbl.textContent = visaoAtual === 'proesc' ? 'Grupo Proesc' : 'Grupo de Gasto';
 
   refreshFinalOptions();
 }
@@ -847,25 +905,53 @@ function sum(itens) {
 function renderKPIs(raw, itens) {
   const totalSelecionado = sum(itens);
   const totalBase = sum(raw);
-  const byMacro = aggregate(['grupoGastos'], raw);
-  const get = name => byMacro.find(i => i.grupoGastos === name)?.valor || 0;
-
-  const custos = get('CUSTOS OPERACIONAIS');
-  const despOp = get('DESPESAS OPERACIONAIS');
-  const fora = get('FORA_DRE');
-  const fin = get('DESPESAS FINANCEIRAS (GASTO)');
   const qtd = itens.length;
+  let cards;
 
-  const cards = [
-    { label: 'Total gastos selecionado', value: fmtK(totalSelecionado), cls: 'red' },
-    { label: 'Total custos operacionais', value: fmtK(custos), cls: 'blue' },
-    { label: 'Total despesas operacionais', value: fmtK(despOp), cls: 'red' },
-    { label: 'Total fora da DRE', value: fmtK(fora), cls: 'yellow' },
-    { label: 'Total despesa financeira', value: fmtK(fin), cls: 'purple' },
-    { label: 'Custos / total', value: fmtPct(totalBase ? custos / totalBase * 100 : 0), cls: 'blue' },
-    { label: 'Despesas op. / total', value: fmtPct(totalBase ? despOp / totalBase * 100 : 0), cls: 'red' },
-    { label: 'Qtd. lançamentos', value: qtd.toLocaleString('pt-BR'), cls: 'green' }
-  ];
+  if (visaoAtual === 'proesc') {
+    // KPIs visão Grupo Proesc: top grupos por valor + pessoal destacado
+    const byGrupo = aggregate(['grupo'], raw).sort((a,b) => b.valor - a.valor);
+    const getPG = name => {
+      const n = norm(name);
+      return byGrupo.find(i => norm(i.grupo || '').includes(n))?.valor || 0;
+    };
+    const pessoal   = getPG('PESSOAS');
+    const variaveis = byGrupo.find(i => norm(i.grupo||'').includes('VARIAV'))?.valor || 0;
+    const impostos  = byGrupo.find(i => norm(i.grupo||'').includes('IMPOSTO') || norm(i.grupo||'').includes('TRIBUTO'))?.valor || 0;
+    const outros    = byGrupo
+      .filter(i => { const n = norm(i.grupo||''); return !n.includes('PESSOAS') && !n.includes('VARIAV') && !n.includes('IMPOSTO') && !n.includes('TRIBUTO'); })
+      .reduce((s,i) => s + i.valor, 0);
+
+    cards = [
+      { label: 'Total gastos (filtro)', value: fmtK(totalSelecionado), cls: 'red' },
+      { label: 'Pessoal (total)', value: fmtK(pessoal), cls: 'blue' },
+      { label: 'Pessoal / total', value: fmtPct(totalBase ? pessoal / totalBase * 100 : 0), cls: 'blue' },
+      { label: 'Despesas variáveis', value: fmtK(variaveis), cls: 'yellow' },
+      { label: 'Impostos / tributos', value: fmtK(impostos), cls: 'purple' },
+      { label: 'Outros grupos', value: fmtK(outros), cls: 'green' },
+      { label: 'Ticket médio', value: fmtK(qtd ? totalSelecionado / qtd : 0), cls: 'green' },
+      { label: 'Qtd. lançamentos', value: qtd.toLocaleString('pt-BR'), cls: 'green' }
+    ];
+  } else {
+    // KPIs visão DRE (original)
+    const byMacro = aggregate(['grupoGastos'], raw);
+    const get = name => byMacro.find(i => i.grupoGastos === name)?.valor || 0;
+    const custos = get('CUSTOS OPERACIONAIS');
+    const despOp = get('DESPESAS OPERACIONAIS');
+    const fora   = get('FORA_DRE');
+    const fin    = get('DESPESAS FINANCEIRAS (GASTO)');
+
+    cards = [
+      { label: 'Total gastos selecionado', value: fmtK(totalSelecionado), cls: 'red' },
+      { label: 'Total custos operacionais', value: fmtK(custos), cls: 'blue' },
+      { label: 'Total despesas operacionais', value: fmtK(despOp), cls: 'red' },
+      { label: 'Total fora da DRE', value: fmtK(fora), cls: 'yellow' },
+      { label: 'Total despesa financeira', value: fmtK(fin), cls: 'purple' },
+      { label: 'Custos / total', value: fmtPct(totalBase ? custos / totalBase * 100 : 0), cls: 'blue' },
+      { label: 'Despesas op. / total', value: fmtPct(totalBase ? despOp / totalBase * 100 : 0), cls: 'red' },
+      { label: 'Qtd. lançamentos', value: qtd.toLocaleString('pt-BR'), cls: 'green' }
+    ];
+  }
 
   document.getElementById('kpi-strip').innerHTML = cards.map(c => `
     <div class="kpi-card">
@@ -875,6 +961,142 @@ function renderKPIs(raw, itens) {
   `).join('');
 }
 
+// ── VISÃO TOGGLE ─────────────────────────────────────────────────────────────
+function setVisao(v) {
+  visaoAtual = v;
+  document.getElementById('btn-visao-dre').classList.toggle('active', v === 'dre');
+  document.getElementById('btn-visao-proesc').classList.toggle('active', v === 'proesc');
+  // Atualiza label do filtro de grupo
+  document.querySelector('label[for="sel-grupo"]') && (document.querySelector('label[for="sel-grupo"]').textContent = v === 'proesc' ? 'Grupo Proesc' : 'Grupo de Gasto');
+  expanded.clear();
+  render();
+}
+
+// ── ÁRVORE VISÃO GRUPO PROESC ────────────────────────────────────────────────
+// Hierarquia: Grupo_Proesc → Categoria_Proesc → Lançamentos
+// Usa o campo `grupo` do lançamento (ex: "Pessoas", "Despesas variáveis")
+function buildTreeProesc(itens) {
+  const roots   = [];
+  const rootMap = {};
+
+  // Mapeamento de cores por grupo Proesc
+  function grupoProescColor(name) {
+    const n = norm(name);
+    if (n.includes('PESSOAS') || n.includes('PESSOAL')) return '#155b9a';
+    if (n.includes('VARIAV'))    return '#14d9a1';
+    if (n.includes('FIXAS') || n.includes('FIXA'))  return '#ff4d6a';
+    if (n.includes('IMPOSTO') || n.includes('TRIBUTO')) return '#60a5fa';
+    if (n.includes('FINANCEIR')) return '#c084fc';
+    if (n.includes('ADMIN'))    return '#4f8fff';
+    return '#ffb547';
+  }
+
+  itens.forEach(i => {
+    const gp  = i.grupo || i.grupoProesc || 'SEM GRUPO PROESC';
+    const cat = i.categoriaProesc || 'SEM CATEGORIA';
+    const k0  = gp;
+    const k1  = `${k0}||${cat}`;
+
+    if (!rootMap[k0]) {
+      rootMap[k0] = {
+        id: makeId('gp', k0), label: gp, level: 0,
+        valor: 0, qtd: 0, dreOrdem: i.dreOrdem,
+        children: {}, kind: 'Grupo_Proesc',
+        _color: grupoProescColor(gp)
+      };
+      roots.push(rootMap[k0]);
+    }
+    const n0 = rootMap[k0];
+
+    if (!n0.children[k1]) {
+      n0.children[k1] = {
+        id: makeId('cp', k1), label: cat, level: 1,
+        valor: 0, qtd: 0, dreOrdem: i.dreOrdem,
+        children: {}, kind: 'Categoria_Proesc',
+        _color: grupoProescColor(gp),
+        // guarda o dreGrupo de cada categoria para mostrar no meta
+        _dreGrupo: i.grupoGastos || ''
+      };
+    }
+    const n1 = n0.children[k1];
+
+    [n0, n1].forEach(n => {
+      n.valor += i.valor;
+      n.qtd   += 1;
+      n.dreOrdem = Math.min(n.dreOrdem || 9999, i.dreOrdem || 9999);
+    });
+
+    // Armazena lançamentos direto no nível da categoria (nível 1 expande para lançamentos)
+    if (!n1.detalhe) n1.detalhe = [];
+    n1.detalhe.push(i);
+  });
+
+  function finish(node) {
+    node.valor = Math.round(node.valor * 100) / 100;
+    node.childrenArr = Object.values(node.children || {})
+      .sort((a,b) => (a.dreOrdem || 9999) - (b.dreOrdem || 9999) || b.valor - a.valor);
+    node.childrenArr.forEach(finish);
+    return node;
+  }
+
+  return roots
+    .sort((a,b) => b.valor - a.valor)
+    .map(finish);
+}
+
+// Renderiza a árvore Proesc (estrutura mais rasa: 2 níveis + lançamentos)
+function renderTreeRowsProesc(nodes, total) {
+  let rows = '';
+  nodes.forEach((node, idx) => {
+    rows += renderNodeRowProesc(node, total, idx);
+    if (expanded.has(node.id)) {
+      if (node.level === 1) {
+        // Categoria → lançamentos inline
+        rows += renderLancamentosInline(node, total);
+      } else {
+        rows += renderTreeRowsProesc(node.childrenArr || [], total);
+      }
+    }
+  });
+  return rows;
+}
+
+function renderNodeRowProesc(node, total, idx) {
+  const canExpand = node.level === 0
+    ? (node.childrenArr && node.childrenArr.length > 0)
+    : (node.detalhe && node.detalhe.length > 0);
+  const exp   = expanded.has(node.id);
+  const p     = total ? node.valor / total * 100 : 0;
+  const emp   = valoresPorEmpresa(node);
+  const indent = `indent-${Math.min(node.level, 4)}`;
+  const color  = node._color || grupoColor(node.label, idx);
+
+  // Meta: nivel 0 mostra qtd categorias, nivel 1 mostra o dreGrupo correspondente
+  const metaText = node.level === 0
+    ? `${node.qtd.toLocaleString('pt-BR')} lançamentos · ${(node.childrenArr||[]).length} categorias`
+    : `${node._dreGrupo ? node._dreGrupo + ' · ' : ''}${node.qtd.toLocaleString('pt-BR')} lançamentos`;
+
+  return `
+    <tr class="level-${node.level}">
+      <td class="linha-nome ${indent}">
+        <span class="node">
+          <button class="toggle ${canExpand ? '' : 'blank'}" onclick="${canExpand ? `toggleNode('${node.id}')` : ''}">${exp ? '−' : '+'}</button>
+          <span class="dot" style="background:${color}"></span>
+          <span>${escapeHtml(node.label)}</span>
+        </span>
+        <div class="meta">${escapeHtml(metaText)}</div>
+      </td>
+      <td class="${emp.MD    ? 'neg' : 'zero'}">${emp.MD    ? fmt(emp.MD)    : '—'}</td>
+      <td class="${emp.SEL   ? 'neg' : 'zero'}">${emp.SEL   ? fmt(emp.SEL)   : '—'}</td>
+      <td class="${emp.SIGMA ? 'neg' : 'zero'}">${emp.SIGMA ? fmt(emp.SIGMA) : '—'}</td>
+      <td class="neg">${fmt(node.valor)}</td>
+      <td>${fmtPct(p)}</td>
+      <td>${node.qtd.toLocaleString('pt-BR')}</td>
+    </tr>
+  `;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 function buildTree(itens) {
   const roots = [];
   const rootMap = {};
@@ -925,7 +1147,18 @@ function makeId(prefix, text) {
 
 function renderMain(itens, raw) {
   const total = sum(itens);
-  const tree = buildTree(itens);
+
+  // Seleciona árvore e renderer conforme visão ativa
+  let treeHtml, drillSubtitle;
+  if (visaoAtual === 'proesc') {
+    const tree = buildTreeProesc(itens);
+    treeHtml = renderTreeRowsProesc(tree, total);
+    drillSubtitle = 'Drill: Grupo Proesc → Categoria → Lançamentos';
+  } else {
+    const tree = buildTree(itens);
+    treeHtml = renderTreeRows(tree, total);
+    drillSubtitle = 'Drill individual: Grupo → Grupo Final → Categoria → Descrição → Lançamentos';
+  }
 
   const html = `
     <div class="grid-charts">
@@ -945,13 +1178,13 @@ function renderMain(itens, raw) {
         <div class="chart-wrap short"><canvas id="chart-stack"></canvas></div>
       </div>
       <div class="card">
-        <div class="card-title"><span>Evolução por grupo macro</span><span class="tip-icon" data-title="Por Grupo Macro" data-tip="Separação por grande categoria (Custos Op., Despesas Op., Desp. Financeiras, Fora DRE) ao longo dos meses. Mostra qual bloco de gastos está crescendo.">i</span><small>Todos os meses</small></div>
+        <div class="card-title"><span>${visaoAtual === 'proesc' ? 'Evolução por grupo Proesc' : 'Evolução por grupo macro'}</span><span class="tip-icon" data-title="${visaoAtual === 'proesc' ? 'Por Grupo Proesc' : 'Por Grupo Macro'}" data-tip="${visaoAtual === 'proesc' ? 'Evolução mensal dos grupos operacionais (Pessoas, Despesas variáveis, etc.) ao longo dos meses.' : 'Separação por grande categoria (Custos Op., Despesas Op., Desp. Financeiras, Fora DRE) ao longo dos meses. Mostra qual bloco de gastos está crescendo.'}">i</span><small>Todos os meses</small></div>
         <div class="chart-wrap short"><canvas id="chart-grupos-macro"></canvas></div>
       </div>
     </div>
 
     <div class="card">
-      <div class="card-title"><span>Detalhamento de gastos</span><span class="tip-icon" data-title="Drill-down de Gastos" data-tip="Clique em qualquer linha para expandir: Grupo → Grupo Final → Categoria → Descrição → Lançamentos individuais. Permite rastrear qualquer gasto até a nota de origem.">i</span><small>Drill individual: Grupo → Grupo Final → Categoria → Descrição → Lançamentos</small></div>
+      <div class="card-title"><span>Detalhamento de gastos</span><span class="tip-icon" data-title="Drill-down de Gastos" data-tip="Clique em qualquer linha para expandir. Visão DRE: Grupo → Grupo Final → Categoria → Lançamentos. Visão Grupo Proesc: Grupo Proesc → Categoria → Lançamentos.">i</span><small>${drillSubtitle}</small></div>
       <div class="table-wrap">
         <table>
           <thead>
@@ -966,7 +1199,7 @@ function renderMain(itens, raw) {
             </tr>
           </thead>
           <tbody>
-            ${renderTreeRows(tree, total)}
+            ${treeHtml}
           </tbody>
         </table>
       </div>
@@ -1110,13 +1343,14 @@ function toggleNode(id) {
 
 function expandAll() {
   const { empresa, mes } = getFilters();
-  const tree = buildTree(getDetalheFiltrado(mes, empresa));
+  const itens = getDetalheFiltrado(mes, empresa);
+  const tree = visaoAtual === 'proesc' ? buildTreeProesc(itens) : buildTree(itens);
+  const maxLevel = visaoAtual === 'proesc' ? 1 : 2;
   function walk(n) {
-    if (n.level <= 2) {           // 0=Grupo_Gastos, 1=Grupo_Gastos_Final, 2=Categoria_Proesc
+    if (n.level <= maxLevel) {
       expanded.add(n.id);
       (n.childrenArr || []).forEach(walk);
     }
-    // nível 3 (Descrição) e 4 (lançamentos) não são expandidos
   }
   tree.forEach(walk);
   render();
@@ -1139,10 +1373,11 @@ function renderCharts(itens, raw) {
 }
 
 function renderDonut(itens) {
-  const byFinal = aggregate(['grupoGastosFinal'], itens).sort((a,b) => b.valor - a.valor);
+  const groupKey = visaoAtual === 'proesc' ? 'grupo' : 'grupoGastosFinal';
+  const byFinal = aggregate([groupKey], itens).sort((a,b) => b.valor - a.valor);
   const top = byFinal.slice(0, 6);
   const rest = byFinal.slice(6).reduce((s,i) => s + i.valor, 0);
-  const labels = top.map(i => i.grupoGastosFinal);
+  const labels = top.map(i => i[groupKey] || 'SEM GRUPO');
   const values = top.map(i => i.valor);
   if (rest > 0) { labels.push('OUTROS'); values.push(rest); }
 
@@ -1209,24 +1444,25 @@ function renderTotalLine() {
 function renderStack() {
   const { empresa, grupo, final } = getFilters();
   const meses = DATA.mesesDisponiveis || [];
+  const groupKey = visaoAtual === 'proesc' ? 'grupo' : 'grupoGastosFinal';
 
-  // Top grupos finais calculado sobre TODOS os meses (não só o selecionado)
+  // Top grupos calculado sobre TODOS os meses (não só o selecionado)
   const todosItens = meses.flatMap(m => getDetalhe(m, empresa).filter(i => {
     if (grupo !== 'TODOS' && i.grupoGastos !== grupo) return false;
     if (final !== 'TODOS' && i.grupoGastosFinal !== final) return false;
     return true;
   }));
-  const topFinal = aggregate(['grupoGastosFinal'], todosItens)
+  const topFinal = aggregate([groupKey], todosItens)
     .sort((a,b) => b.valor - a.valor)
     .slice(0,6)
-    .map(i => i.grupoGastosFinal);
+    .map(i => i[groupKey] || 'SEM GRUPO');
 
   const datasets = topFinal.map((gf, idx) => ({
     label: gf,
     data: meses.map(m => sum(getDetalhe(m, empresa).filter(i => {
       if (grupo !== 'TODOS' && i.grupoGastos !== grupo) return false;
       if (final !== 'TODOS' && i.grupoGastosFinal !== final) return false;
-      return i.grupoGastosFinal === gf;
+      return (i[groupKey] || 'SEM GRUPO') === gf;
     }))),
     backgroundColor: grupoColor(gf, idx) + '88',
     borderColor: grupoColor(gf, idx),
@@ -1252,26 +1488,57 @@ function renderGruposMacro() {
   const { empresa, grupo, final } = getFilters();
   const meses = DATA.mesesDisponiveis || [];
 
-  const GRUPOS = [
-    { key: 'CUSTOS OPERACIONAIS',        label: 'Custos Op.',      color: '#4f8fff' },
-    { key: 'DESPESAS OPERACIONAIS',       label: 'Despesas Op.',    color: '#f87171' },
-    { key: 'DESPESAS FINANCEIRAS (GASTO)',label: 'Desp. Fin.',      color: '#a78bfa' },
-    { key: 'FORA_DRE',                    label: 'Fora DRE',        color: '#fbbf24' },
-  ];
+  let datasets;
 
-  const datasets = GRUPOS.map(g => ({
-    label: g.label,
-    data: meses.map(m => sum(getDetalhe(m, empresa).filter(i => i.grupoGastos === g.key))),
-    borderColor: g.color,
-    backgroundColor: g.color + '22',
-    fill: false,
-    tension: .3,
-    pointRadius: 4,
-    pointBackgroundColor: g.color,
-    pointBorderColor: g.color,
-    pointHoverRadius: 6,
-    borderWidth: 2
-  })).filter(ds => ds.data.some(v => v > 0));
+  if (visaoAtual === 'proesc') {
+    // Visão Grupo Proesc: uma linha por grupo Proesc (ex: Pessoas, Despesas variáveis…)
+    const todosItens = meses.flatMap(m => getDetalhe(m, empresa));
+    const gruposProesc = [...new Set(todosItens.map(i => i.grupo || 'SEM GRUPO PROESC'))]
+      .map(gp => ({
+        key: gp,
+        total: todosItens.filter(i => (i.grupo || 'SEM GRUPO PROESC') === gp).reduce((s,i) => s + i.valor, 0)
+      }))
+      .sort((a,b) => b.total - a.total)
+      .slice(0, 6);
+
+    datasets = gruposProesc.map((g, idx) => {
+      const color = grupoColor(g.key, idx);
+      return {
+        label: g.key,
+        data: meses.map(m => sum(getDetalhe(m, empresa).filter(i => (i.grupo || 'SEM GRUPO PROESC') === g.key))),
+        borderColor: color,
+        backgroundColor: color + '22',
+        fill: false,
+        tension: .3,
+        pointRadius: 4,
+        pointBackgroundColor: color,
+        pointBorderColor: color,
+        pointHoverRadius: 6,
+        borderWidth: 2
+      };
+    }).filter(ds => ds.data.some(v => v > 0));
+  } else {
+    // Visão DRE: grupos macro fixos
+    const GRUPOS = [
+      { key: 'CUSTOS OPERACIONAIS',         label: 'Custos Op.',   color: '#4f8fff' },
+      { key: 'DESPESAS OPERACIONAIS',        label: 'Despesas Op.', color: '#f87171' },
+      { key: 'DESPESAS FINANCEIRAS (GASTO)', label: 'Desp. Fin.',   color: '#a78bfa' },
+      { key: 'FORA_DRE',                     label: 'Fora DRE',     color: '#fbbf24' },
+    ];
+    datasets = GRUPOS.map(g => ({
+      label: g.label,
+      data: meses.map(m => sum(getDetalhe(m, empresa).filter(i => i.grupoGastos === g.key))),
+      borderColor: g.color,
+      backgroundColor: g.color + '22',
+      fill: false,
+      tension: .3,
+      pointRadius: 4,
+      pointBackgroundColor: g.color,
+      pointBorderColor: g.color,
+      pointHoverRadius: 6,
+      borderWidth: 2
+    })).filter(ds => ds.data.some(v => v > 0));
+  }
 
   const ctx = document.getElementById('chart-grupos-macro');
   if (!ctx) return;
@@ -1312,128 +1579,215 @@ function tooltipMoney() {
 
 function exportExcel() {
   const { empresa, mes } = getFilters();
-  const itens = getDetalheFiltrado(mes, empresa).sort(sortDetalhe);
-  const headers = ['DRE_Ordem','Data','Empresa','Grupo_Gastos','Grupo_Gastos_Final','Categoria_Proesc','DRE_Linha','Documento','Cliente','Descrição','Valor'];
-  const rows = itens.map(i => [
-    i.dreOrdem || '',
-    formatDateBR(i.data), i.empresa, i.grupoGastos, i.grupoGastosFinal, i.categoriaProesc, i.dreLinha,
-    i.documento, i.cliente, i.descricao, i.valor.toLocaleString('pt-BR', {minimumFractionDigits:2})
-  ]);
+  // Exporta TODOS os lançamentos de TODOS os meses (sem filtro de mês nem de grupo/final)
+  // para garantir dataset completo. Aplica só o filtro de empresa.
+  const meses = DATA.mesesDisponiveis || [];
+  const todosItens = meses.flatMap(m => getDetalhe(m, empresa));
 
-  const csv = [headers, ...rows].map(r => r.map(cell => `"${String(cell ?? '').replace(/"/g,'""')}"`).join(';')).join('\n');
+  if (!todosItens.length) {
+    alert('Nenhum dado disponível para exportação.');
+    return;
+  }
+
+  const headers = [
+    'AnoMes','Data','Empresa','Grupo_Proesc',
+    'Grupo_DRE','Grupo_Gastos_Final','Categoria_Proesc',
+    'DRE_Linha','DRE_Grupo','DRE_Ordem',
+    'Documento','Cliente','Descrição','Forma_Pagamento','Valor'
+  ];
+
+  const rows = todosItens
+    .sort((a,b) => {
+      const ma = (a.data||'').substring(0,7), mb = (b.data||'').substring(0,7);
+      if (ma !== mb) return ma < mb ? -1 : 1;
+      return sortDetalhe(a, b);
+    })
+    .map(i => [
+      (i.data||'').substring(0,7),
+      formatDateBR(i.data),
+      i.empresa || '',
+      i.grupo || '',
+      i.grupoGastos || '',
+      i.grupoGastosFinal || '',
+      i.categoriaProesc || '',
+      i.dreLinha || '',
+      i.dreGrupo || '',
+      i.dreOrdem !== 9999 ? (i.dreOrdem || '') : '',
+      i.documento || '',
+      i.cliente || '',
+      i.descricao || '',
+      i.formaPagamento || '',
+      i.valor != null ? i.valor.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}) : '0,00'
+    ]);
+
+  const csv = [headers, ...rows]
+    .map(r => r.map(cell => `"${String(cell ?? '').replace(/"/g,'""')}"`).join(';'))
+    .join('\n');
+
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-  downloadBlob(blob, `gastos_${empresa}_${mes}.csv`);
+  downloadBlob(blob, `gastos_completo_${empresa}.csv`);
 }
 
 function exportPDF() {
   const { empresa, mes, grupo, final } = getFilters();
-  const itens = getDetalheFiltrado(mes, empresa).sort(sortDetalhe);
-  const total = sum(itens);
-  const raw   = getDetalhe(mes, empresa);
-  const byMacro = aggregate(['grupoGastos'], raw);
-  const get = name => byMacro.find(i => i.grupoGastos === name)?.valor || 0;
+  const itens  = getDetalheFiltrado(mes, empresa).sort(sortDetalhe);
+  const total  = sum(itens);
+  const raw    = getDetalhe(mes, empresa);
 
-  const linhas = itens.map(i => `
-    <tr>
-      <td>${escapeHtml(formatDateBR(i.data))}</td>
-      <td>${escapeHtml(i.grupoGastosFinal || '')} · ${escapeHtml(i.categoriaProesc || '')}<br><span class="sub2">${escapeHtml(i.descricao || '')}</span></td>
-      <td>${escapeHtml(i.empresa || '')}</td>
-      <td>${escapeHtml(i.cliente || '')}</td>
-      <td>${escapeHtml(i.documento || '')}</td>
-      <td style="text-align:right;font-weight:600">${fmt(i.valor)}</td>
-    </tr>
-  `).join('');
+  const isProesc = visaoAtual === 'proesc';
+  const visaoLabel = isProesc ? 'Visão Grupo Proesc' : 'Visão DRE';
 
-  const html = `
-    <!DOCTYPE html>
-    <html><head><meta charset="utf-8">
-    <title>Relatório de Gastos — ${empresa} ${MESES_LABEL[mes]||mes}</title>
-    <style>
-      * { box-sizing: border-box; margin: 0; padding: 0; }
-      body { font-family: Arial, sans-serif; color: #111; padding: 28px; font-size: 11px; }
-      .header { border-bottom: 3px solid #111; padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end; }
-      .header h1 { font-size: 20px; margin: 0 0 3px; }
-      .header .meta { color: #555; font-size: 10px; }
-      .header .gen { text-align: right; color: #555; font-size: 9px; }
-      .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
-      .kpi { border: 1px solid #ccc; border-radius: 6px; padding: 8px 10px; }
-      .kpi small { display: block; color: #666; text-transform: uppercase; font-size: 8px; letter-spacing: .06em; margin-bottom: 3px; }
-      .kpi strong { font-size: 14px; }
-      .section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; border-top: 1px solid #ddd; padding-top: 8px; }
-      table { width: 100%; border-collapse: collapse; font-size: 9px; table-layout: fixed; }
-      col.c-data   { width: 7%; }
-      col.c-class  { width: 38%; }
-      col.c-emp    { width: 6%; }
-      col.c-client { width: 24%; }
-      col.c-doc    { width: 9%; }
-      col.c-val    { width: 16%; }
-      th { background: #f0f0f0; text-align: left; border-bottom: 2px solid #999; padding: 5px 6px; font-size: 8px; text-transform: uppercase; letter-spacing: .05em; }
-      td { border-bottom: 1px solid #e8e8e8; padding: 4px 6px; vertical-align: top; }
-      tr:hover td { background: #fafafa; }
-      .sub2 { color: #777; font-size: 8px; }
-      .total-row td { border-top: 2px solid #999; font-weight: 700; background: #f7f7f7; }
-      @media print { body { padding: 14px; } .kpis { grid-template-columns: repeat(4,1fr); } }
+  // ── KPI blocks ──────────────────────────────────────────────────────────────
+  let kpiHtml = '';
+  if (isProesc) {
+    const byGrupo = aggregate(['grupo'], raw).sort((a,b) => b.valor - a.valor);
+    const getPG = name => byGrupo.find(i => norm(i.grupo||'').includes(norm(name)))?.valor || 0;
+    const pessoal   = getPG('PESSOAS');
+    const variaveis = byGrupo.find(i => norm(i.grupo||'').includes('VARIAV'))?.valor || 0;
+    const impostos  = byGrupo.find(i => norm(i.grupo||'').includes('IMPOSTO') || norm(i.grupo||'').includes('TRIBUTO'))?.valor || 0;
+    const totalBase = sum(raw);
+    kpiHtml = `
+      <div class="kpi"><small>Total selecionado</small><strong>${fmt(total)}</strong></div>
+      <div class="kpi"><small>Pessoal (total)</small><strong>${fmt(pessoal)}</strong></div>
+      <div class="kpi"><small>Pessoal / total</small><strong>${fmtPct(totalBase ? pessoal/totalBase*100 : 0)}</strong></div>
+      <div class="kpi"><small>Despesas variáveis</small><strong>${fmt(variaveis)}</strong></div>
+      <div class="kpi"><small>Impostos / tributos</small><strong>${fmt(impostos)}</strong></div>
+      <div class="kpi"><small>Qtd. lançamentos</small><strong>${itens.length.toLocaleString('pt-BR')}</strong></div>
+      <div class="kpi"><small>Ticket médio</small><strong>${fmt(itens.length ? total/itens.length : 0)}</strong></div>
+      <div class="kpi"><small>Maior lançamento</small><strong>${fmt(Math.max(0, ...itens.map(i=>i.valor)))}</strong></div>`;
+  } else {
+    const byMacro = aggregate(['grupoGastos'], raw);
+    const get = name => byMacro.find(i => i.grupoGastos === name)?.valor || 0;
+    kpiHtml = `
+      <div class="kpi"><small>Total selecionado</small><strong>${fmt(total)}</strong></div>
+      <div class="kpi"><small>Custos Operacionais</small><strong>${fmt(get('CUSTOS OPERACIONAIS'))}</strong></div>
+      <div class="kpi"><small>Despesas Operacionais</small><strong>${fmt(get('DESPESAS OPERACIONAIS'))}</strong></div>
+      <div class="kpi"><small>Fora da DRE</small><strong>${fmt(get('FORA_DRE'))}</strong></div>
+      <div class="kpi"><small>Despesas Financeiras</small><strong>${fmt(get('DESPESAS FINANCEIRAS (GASTO)'))}</strong></div>
+      <div class="kpi"><small>Qtd. Lançamentos</small><strong>${itens.length.toLocaleString('pt-BR')}</strong></div>
+      <div class="kpi"><small>Ticket Médio</small><strong>${fmt(itens.length ? total/itens.length : 0)}</strong></div>
+      <div class="kpi"><small>Maior lançamento</small><strong>${fmt(Math.max(0, ...itens.map(i=>i.valor)))}</strong></div>`;
+  }
 
-.banner-sem-mapa{margin:8px 16px 0;border-radius:8px;border:1px solid rgba(251,191,36,.4);background:rgba(251,191,36,.07);overflow:hidden}
-.banner-header{display:flex;align-items:center;gap:12px;padding:10px 14px;font-size:.82rem;color:#fbbf24;flex-wrap:wrap}
-.banner-header strong{color:#fde68a}
-.banner-total{margin-left:auto;font-family:monospace;font-size:.75rem;color:#94a3b8}
-.banner-toggle{background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.3);color:#fbbf24;border-radius:4px;padding:2px 8px;font-size:.72rem;cursor:pointer}
-.banner-linha{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(251,191,36,.1);font-size:.76rem}
-.banner-linha:last-child{border-bottom:none}
-.banner-cat{color:#fde68a;font-family:monospace}
-.banner-info{color:#94a3b8}
-    </style></head><body>
-      <div class="header">
-        <div>
-          <h1>Relatório de Gastos — Caixa Real</h1>
-          <div class="meta">
-            Empresa: <strong>${escapeHtml(empresa)}</strong> &nbsp;·&nbsp;
-            Período: <strong>${escapeHtml(MESES_LABEL[mes]||mes)}</strong>
-            ${grupo !== 'TODOS' ? ` &nbsp;·&nbsp; Grupo: <strong>${escapeHtml(grupo)}</strong>` : ''}
-            ${final !== 'TODOS' ? ` &nbsp;·&nbsp; Grupo Final: <strong>${escapeHtml(final)}</strong>` : ''}
-          </div>
-        </div>
-        <div class="gen">Gerado em ${new Date().toLocaleString('pt-BR')}<br>Total lançamentos: ${itens.length.toLocaleString('pt-BR')}</div>
-      </div>
-
-      <div class="kpis">
-        <div class="kpi"><small>Total selecionado</small><strong>${fmt(total)}</strong></div>
-        <div class="kpi"><small>Custos Operacionais</small><strong>${fmt(get('CUSTOS OPERACIONAIS'))}</strong></div>
-        <div class="kpi"><small>Despesas Operacionais</small><strong>${fmt(get('DESPESAS OPERACIONAIS'))}</strong></div>
-        <div class="kpi"><small>Fora da DRE</small><strong>${fmt(get('FORA_DRE'))}</strong></div>
-        <div class="kpi"><small>Despesas Financeiras</small><strong>${fmt(get('DESPESAS FINANCEIRAS (GASTO)'))}</strong></div>
-        <div class="kpi"><small>Qtd. Lançamentos</small><strong>${itens.length.toLocaleString('pt-BR')}</strong></div>
-        <div class="kpi"><small>Ticket Médio</small><strong>${fmt(itens.length ? total/itens.length : 0)}</strong></div>
-        <div class="kpi"><small>Maior lançamento</small><strong>${fmt(Math.max(...itens.map(i=>i.valor)))}</strong></div>
-      </div>
-
-      <div class="section-title">Detalhamento de Lançamentos</div>
-      <table>
-        <colgroup>
-          <col class="c-data"><col class="c-class"><col class="c-emp">
-          <col class="c-client"><col class="c-doc"><col class="c-val">
-        </colgroup>
-        <thead>
-          <tr>
-            <th>Data</th>
-            <th>Classificação / Descrição</th>
-            <th>Emp.</th>
-            <th>Cliente / Favorecido</th>
-            <th>Doc.</th>
-            <th style="text-align:right">Valor</th>
-          </tr>
-        </thead>
+  // ── Summary por grupo (tabela intermediária apenas na visão Proesc) ─────────
+  let summaryHtml = '';
+  if (isProesc) {
+    const byGrupo = aggregate(['grupo'], itens).sort((a,b) => b.valor - a.valor);
+    const summaryRows = byGrupo.map(g => {
+      const pct = total ? (g.valor / total * 100).toFixed(1) : '0.0';
+      return `<tr>
+        <td>${escapeHtml(g.grupo || 'SEM GRUPO')}</td>
+        <td style="text-align:right">${g.qtd}</td>
+        <td style="text-align:right;font-weight:600">${fmt(g.valor)}</td>
+        <td style="text-align:right">${pct}%</td>
+      </tr>`;
+    }).join('');
+    summaryHtml = `
+      <div class="section-title" style="margin-top:14px">Resumo por Grupo Proesc</div>
+      <table style="margin-bottom:16px">
+        <thead><tr>
+          <th>Grupo Proesc</th>
+          <th style="text-align:right">Qtd.</th>
+          <th style="text-align:right">Total</th>
+          <th style="text-align:right">%</th>
+        </tr></thead>
         <tbody>
-          ${linhas}
+          ${summaryRows}
           <tr class="total-row">
-            <td colspan="5">Total</td>
+            <td>TOTAL</td>
+            <td style="text-align:right">${itens.length}</td>
             <td style="text-align:right">${fmt(total)}</td>
+            <td style="text-align:right">100%</td>
           </tr>
         </tbody>
-      </table>
-    
-  `;
+      </table>`;
+  }
+
+  // ── Linhas da tabela de detalhe ──────────────────────────────────────────────
+  const linhas = itens.map(i => {
+    const classif = isProesc
+      ? `${escapeHtml(i.grupo || '')} · ${escapeHtml(i.categoriaProesc || '')}<br><span class="sub2">${escapeHtml(i.descricao || '')}</span>`
+      : `${escapeHtml(i.grupoGastosFinal || '')} · ${escapeHtml(i.categoriaProesc || '')}<br><span class="sub2">${escapeHtml(i.descricao || '')}</span>`;
+    return `
+      <tr>
+        <td>${escapeHtml(formatDateBR(i.data))}</td>
+        <td>${classif}</td>
+        <td>${escapeHtml(i.empresa || '')}</td>
+        <td>${escapeHtml(i.cliente || '')}</td>
+        <td>${escapeHtml(i.documento || '')}</td>
+        <td style="text-align:right;font-weight:600">${fmt(i.valor)}</td>
+      </tr>`;
+  }).join('');
+
+  // ── Col widths por visão ─────────────────────────────────────────────────────
+  const colClassWidth = isProesc ? '42%' : '38%';
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<title>Relatório de Gastos — ${empresa} ${MESES_LABEL[mes]||mes} — ${visaoLabel}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; color: #111; padding: 28px; font-size: 11px; }
+  .header { border-bottom: 3px solid #111; padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end; }
+  .header h1 { font-size: 20px; margin: 0 0 3px; }
+  .header .meta { color: #555; font-size: 10px; }
+  .header .gen { text-align: right; color: #555; font-size: 9px; }
+  .visao-badge { display:inline-block; background:#e8f5e9; border:1px solid #a5d6a7; border-radius:4px; padding:1px 7px; font-size:9px; font-weight:700; color:#2e7d32; margin-left:8px; vertical-align:middle; }
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+  .kpi { border: 1px solid #ccc; border-radius: 6px; padding: 8px 10px; }
+  .kpi small { display: block; color: #666; text-transform: uppercase; font-size: 8px; letter-spacing: .06em; margin-bottom: 3px; }
+  .kpi strong { font-size: 14px; }
+  .section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; border-top: 1px solid #ddd; padding-top: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 9px; table-layout: fixed; }
+  th { background: #f0f0f0; text-align: left; border-bottom: 2px solid #999; padding: 5px 6px; font-size: 8px; text-transform: uppercase; letter-spacing: .05em; }
+  td { border-bottom: 1px solid #e8e8e8; padding: 4px 6px; vertical-align: top; }
+  .sub2 { color: #777; font-size: 8px; }
+  .total-row td { border-top: 2px solid #999; font-weight: 700; background: #f7f7f7; }
+  @media print { body { padding: 14px; } .kpis { grid-template-columns: repeat(4,1fr); } }
+</style></head><body>
+  <div class="header">
+    <div>
+      <h1>Relatório de Gastos — Caixa Real <span class="visao-badge">${visaoLabel}</span></h1>
+      <div class="meta">
+        Empresa: <strong>${escapeHtml(empresa)}</strong> &nbsp;·&nbsp;
+        Período: <strong>${escapeHtml(MESES_LABEL[mes]||mes)}</strong>
+        ${grupo !== 'TODOS' ? ` &nbsp;·&nbsp; Grupo: <strong>${escapeHtml(grupo)}</strong>` : ''}
+        ${final !== 'TODOS' ? ` &nbsp;·&nbsp; Grupo Final: <strong>${escapeHtml(final)}</strong>` : ''}
+      </div>
+    </div>
+    <div class="gen">Gerado em ${new Date().toLocaleString('pt-BR')}<br>Total lançamentos: ${itens.length.toLocaleString('pt-BR')}</div>
+  </div>
+
+  <div class="kpis">${kpiHtml}</div>
+
+  ${summaryHtml}
+
+  <div class="section-title">Detalhamento de Lançamentos</div>
+  <table>
+    <colgroup>
+      <col style="width:7%"><col style="width:${colClassWidth}">
+      <col style="width:6%"><col style="width:24%">
+      <col style="width:9%"><col style="width:12%">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Data</th>
+        <th>${isProesc ? 'Grupo Proesc · Categoria / Descrição' : 'Classificação / Descrição'}</th>
+        <th>Emp.</th>
+        <th>Cliente / Favorecido</th>
+        <th>Doc.</th>
+        <th style="text-align:right">Valor</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${linhas}
+      <tr class="total-row">
+        <td colspan="5">Total</td>
+        <td style="text-align:right">${fmt(total)}</td>
+      </tr>
+    </tbody>
+  </table>
+</body></html>`;
 
   const w = window.open('', '_blank');
   w.document.write(html);
