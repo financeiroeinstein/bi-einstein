@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BI Sigma — Pessoal</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0f14;--surface:#13161e;--surface2:#1a1e2a;--surface3:#10131b;
+  --border:#252b3b;--accent:#00e5a0;--accent2:#4f8fff;--danger:#ff4d6a;
+  --warn:#ffb547;--purple:#c084fc;--text:#e8eaf0;--muted:#6b7280;
+  --font-head:'Syne',sans-serif;--font-mono:'JetBrains Mono',monospace;
+}
+html{font-size:14px}
+body{background:var(--bg);color:var(--text);font-family:var(--font-head);min-height:100vh}
+
+/* NAV */
+nav{display:flex;align-items:center;gap:6px;padding:12px 20px;background:var(--surface3);border-bottom:1px solid var(--border);font-size:.8rem;flex-wrap:wrap}
+nav a{color:var(--muted);text-decoration:none;transition:color .15s}
+nav a:hover{color:var(--accent)}
+nav span.active{color:var(--accent);font-weight:700}
+nav .sep{color:var(--border)}
+
+/* HEADER */
+.page-header{padding:20px 20px 0;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.page-header h1{font-size:1.5rem;font-weight:800;color:var(--text)}
+.page-header .badge{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:.75rem;font-family:var(--font-mono);color:var(--muted)}
+
+/* TOOLBAR */
+.toolbar{display:flex;align-items:center;gap:10px;padding:14px 20px;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+.toolbar select,.toolbar button{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--font-head);font-size:.8rem;border-radius:6px;padding:6px 12px;cursor:pointer;transition:border-color .15s,background .15s}
+.toolbar select:hover,.toolbar button:hover{border-color:var(--accent);background:var(--surface)}
+.toolbar select:focus{outline:none;border-color:var(--accent)}
+.toolbar .sep-v{width:1px;height:28px;background:var(--border)}
+.toolbar .btn-action{border-color:var(--border);color:var(--muted)}
+.toolbar .btn-action:hover{color:var(--accent);border-color:var(--accent)}
+#loading-bar{position:fixed;top:0;left:0;height:2px;background:var(--accent);width:0;transition:width .3s;z-index:9999}
+
+/* EMPRESA TOGGLES */
+.emp-toggles{display:flex;gap:6px;align-items:center}
+.emp-toggle{background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:var(--font-head);font-size:.8rem;font-weight:700;border-radius:6px;padding:6px 14px;cursor:pointer;transition:all .15s;user-select:none}
+.emp-toggle:hover{border-color:var(--accent)}
+.emp-toggle.active-MD{background:rgba(0,229,160,.15);border-color:var(--accent);color:var(--accent)}
+.emp-toggle.active-SEL{background:rgba(79,143,255,.15);border-color:var(--accent2);color:var(--accent2)}
+.emp-toggle.active-SIGMA{background:rgba(192,132,252,.15);border-color:var(--purple);color:var(--purple)}
+.emp-toggle.inactive{opacity:.45}
+.toolbar-label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+
+/* KPI STRIP */
+.kpi-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:10px;padding:16px 20px}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;position:relative;transition:border-color .15s}
+.kpi-card:hover{border-color:var(--accent)}
+.kpi-label{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;display:flex;align-items:center;gap:5px;line-height:1.3}
+.kpi-value{font-family:var(--font-mono);font-size:1.12rem;font-weight:500;color:var(--text)}
+.kpi-value.accent{color:var(--accent)}
+.kpi-value.accent2{color:var(--accent2)}
+.kpi-value.warn{color:var(--warn)}
+.kpi-value.danger{color:var(--danger)}
+.kpi-value.purple{color:var(--purple)}
+.kpi-sub{font-size:.68rem;color:var(--muted);margin-top:4px;font-family:var(--font-mono)}
+
+/* CHARTS */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:0 20px 14px}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px}
+.chart-title{font-size:.8rem;font-weight:700;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.chart-wrap{position:relative;height:220px}
+
+/* TABLE */
+.table-section{padding:0 20px 20px}
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.table-toolbar{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.table-toolbar span{font-size:.8rem;font-weight:700;color:var(--text)}
+.table-toolbar .spacer{flex:1}
+table{width:100%;border-collapse:collapse}
+thead th{background:var(--surface3);font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:8px 12px;text-align:right;border-bottom:1px solid var(--border);white-space:nowrap}
+thead th:first-child{text-align:left}
+tbody tr{border-bottom:1px solid rgba(37,43,59,.5)}
+tbody tr:last-child{border-bottom:none}
+tbody td{padding:7px 12px;font-family:var(--font-mono);font-size:.75rem;text-align:right;color:var(--text)}
+tbody td:first-child{text-align:left;font-family:var(--font-head)}
+
+/* DRILL LEVELS */
+.row-l0{background:rgba(79,143,255,.07)}
+.row-l0 td:first-child{font-weight:800;font-size:.82rem;color:var(--accent2)}
+.row-l1{background:rgba(255,255,255,.025)}
+.row-l1 td:first-child{font-weight:700;font-size:.76rem;padding-left:22px;color:var(--text)}
+.row-l2{background:rgba(0,0,0,.18)}
+.row-l2 td:first-child{padding-left:40px;font-size:.72rem;color:var(--muted)}
+.row-l3{background:rgba(0,0,0,.32)}
+.row-l3 td{padding:5px 12px;font-size:.68rem;color:var(--muted)}
+.row-l3 td:first-child{padding-left:58px}
+
+.toggle-btn{cursor:pointer;user-select:none;display:inline-flex;align-items:center;gap:7px}
+.toggle-btn::before{content:'▶';font-size:.55rem;color:var(--muted);transition:transform .15s;display:inline-block}
+.toggle-btn.open::before{transform:rotate(90deg)}
+
+/* MISC */
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:.85rem}
+.error-msg{background:rgba(255,77,106,.1);border:1px solid var(--danger);border-radius:8px;padding:12px 16px;margin:16px 20px;font-size:.8rem;color:var(--danger)}
+.tip-icon{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;border:1px solid var(--muted);color:var(--muted);font-size:.55rem;cursor:help;position:relative;font-family:var(--font-mono);line-height:1;flex-shrink:0}
+.tip-icon:hover .tip-bubble{display:block}
+.tip-bubble{display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:.72rem;color:var(--text);white-space:nowrap;z-index:100;box-shadow:0 4px 16px rgba(0,0,0,.4);font-family:var(--font-head);pointer-events:none;min-width:220px;white-space:normal;max-width:280px;line-height:1.5}
+.emp-badge{display:inline-block;border-radius:4px;padding:1px 6px;font-size:.65rem;font-weight:700;font-family:var(--font-mono)}
+.emp-MD{background:rgba(0,229,160,.12);color:var(--accent)}
+.emp-SEL{background:rgba(79,143,255,.12);color:var(--accent2)}
+.emp-SIGMA{background:rgba(192,132,252,.12);color:var(--purple)}
+.row-total td{background:var(--surface3)!important;font-weight:800;border-top:2px solid var(--border)}
+.row-total td:first-child{font-family:var(--font-head);font-size:.82rem}
+
+/* PDF MODAL */
+#pdf-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center}
+#pdf-overlay.show{display:flex}
+#pdf-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:340px;max-width:95vw}
+#pdf-box h3{font-size:1rem;margin-bottom:10px}
+#pdf-box p{font-size:.8rem;color:var(--muted);margin-bottom:20px;line-height:1.5}
+#pdf-box .btn-row{display:flex;gap:10px;justify-content:flex-end}
+#pdf-box button{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--font-head);padding:7px 16px;border-radius:6px;cursor:pointer;font-size:.8rem}
+#pdf-box button.primary{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700}
+
+@media(max-width:900px){.charts-grid{grid-template-columns:1fr}}
+@media(max-width:640px){.kpi-strip{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div id="loading-bar"></div>
+
+<nav>
+  <a href="index.html">Menu</a><span class="sep">›</span>
+  <a href="painel_executivo.html">Painel</a><span class="sep">›</span>
+  <a href="fluxo_caixa.html">Fluxo</a><span class="sep">›</span>
+  <a href="dre.html">DRE</a><span class="sep">›</span>
+  <a href="gastos.html">Gastos</a><span class="sep">›</span>
+  <span class="active">Pessoal</span><span class="sep">›</span>
+  <a href="receitas.html">Receitas</a><span class="sep">›</span>
+  <a href="ajustes.html">Ajustes</a><span class="sep">›</span>
+  <a href="conciliacao.html">Conciliação</a><span class="sep">›</span>
+  <a href="planejamento.html">Planejamento</a><span class="sep">›</span>
+  <a href="glossario.html">Glossário</a>
+</nav>
+
+<div class="page-header">
+  <h1>Pessoal</h1>
+  <span class="badge" id="data-badge">carregando…</span>
+</div>
+
+<div id="error-container"></div>
+
+<!-- FILTROS -->
+<div class="toolbar">
+  <span class="toolbar-label">Empresa</span>
+  <div class="emp-toggles" id="emp-toggles">
+    <button class="emp-toggle active-MD"   data-emp="MD"    onclick="toggleEmp('MD')">MD</button>
+    <button class="emp-toggle active-SEL"  data-emp="SEL"   onclick="toggleEmp('SEL')">SEL</button>
+    <button class="emp-toggle active-SIGMA" data-emp="SIGMA" onclick="toggleEmp('SIGMA')">SIGMA</button>
+  </div>
+  <div class="sep-v"></div>
+  <span class="toolbar-label">Mês</span>
+  <select id="sel-mes"></select>
+  <div class="sep-v"></div>
+  <button class="btn-action" onclick="exportCSV()">⬇ Exportar Excel</button>
+  <button class="btn-action" onclick="showPdfModal()">⬇ Exportar PDF</button>
+</div>
+
+<!-- KPI STRIP — 7 cards -->
+<div class="kpi-strip">
+  <div class="kpi-card">
+    <div class="kpi-label">Folha Bruta
+      <span class="tip-icon">?<span class="tip-bubble">Folha Prof. + Folha Adm. + Folha Estag. + Pró-labore/Retiradas</span></span>
+    </div>
+    <div class="kpi-value accent" id="kpi-folha">—</div>
+    <div class="kpi-sub" id="kpi-folha-sub">—</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Benefícios
+      <span class="tip-icon">?<span class="tip-bubble">Benefícios Administrativo + Benefícios Professores</span></span>
+    </div>
+    <div class="kpi-value warn" id="kpi-benef">—</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Encargos INSS/FGTS
+      <span class="tip-icon">?<span class="tip-bubble">Encargos Administrativo + Encargos Professores</span></span>
+    </div>
+    <div class="kpi-value warn" id="kpi-enc">—</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Encargos / Folha Bruta
+      <span class="tip-icon">?<span class="tip-bubble">Percentual dos encargos sobre a folha bruta</span></span>
+    </div>
+    <div class="kpi-value" id="kpi-enc-pct">—</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Total Professores
+      <span class="tip-icon">?<span class="tip-bubble">Folha + Encargos + Benefícios do perfil Professor</span></span>
+    </div>
+    <div class="kpi-value accent" id="kpi-prof">—</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Total Administrativo
+      <span class="tip-icon">?<span class="tip-bubble">Folha + Encargos + Benefícios do perfil Administrativo</span></span>
+    </div>
+    <div class="kpi-value accent2" id="kpi-adm">—</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Total Geral Pessoal
+      <span class="tip-icon">?<span class="tip-bubble">Soma de todos os lançamentos do grupo Pessoas no mês/empresas selecionadas</span></span>
+    </div>
+    <div class="kpi-value purple" id="kpi-total">—</div>
+    <div class="kpi-sub" id="kpi-qtd-sub">—</div>
+  </div>
+</div>
+
+<!-- CHARTS -->
+<div class="charts-grid">
+  <div class="chart-card">
+    <div class="chart-title">🍩 Composição do Mês
+      <span class="tip-icon">?<span class="tip-bubble">Distribuição por classificação de pessoal no mês selecionado</span></span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-donut"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">📈 Evolução Total Pessoal
+      <span class="tip-icon">?<span class="tip-bubble">Total mensal de pessoal ao longo de todos os meses disponíveis</span></span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-total-line"></canvas></div>
+  </div>
+</div>
+<div class="charts-grid">
+  <div class="chart-card">
+    <div class="chart-title">📊 Folha × Encargos × Benefícios
+      <span class="tip-icon">?<span class="tip-bubble">Evolução mensal dos três grandes blocos de custo com pessoal</span></span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-comp-line"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">📊 Evolução por Perfil
+      <span class="tip-icon">?<span class="tip-bubble">Professores vs Administrativo empilhados por mês</span></span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-perfil-bar"></canvas></div>
+  </div>
+</div>
+
+<!-- DRILL-DOWN -->
+<div class="table-section">
+  <div class="table-wrap">
+    <div class="table-toolbar">
+      <span>Detalhamento de Pessoal</span>
+      <div class="spacer"></div>
+      <button class="btn-action" style="color:var(--accent2);border-color:var(--accent2)" onclick="expandAll()">⊞ Expandir tudo</button>
+      <button class="btn-action" onclick="collapseAll()">⊟ Recolher tudo</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table id="drill-table">
+        <thead>
+          <tr>
+            <th style="text-align:left;min-width:260px">Descrição / Hierarquia</th>
+            <th>MD</th><th>SEL</th><th>SIGMA</th>
+            <th>Total</th><th>% Total</th><th>Qtd.</th>
+          </tr>
+        </thead>
+        <tbody id="drill-body">
+          <tr><td colspan="7" class="empty">Carregando dados…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- PDF MODAL -->
+<div id="pdf-overlay">
+  <div id="pdf-box">
+    <h3>📄 Exportar PDF</h3>
+    <p>Gera relatório com cabeçalho, 7 KPIs, resumo por bloco e detalhe de lançamentos para o mês e empresas selecionados.</p>
+    <div class="btn-row">
+      <button onclick="closePdfModal()">Cancelar</button>
+      <button class="primary" onclick="exportPDF()">Gerar PDF</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   FETCH
+═══════════════════════════════════════════════════════ */
+const _AS_URL = 'https://script.google.com/macros/s/AKfycbxb6AWl5weYzZjR9uveLtUG8HhLYIIw3GasBSZZpGbcUnv6vKK792GD4nDBDqk3yF43/exec?action=json&_=';
+const DRIVE_FILE_ID = '1uHgfvF8CU2qJSbYjv_MtmgRxJFJzJR-Z';
+const _DRIVE_PROXIES = [
+  id => `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://drive.google.com/uc?export=download&id=${id}`)}`,
+  id => `https://corsproxy.io/?${encodeURIComponent(`https://drive.google.com/uc?export=download&id=${id}`)}`,
+  id => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`https://drive.google.com/uc?export=download&id=${id}`)}`
+];
+async function _fetchJSON() {
+  const ts = Date.now();
+  try {
+    const r = await fetch(_AS_URL + ts, { signal: AbortSignal.timeout(8000) });
+    if (r.ok) { const d = await r.json(); if (d && d.mesesDisponiveis) return d; }
+  } catch(e) {}
+  for (const proxy of _DRIVE_PROXIES) {
+    try {
+      const r = await fetch(proxy(DRIVE_FILE_ID), { signal: AbortSignal.timeout(8000) });
+      if (r.ok) { const d = await r.json(); if (d && d.mesesDisponiveis) return d; }
+    } catch(e) {}
+  }
+  throw new Error('Não foi possível carregar o JSON. Verifique a conexão ou a publicação do Apps Script.');
+}
+
+/* ═══════════════════════════════════════════════════════
+   UTILITÁRIOS
+═══════════════════════════════════════════════════════ */
+const fmt    = v => 'R$ ' + (v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtK   = v => {
+  const abs = Math.abs(v||0);
+  if (abs >= 1e6) return 'R$ ' + (v/1e6).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' Mi';
+  if (abs >= 1e3) return 'R$ ' + (v/1e3).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}) + ' Mil';
+  return fmt(v);
+};
+const fmtPct = v => (v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) + '%';
+const escH   = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const norm   = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();
+const sum    = arr => arr.reduce((a,i) => a + (i.valor||0), 0);
+const monthLabel = m => {
+  if (!m) return m;
+  const [y,mo] = m.split('-');
+  return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][parseInt(mo,10)-1] + '/' + y.slice(2);
+};
+const tooltipMoney = () => ({ callbacks: { label: ctx => ' ' + fmt(ctx.parsed.y ?? ctx.parsed) } });
+const chartOptionsMoney = (stacked=false) => ({
+  responsive:true, maintainAspectRatio:false,
+  plugins:{ legend:{ labels:{ color:'#6b7280', font:{size:11} } }, tooltip:tooltipMoney() },
+  scales:{
+    x:{ stacked, grid:{color:'rgba(37,43,59,.5)'}, ticks:{color:'#6b7280',font:{size:10}} },
+    y:{ stacked, grid:{color:'rgba(37,43,59,.5)'}, ticks:{color:'#6b7280',font:{size:10}, callback:v => fmtK(v)} }
+  }
+});
+
+/* ═══════════════════════════════════════════════════════
+   MAPEAMENTO DE CLASSIFICAÇÕES
+   Baseado nas categorias reais do Proesc.
+═══════════════════════════════════════════════════════ */
+
+// Ordem de exibição no drill-down (L0 = bloco principal)
+const BLOCOS_ORDEM = [
+  'Administrativo',
+  'Professor',
+  'Outros'
+];
+
+// Dentro de cada bloco, subgrupos na ordem:
+// Administrativo: Salário, Encargos, Benefícios
+// Professor:      Salário, Encargos, Benefícios
+// Outros:         Estagiário, Pró-labore/Retiradas, Outros
+
+/**
+ * Retorna { bloco, subgrupo, classificacao } para uma categoria Proesc.
+ *
+ * classificacao = rótulo amigável da linha (ex: "Folha de Pagamento Professores")
+ * bloco         = nível L0 do drill (Administrativo | Professor | Outros)
+ * subgrupo      = nível L1 do drill (Salário | Encargos | Benefícios | ...)
+ */
+function classificarPessoal(categoria) {
+  const c = norm(categoria);
+
+  // ── PROFESSORES ────────────────────────────────────
+  if (c.includes('PROFESSOR')) {
+    if (c.includes('BENEFICIO'))
+      return { bloco:'Professor', subgrupo:'Benefícios', classificacao:'Benefícios Professores' };
+    if (c.includes('ENCARGO') || c.includes('INSS') || c.includes('FGTS'))
+      return { bloco:'Professor', subgrupo:'Encargos', classificacao:'Encargos Professores' };
+    // Salário ou Adiantamento → folha
+    return { bloco:'Professor', subgrupo:'Salário', classificacao:'Folha de Pagamento Professores' };
+  }
+
+  // ── ADMINISTRATIVO ────────────────────────────────
+  if (c.includes('ADMINISTRATIVO')) {
+    if (c.includes('BENEFICIO'))
+      return { bloco:'Administrativo', subgrupo:'Benefícios', classificacao:'Benefícios Administrativo' };
+    if (c.includes('ENCARGO') || c.includes('INSS') || c.includes('FGTS'))
+      return { bloco:'Administrativo', subgrupo:'Encargos', classificacao:'Encargos Administrativo' };
+    return { bloco:'Administrativo', subgrupo:'Salário', classificacao:'Folha de Pagamento Administrativo' };
+  }
+
+  // ── ESTAGIÁRIO ────────────────────────────────────
+  if (c.includes('ESTAGIARIO') || c.includes('ESTAGIARIO'))
+    return { bloco:'Outros', subgrupo:'Estagiário', classificacao:'Folha de Pagamento Estagiário' };
+
+  // ── PRÓ-LABORE / RETIRADAS ────────────────────────
+  if (c.includes('PRO-LABORE') || c.includes('PROLABORE') || c.includes('PRO LABORE') ||
+      c.includes('RETIRADA') || c.includes('SOCIO'))
+    return { bloco:'Outros', subgrupo:'Pró-labore/Retiradas', classificacao:'Pró-labore/Retirada de Sócios' };
+
+  // ── FALLBACK ──────────────────────────────────────
+  return { bloco:'Outros', subgrupo:'Outros', classificacao:'Outros' };
+}
+
+/* ═══════════════════════════════════════════════════════
+   ESTADO GLOBAL
+═══════════════════════════════════════════════════════ */
+let DATA = null;
+let _empresasSel = new Set(['MD','SEL','SIGMA']);
+let chartDonut=null, chartTotalLine=null, chartCompLine=null, chartPerfilBar=null;
+
+/* ═══════════════════════════════════════════════════════
+   EMPRESA TOGGLES
+═══════════════════════════════════════════════════════ */
+function toggleEmp(emp) {
+  // Garante que pelo menos uma empresa fique ativa
+  if (_empresasSel.has(emp) && _empresasSel.size === 1) return;
+  if (_empresasSel.has(emp)) _empresasSel.delete(emp);
+  else _empresasSel.add(emp);
+  // Atualiza visual dos botões
+  document.querySelectorAll('.emp-toggle').forEach(btn => {
+    const e = btn.dataset.emp;
+    btn.className = 'emp-toggle';
+    if (_empresasSel.has(e)) btn.classList.add(`active-${e}`);
+    else btn.classList.add('inactive');
+  });
+  render();
+}
+
+/* ═══════════════════════════════════════════════════════
+   DADOS: PESSOAL ENRIQUECIDO
+═══════════════════════════════════════════════════════ */
+function getDetalhe(mes, empresa) {
+  if (!DATA.gastosDetalhe || !DATA.gastosDetalhe[mes]) return [];
+  if (empresa === '__ALL__') {
+    return Object.values(DATA.gastosDetalhe[mes]).flat();
+  }
+  return DATA.gastosDetalhe[mes][empresa] || [];
+}
+
+function getPessoal(mes, empresas) {
+  // empresas = Set ou array de strings
+  const emps = [...empresas];
+  const itens = emps.flatMap(emp => getDetalhe(mes, emp));
+  return itens
+    .filter(i => norm(i.grupo||'').includes('PESSO'))
+    .map(i => {
+      const cat = i.categoriaProesc || i.categoria || '';
+      const cl = classificarPessoal(cat);
+      return { ...i, ...cl };
+    });
+}
+
+function getPessoalTodosMeses(empresas) {
+  const meses = [...(DATA.mesesDisponiveis||[])].sort();
+  const result = {};
+  meses.forEach(m => { result[m] = getPessoal(m, empresas); });
+  return result;
+}
+
+/* ═══════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════ */
+async function init() {
+  const bar = document.getElementById('loading-bar');
+  bar.style.width = '30%';
+  try {
+    DATA = await _fetchJSON();
+    bar.style.width = '80%';
+    document.getElementById('data-badge').textContent =
+      'Atualizado: ' + new Date(DATA.geradoEm || Date.now()).toLocaleString('pt-BR');
+
+    const selMes = document.getElementById('sel-mes');
+    const meses = [...(DATA.mesesDisponiveis || [])].reverse();
+    meses.forEach(m => {
+      const o = document.createElement('option');
+      o.value = m; o.textContent = monthLabel(m);
+      selMes.appendChild(o);
+    });
+    selMes.addEventListener('change', render);
+
+    bar.style.width = '100%';
+    setTimeout(() => { bar.style.opacity='0'; }, 400);
+    render();
+  } catch(e) {
+    bar.style.background = 'var(--danger)';
+    document.getElementById('error-container').innerHTML =
+      `<div class="error-msg">⚠ ${escH(e.message)}</div>`;
+    document.getElementById('data-badge').textContent = 'Erro ao carregar';
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   RENDER PRINCIPAL
+═══════════════════════════════════════════════════════ */
+function render() {
+  if (!DATA) return;
+  const mes = document.getElementById('sel-mes').value;
+  if (!mes) return;
+
+  const itens = getPessoal(mes, _empresasSel);
+  renderKPIs(itens);
+  renderDonut(itens);
+  renderTotalLine();
+  renderCompLine();
+  renderPerfilBar();
+  renderDrill(itens);
+}
+
+/* ═══════════════════════════════════════════════════════
+   KPIs
+═══════════════════════════════════════════════════════ */
+function renderKPIs(itens) {
+  // Folha bruta = Salário (prof+adm) + Estagiários + Pró-labore
+  const isFolha = i =>
+    (i.bloco === 'Professor'      && i.subgrupo === 'Salário') ||
+    (i.bloco === 'Administrativo' && i.subgrupo === 'Salário') ||
+    i.subgrupo === 'Estagiário'   ||
+    i.subgrupo === 'Pró-labore/Retiradas';
+
+  const folha   = sum(itens.filter(isFolha));
+  const benef   = sum(itens.filter(i => i.subgrupo === 'Benefícios'));
+  const enc     = sum(itens.filter(i => i.subgrupo === 'Encargos'));
+  const prof    = sum(itens.filter(i => i.bloco    === 'Professor'));
+  const adm     = sum(itens.filter(i => i.bloco    === 'Administrativo'));
+  const total   = sum(itens);
+
+  document.getElementById('kpi-folha').textContent    = fmtK(folha);
+  document.getElementById('kpi-folha-sub').textContent= `Prof + Adm + Estag + Pró-labore`;
+  document.getElementById('kpi-benef').textContent    = fmtK(benef);
+  document.getElementById('kpi-enc').textContent      = fmtK(enc);
+  document.getElementById('kpi-enc-pct').textContent  = folha > 0 ? fmtPct(enc/folha*100) : '—';
+  document.getElementById('kpi-prof').textContent     = fmtK(prof);
+  document.getElementById('kpi-adm').textContent      = fmtK(adm);
+  document.getElementById('kpi-total').textContent    = fmtK(total);
+  document.getElementById('kpi-qtd-sub').textContent  = `${itens.length} lançamentos`;
+}
+
+/* ═══════════════════════════════════════════════════════
+   CHART: DONUT
+═══════════════════════════════════════════════════════ */
+function renderDonut(itens) {
+  // 9 categorias amigáveis
+  const cats = [
+    'Folha de Pagamento Professores',
+    'Folha de Pagamento Administrativo',
+    'Folha de Pagamento Estagiário',
+    'Pró-labore/Retirada de Sócios',
+    'Benefícios Administrativo',
+    'Benefícios Professores',
+    'Encargos Administrativo',
+    'Encargos Professores',
+    'Outros'
+  ];
+  const colors = [
+    '#00e5a0','#4f8fff','#c084fc','#ffb547',
+    '#60a5fa','#34d399','#fb923c','#f87171','#6b7280'
+  ];
+  const vals = cats.map(c => sum(itens.filter(i => i.classificacao === c)));
+
+  const ctx = document.getElementById('chart-donut').getContext('2d');
+  if (chartDonut) chartDonut.destroy();
+  chartDonut = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: cats,
+      datasets: [{
+        data: vals,
+        backgroundColor: colors.map(c => c + 'cc'),
+        borderColor: colors,
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      cutout:'62%',
+      plugins:{
+        legend:{ position:'right', labels:{ color:'#6b7280', font:{size:10}, boxWidth:12 } },
+        tooltip:{ callbacks:{ label: ctx => ` ${ctx.label}: ${fmt(ctx.parsed)}` } }
+      }
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   CHART: LINHA TOTAL PESSOAL
+═══════════════════════════════════════════════════════ */
+function renderTotalLine() {
+  const meses = [...(DATA.mesesDisponiveis||[])].sort();
+  const vals = meses.map(m => sum(getPessoal(m, _empresasSel)));
+
+  const ctx = document.getElementById('chart-total-line').getContext('2d');
+  if (chartTotalLine) chartTotalLine.destroy();
+  chartTotalLine = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels: meses.map(monthLabel),
+      datasets:[{
+        label:'Total Pessoal',
+        data: vals,
+        borderColor:'#00e5a0', backgroundColor:'rgba(0,229,160,.08)',
+        fill:true, tension:.35, pointBackgroundColor:'#00e5a0', pointRadius:4
+      }]
+    },
+    options: chartOptionsMoney(false)
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   CHART: FOLHA × ENCARGOS × BENEFÍCIOS
+═══════════════════════════════════════════════════════ */
+function renderCompLine() {
+  const meses = [...(DATA.mesesDisponiveis||[])].sort();
+  const isFolha = i =>
+    (i.bloco === 'Professor'      && i.subgrupo === 'Salário') ||
+    (i.bloco === 'Administrativo' && i.subgrupo === 'Salário') ||
+    i.subgrupo === 'Estagiário' || i.subgrupo === 'Pró-labore/Retiradas';
+
+  const series = [
+    { label:'Folha Bruta',  color:'#4f8fff', fn: i => isFolha(i) },
+    { label:'Encargos',     color:'#ffb547', fn: i => i.subgrupo === 'Encargos' },
+    { label:'Benefícios',   color:'#00e5a0', fn: i => i.subgrupo === 'Benefícios' }
+  ];
+
+  const datasets = series.map(s => ({
+    label: s.label,
+    data: meses.map(m => sum(getPessoal(m, _empresasSel).filter(s.fn))),
+    borderColor: s.color, backgroundColor: s.color + '22',
+    fill:false, tension:.3, pointRadius:3
+  }));
+
+  const ctx = document.getElementById('chart-comp-line').getContext('2d');
+  if (chartCompLine) chartCompLine.destroy();
+  chartCompLine = new Chart(ctx, {
+    type:'line',
+    data:{ labels: meses.map(monthLabel), datasets },
+    options: chartOptionsMoney(false)
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   CHART: BARRA EMPILHADA PERFIL
+═══════════════════════════════════════════════════════ */
+function renderPerfilBar() {
+  const meses = [...(DATA.mesesDisponiveis||[])].sort();
+  const datasets = [
+    { label:'Administrativo', color:'#4f8fff', bloco:'Administrativo' },
+    { label:'Professor',      color:'#00e5a0', bloco:'Professor' },
+    { label:'Outros',         color:'#c084fc', bloco:'Outros' }
+  ].map(({label,color,bloco}) => ({
+    label,
+    data: meses.map(m => sum(getPessoal(m, _empresasSel).filter(i => i.bloco === bloco))),
+    backgroundColor: color + 'cc', borderColor: color, borderWidth:1
+  }));
+
+  const ctx = document.getElementById('chart-perfil-bar').getContext('2d');
+  if (chartPerfilBar) chartPerfilBar.destroy();
+  chartPerfilBar = new Chart(ctx, {
+    type:'bar',
+    data:{ labels: meses.map(monthLabel), datasets },
+    options: chartOptionsMoney(true)
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   DRILL-DOWN TABLE
+   Hierarquia: Bloco (L0) → Subgrupo (L1) → Categoria (L2) → Lançamentos (L3)
+═══════════════════════════════════════════════════════ */
+let _open = {};
+
+function toggleGroup(key) {
+  _open[key] = !_open[key];
+  const btn = document.querySelector(`[data-toggle="${CSS.escape(key)}"]`);
+  if (btn) btn.classList.toggle('open', _open[key]);
+  document.querySelectorAll(`[data-parent="${CSS.escape(key)}"]`).forEach(row => {
+    row.style.display = _open[key] ? '' : 'none';
+  });
+}
+
+function expandAll()  { Object.keys(_open).forEach(k => { if(!_open[k]) toggleGroup(k); }); }
+function collapseAll(){ Object.keys(_open).forEach(k => { if(_open[k])  toggleGroup(k); }); }
+
+function empSum(arr, emp) {
+  return sum(arr.filter(i => i.empresa === emp));
+}
+function empSumSel(arr) {
+  return sum(arr.filter(i => _empresasSel.has(i.empresa)));
+}
+
+function renderDrill(itens) {
+  _open = {};
+  const tbody = document.getElementById('drill-body');
+
+  if (!itens.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhum lançamento encontrado.</td></tr>';
+    return;
+  }
+
+  const totalGeral = sum(itens);
+
+  // Agrupa: bloco → subgrupo → classificacao → lançamentos
+  const tree = {};
+  itens.forEach(i => {
+    const b = i.bloco, sg = i.subgrupo, cl = i.classificacao;
+    if (!tree[b])       tree[b] = {};
+    if (!tree[b][sg])   tree[b][sg] = {};
+    if (!tree[b][sg][cl]) tree[b][sg][cl] = [];
+    tree[b][sg][cl].push(i);
+  });
+
+  const rows = [];
+
+  // Ordem dos blocos
+  const blocosOrdem = ['Administrativo','Professor','Outros'];
+  // Ordem dos subgrupos por bloco
+  const subgOrdem = {
+    'Administrativo': ['Salário','Encargos','Benefícios'],
+    'Professor':      ['Salário','Encargos','Benefícios'],
+    'Outros':         ['Estagiário','Pró-labore/Retiradas','Outros']
+  };
+
+  blocosOrdem.forEach(bloco => {
+    if (!tree[bloco]) return;
+    const blocoItens = Object.values(tree[bloco]).flatMap(sg => Object.values(sg).flat());
+    const bTotal = sum(blocoItens);
+    const bMD = empSum(blocoItens,'MD'), bSEL = empSum(blocoItens,'SEL'), bSIGMA = empSum(blocoItens,'SIGMA');
+    const bKey = `b_${bloco}`;
+    _open[bKey] = false;
+
+    rows.push(`<tr class="row-l0">
+      <td><span class="toggle-btn" data-toggle="${escH(bKey)}" onclick="toggleGroup('${escH(bKey)}')">${escH(bloco)}</span></td>
+      <td>${_empresasSel.has('MD')    ? fmtK(bMD)    : '—'}</td>
+      <td>${_empresasSel.has('SEL')   ? fmtK(bSEL)   : '—'}</td>
+      <td>${_empresasSel.has('SIGMA') ? fmtK(bSIGMA) : '—'}</td>
+      <td>${fmtK(bTotal)}</td>
+      <td>${fmtPct(totalGeral > 0 ? bTotal/totalGeral*100 : 0)}</td>
+      <td>${blocoItens.length}</td>
+    </tr>`);
+
+    const sgs = subgOrdem[bloco] || Object.keys(tree[bloco]);
+    sgs.forEach(sg => {
+      if (!tree[bloco][sg]) return;
+      const sgItens = Object.values(tree[bloco][sg]).flat();
+      const sgTotal = sum(sgItens);
+      const sgMD = empSum(sgItens,'MD'), sgSEL = empSum(sgItens,'SEL'), sgSIGMA = empSum(sgItens,'SIGMA');
+      const sgKey = `sg_${bloco}_${sg}`;
+      _open[sgKey] = false;
+
+      rows.push(`<tr class="row-l1" data-parent="${escH(bKey)}" style="display:none">
+        <td><span class="toggle-btn" data-toggle="${escH(sgKey)}" onclick="toggleGroup('${escH(sgKey)}')">${escH(sg)}</span></td>
+        <td>${_empresasSel.has('MD')    ? fmtK(sgMD)    : '—'}</td>
+        <td>${_empresasSel.has('SEL')   ? fmtK(sgSEL)   : '—'}</td>
+        <td>${_empresasSel.has('SIGMA') ? fmtK(sgSIGMA) : '—'}</td>
+        <td>${fmtK(sgTotal)}</td>
+        <td>${fmtPct(totalGeral > 0 ? sgTotal/totalGeral*100 : 0)}</td>
+        <td>${sgItens.length}</td>
+      </tr>`);
+
+      Object.keys(tree[bloco][sg]).sort().forEach(cl => {
+        const clItens = tree[bloco][sg][cl];
+        const clTotal = sum(clItens);
+        const clMD = empSum(clItens,'MD'), clSEL = empSum(clItens,'SEL'), clSIGMA = empSum(clItens,'SIGMA');
+        const clKey = `cl_${bloco}_${sg}_${cl}`;
+        _open[clKey] = false;
+
+        rows.push(`<tr class="row-l2" data-parent="${escH(sgKey)}" style="display:none">
+          <td><span class="toggle-btn" data-toggle="${escH(clKey)}" onclick="toggleGroup('${escH(clKey)}')">${escH(cl)}</span></td>
+          <td>${_empresasSel.has('MD')    ? fmtK(clMD)    : '—'}</td>
+          <td>${_empresasSel.has('SEL')   ? fmtK(clSEL)   : '—'}</td>
+          <td>${_empresasSel.has('SIGMA') ? fmtK(clSIGMA) : '—'}</td>
+          <td>${fmtK(clTotal)}</td>
+          <td>${fmtPct(totalGeral > 0 ? clTotal/totalGeral*100 : 0)}</td>
+          <td>${clItens.length}</td>
+        </tr>`);
+
+        clItens.forEach(i => {
+          const badge = `<span class="emp-badge emp-${escH(i.empresa)}">${escH(i.empresa)}</span>`;
+          rows.push(`<tr class="row-l3" data-parent="${escH(clKey)}" style="display:none">
+            <td>${escH(i.data||'')} · ${badge} · ${escH(i.documento||'')} · ${escH(i.cliente||'')} · ${escH(i.descricao||'')}</td>
+            <td>${i.empresa==='MD'    ? fmt(i.valor) : ''}</td>
+            <td>${i.empresa==='SEL'   ? fmt(i.valor) : ''}</td>
+            <td>${i.empresa==='SIGMA' ? fmt(i.valor) : ''}</td>
+            <td>${fmt(i.valor)}</td>
+            <td>${fmtPct(totalGeral > 0 ? i.valor/totalGeral*100 : 0)}</td>
+            <td>1</td>
+          </tr>`);
+        });
+      });
+    });
+  });
+
+  // Linha total
+  const tMD = empSum(itens,'MD'), tSEL = empSum(itens,'SEL'), tSIGMA = empSum(itens,'SIGMA');
+  rows.push(`<tr class="row-total">
+    <td>TOTAL</td>
+    <td>${_empresasSel.has('MD')    ? fmtK(tMD)    : '—'}</td>
+    <td>${_empresasSel.has('SEL')   ? fmtK(tSEL)   : '—'}</td>
+    <td>${_empresasSel.has('SIGMA') ? fmtK(tSIGMA) : '—'}</td>
+    <td>${fmtK(totalGeral)}</td>
+    <td>100,00%</td>
+    <td>${itens.length}</td>
+  </tr>`);
+
+  tbody.innerHTML = rows.join('');
+}
+
+/* ═══════════════════════════════════════════════════════
+   EXPORTAR CSV
+═══════════════════════════════════════════════════════ */
+function exportCSV() {
+  if (!DATA) return;
+  const meses = [...(DATA.mesesDisponiveis||[])].sort();
+  const cols = ['AnoMes','Data','Empresa','Bloco','Subgrupo','Classificacao','Categoria_Proesc',
+                'Cliente','Documento','Descricao','Forma_Pagamento','Valor'];
+  const rows = [cols];
+  meses.forEach(m => {
+    getPessoal(m, _empresasSel).forEach(i => {
+      rows.push([
+        i.anoMes||m, i.data||'', i.empresa||'',
+        i.bloco||'', i.subgrupo||'', i.classificacao||'',
+        i.categoriaProesc||i.categoria||'',
+        i.cliente||'', i.documento||'', i.descricao||'',
+        i.formaPagamento||'',
+        String(i.valor||0).replace('.',',')
+      ]);
+    });
+  });
+  const bom = '\uFEFF';
+  const csv = bom + rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(';')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `pessoal_${[..._empresasSel].join('-')}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+/* ═══════════════════════════════════════════════════════
+   EXPORTAR PDF
+═══════════════════════════════════════════════════════ */
+function showPdfModal()  { document.getElementById('pdf-overlay').classList.add('show'); }
+function closePdfModal() { document.getElementById('pdf-overlay').classList.remove('show'); }
+
+function exportPDF() {
+  closePdfModal();
+  if (!DATA) return;
+  const mes = document.getElementById('sel-mes').value;
+  const itens = getPessoal(mes, _empresasSel);
+
+  const isFolha = i =>
+    (i.bloco === 'Professor'      && i.subgrupo === 'Salário') ||
+    (i.bloco === 'Administrativo' && i.subgrupo === 'Salário') ||
+    i.subgrupo === 'Estagiário' || i.subgrupo === 'Pró-labore/Retiradas';
+
+  const folha  = sum(itens.filter(isFolha));
+  const benef  = sum(itens.filter(i => i.subgrupo === 'Benefícios'));
+  const enc    = sum(itens.filter(i => i.subgrupo === 'Encargos'));
+  const prof   = sum(itens.filter(i => i.bloco === 'Professor'));
+  const adm    = sum(itens.filter(i => i.bloco === 'Administrativo'));
+  const total  = sum(itens);
+
+  // ── Resumo por bloco/subgrupo ──────────────────────────
+  const treeRes = {};
+  itens.forEach(i => {
+    if (!treeRes[i.bloco]) treeRes[i.bloco] = {};
+    if (!treeRes[i.bloco][i.subgrupo]) treeRes[i.bloco][i.subgrupo] = 0;
+    treeRes[i.bloco][i.subgrupo] += i.valor||0;
+  });
+  let resumo = '';
+  ['Administrativo','Professor','Outros'].forEach(b => {
+    if (!treeRes[b]) return;
+    const bTotal = Object.values(treeRes[b]).reduce((a,v) => a+v, 0);
+    resumo += `<tr style="background:#e8e8e8;font-weight:700"><td colspan="2">${escH(b)}</td><td style="text-align:right">${fmt(bTotal)}</td><td style="text-align:right">${fmtPct(total>0?bTotal/total*100:0)}</td></tr>`;
+    Object.entries(treeRes[b]).forEach(([sg,v]) => {
+      resumo += `<tr><td></td><td style="padding-left:16px">${escH(sg)}</td><td style="text-align:right">${fmt(v)}</td><td style="text-align:right">${fmtPct(total>0?v/total*100:0)}</td></tr>`;
+    });
+  });
+
+  // ── Detalhe: ordenar por Bloco → Subgrupo → Data ───────
+  const blocoOrd = {Administrativo:0, Professor:1, Outros:2};
+  const subgOrd  = {Salário:0, Encargos:1, Benefícios:2, Estagiário:0, 'Pró-labore/Retiradas':1, Outros:2};
+  const sorted = [...itens].sort((a,b) => {
+    const bo = (blocoOrd[a.bloco]??9) - (blocoOrd[b.bloco]??9);
+    if (bo !== 0) return bo;
+    const so = (subgOrd[a.subgrupo]??9) - (subgOrd[b.subgrupo]??9);
+    if (so !== 0) return so;
+    return (a.data||'').localeCompare(b.data||'');
+  });
+
+  let det = '';
+  const limit = 500;
+  sorted.slice(0, limit).forEach(i => {
+    det += `<tr>
+      <td>${escH(i.data||'')}</td>
+      <td>${escH(i.bloco||'')}</td>
+      <td>${escH(i.subgrupo||'')}</td>
+      <td>${escH(i.empresa||'')}</td>
+      <td>${escH(i.cliente||'')}</td>
+      <td>${escH(i.descricao||'')}</td>
+      <td style="text-align:right;white-space:nowrap">${fmt(i.valor)}</td>
+    </tr>`;
+  });
+
+  const empsLabel = [..._empresasSel].join(', ');
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pessoal — ${escH(empsLabel)} — ${monthLabel(mes)}</title>
+<style>
+body{font-family:Arial,sans-serif;font-size:10px;color:#111;margin:16px}
+h1{font-size:15px;margin-bottom:3px}
+h2{font-size:11px;margin:14px 0 5px;color:#333;border-bottom:1px solid #ccc;padding-bottom:3px}
+p{font-size:10px;margin-bottom:8px;color:#555}
+.kgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0}
+.kcard{background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:7px;text-align:center}
+.klbl{font-size:8px;color:#777;text-transform:uppercase;margin-bottom:2px}
+.kval{font-size:12px;font-weight:700}
+table{width:100%;border-collapse:collapse;font-size:9px}
+th{background:#2c2c2c;color:#fff;padding:5px 7px;text-align:left;font-size:9px}
+td{padding:3px 7px;border-bottom:1px solid #e8e8e8;vertical-align:middle}
+tr:hover td{background:#f5f9ff}
+.tot td{background:#e8e8e8!important;font-weight:700;border-top:2px solid #999}
+@media print{
+  body{margin:8px;font-size:9px}
+  h2{page-break-before:auto}
+  table{page-break-inside:auto}
+  tr{page-break-inside:avoid}
+}
+</style></head><body>
+<h1>Relatório de Pessoal</h1>
+<p><b>Empresas:</b> ${escH(empsLabel)} &nbsp;&nbsp; <b>Mês:</b> ${monthLabel(mes)} &nbsp;&nbsp; <b>Gerado em:</b> ${new Date().toLocaleString('pt-BR')}</p>
+<div class="kgrid">
+  <div class="kcard"><div class="klbl">Folha Bruta</div><div class="kval">${fmtK(folha)}</div></div>
+  <div class="kcard"><div class="klbl">Benefícios</div><div class="kval">${fmtK(benef)}</div></div>
+  <div class="kcard"><div class="klbl">Encargos</div><div class="kval">${fmtK(enc)}</div></div>
+  <div class="kcard"><div class="klbl">Enc / Folha</div><div class="kval">${fmtPct(folha>0?enc/folha*100:0)}</div></div>
+  <div class="kcard"><div class="klbl">Professores</div><div class="kval">${fmtK(prof)}</div></div>
+  <div class="kcard"><div class="klbl">Administrativo</div><div class="kval">${fmtK(adm)}</div></div>
+  <div class="kcard"><div class="klbl">Total Pessoal</div><div class="kval">${fmtK(total)}</div></div>
+  <div class="kcard"><div class="klbl">Lançamentos</div><div class="kval">${itens.length}</div></div>
+</div>
+<h2>Resumo por Bloco → Subgrupo</h2>
+<table><thead><tr><th>Bloco</th><th>Subgrupo</th><th>Valor</th><th>%</th></tr></thead><tbody>${resumo}</tbody></table>
+<h2>Detalhe de Lançamentos${itens.length>limit?' (primeiros '+limit+')':''}</h2>
+<table>
+  <thead><tr><th>Data</th><th>Bloco</th><th>Subgrupo</th><th>Empresa</th><th>Favorecido</th><th>Descrição</th><th>Valor</th></tr></thead>
+  <tbody>${det}
+    <tr class="tot"><td colspan="6">TOTAL</td><td style="text-align:right">${fmt(total)}</td></tr>
+  </tbody>
+</table>
+<script>window.onload=()=>window.print()<\/script></body></html>`;
+
+  const w = window.open('','_blank');
+  if (w) { w.document.write(html); w.document.close(); }
+}
+
+/* START */
+init();
+</script>
+</body>
+</html>
