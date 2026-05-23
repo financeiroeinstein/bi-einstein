@@ -230,6 +230,35 @@
   .search-input:focus { border-color: var(--accent); }
   .search-input::placeholder { color: var(--muted); }
 
+  /* ── BOTÕES DE EXPORTAÇÃO ── */
+  .export-btn {
+    display: inline-flex; align-items: center; gap: .35rem;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--muted); font-family: var(--font-h); font-size: .72rem;
+    font-weight: 600; padding: .35rem .75rem; border-radius: 6px;
+    cursor: pointer; transition: all .15s; letter-spacing: .04em;
+  }
+  .export-btn:hover { border-color: var(--accent2); color: var(--accent2); background: rgba(79,143,255,.08); }
+  .export-btn-pdf:hover { border-color: var(--warn); color: var(--warn); background: rgba(255,181,71,.08); }
+  .export-btn:active { transform: scale(.97); }
+
+  /* ── TOGGLE ENTRADA / SAÍDA / TODOS ── */
+  .sinal-toggle {
+    display: flex; gap: 2px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 7px; padding: 2px;
+  }
+  .stgl-btn {
+    background: transparent; border: none; cursor: pointer;
+    font-family: var(--font-h); font-size: .72rem; font-weight: 600;
+    color: var(--muted); padding: .3rem .65rem; border-radius: 5px;
+    transition: all .15s; letter-spacing: .03em; white-space: nowrap;
+  }
+  .stgl-btn:hover { color: var(--text); background: rgba(255,255,255,.06); }
+  .stgl-btn.active[data-sinal="todos"]   { background: var(--surface3); color: var(--text); }
+  .stgl-btn.active[data-sinal="entrada"] { background: rgba(74,222,128,.18); color: var(--green); }
+  .stgl-btn.active[data-sinal="saida"]   { background: rgba(248,113,113,.18); color: var(--red); }
+
   /* ── TOOLTIP CONTEXTUAL ── */
   .tip-icon {
     display: inline-flex; align-items: center; justify-content: center;
@@ -274,7 +303,7 @@
 
 <div class="page-header">
   <div>
-    <div class="page-title">Ajustes de Caixa e <span>Itens Não Operacionais</span></div>
+    <div class="page-title">Ajustes de Caixa e <span>Extratos</span></div>
     <div style="font-size:.76rem;color:var(--muted);margin-top:.3rem">Conferência de lançamentos classificados por tipo — baseado nos extratos bancários</div>
   </div>
   <div class="last-update" id="lastUpdate">—</div>
@@ -344,12 +373,27 @@
   <div class="card">
     <div class="card-title">
       <strong>Detalhamento de Lançamentos</strong>
-      <div class="tipo-pills" id="tipoPills">
-        <div class="pill pill-op active" data-tipo="Operacional"           onclick="toggleTipo(this)"><span>Operacional</span><span class="pill-count" id="cnt-op">0</span></div>
-        <div class="pill pill-ti active" data-tipo="Transferência Interna" onclick="toggleTipo(this)"><span>Transf. Interna</span><span class="pill-count" id="cnt-ti">0</span></div>
-        <div class="pill pill-ic active" data-tipo="Intercompany"          onclick="toggleTipo(this)"><span>Intercompany</span><span class="pill-count" id="cnt-ic">0</span></div>
-        <div class="pill pill-af active" data-tipo="Aplicação Financeira"  onclick="toggleTipo(this)"><span>Aplicação Fin.</span><span class="pill-count" id="cnt-af">0</span></div>
+      <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
+        <div class="sinal-toggle" id="sinalToggleGlobal">
+          <button class="stgl-btn active" data-sinal="todos"   onclick="setSinalGlobal('todos',this)">Todos</button>
+          <button class="stgl-btn"        data-sinal="entrada" onclick="setSinalGlobal('entrada',this)">↑ Entradas</button>
+          <button class="stgl-btn"        data-sinal="saida"   onclick="setSinalGlobal('saida',this)">↓ Saídas</button>
+        </div>
+        <div class="tipo-pills" id="tipoPills">
+          <div class="pill pill-op active" data-tipo="Operacional"           onclick="toggleTipo(this)"><span>Operacional</span><span class="pill-count" id="cnt-op">0</span></div>
+          <div class="pill pill-ti active" data-tipo="Transferência Interna" onclick="toggleTipo(this)"><span>Transf. Interna</span><span class="pill-count" id="cnt-ti">0</span></div>
+          <div class="pill pill-ic active" data-tipo="Intercompany"          onclick="toggleTipo(this)"><span>Intercompany</span><span class="pill-count" id="cnt-ic">0</span></div>
+          <div class="pill pill-af active" data-tipo="Aplicação Financeira"  onclick="toggleTipo(this)"><span>Aplicação Fin.</span><span class="pill-count" id="cnt-af">0</span></div>
+        </div>
       </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:.5rem;margin-bottom:.75rem">
+      <button class="export-btn" onclick="exportarExcel()" title="Exportar todos os registros filtrados para Excel (.xls)">
+        📄 Excel
+      </button>
+      <button class="export-btn export-btn-pdf" onclick="exportarPDF()" title="Imprimir / salvar como PDF">
+        🖨️ PDF
+      </button>
     </div>
     <div class="table-wrap" id="tableWrap"><div class="loading">Carregando…</div></div>
     <div class="pagination" id="tablePag"></div>
@@ -416,8 +460,17 @@ const TIPO_CSS   = {
 let dadosGlobais = null;
 let filtros = { meses: [], empresas: ['MD','SEL','SIGMA'], bancos: ['CAIXA','SICOOB'] };
 let tiposAtivos = new Set(['Operacional','Transferência Interna','Intercompany','Aplicação Financeira']);
+let sinalGlobal = 'todos'; // 'todos' | 'entrada' | 'saida'
 let page = 0;
 const PAGE_SIZE = 50;
+
+function setSinalGlobal(sinal, btn) {
+  sinalGlobal = sinal;
+  document.querySelectorAll('#sinalToggleGlobal .stgl-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  page = 0;
+  renderTable();
+}
 
 // ── Formatação ────────────────────────────────────────────────────────────
 function fmtBRL(val) {
@@ -517,10 +570,14 @@ function getLancamentosFiltrados() {
       (l.historico||'').toLowerCase().includes(busca) ||
       (l.nomeRS||'').toLowerCase().includes(busca) ||
       (l.documento||'').toLowerCase().includes(busca);
+    // Filtro de sinal global da tabela (Todos / Entradas / Saídas)
+    const sinalGlobalOk = sinalGlobal === 'todos' ||
+      (sinalGlobal === 'entrada' && l.valor > 0) ||
+      (sinalGlobal === 'saida'   && l.valor < 0);
     // Filtro de sinal por tipo (chips do sumário)
     const sf = sinalFiltro[l.tipo];
     const sinalOk = !sf || (sf === 'pos' ? l.valor > 0 : l.valor < 0);
-    return mesOk && empOk && bcOk && tipoOk && buscaOk && sinalOk;
+    return mesOk && empOk && bcOk && tipoOk && buscaOk && sinalOk && sinalGlobalOk;
   });
 }
 
@@ -778,6 +835,171 @@ async function carregarDados() {
     document.getElementById('tableWrap').innerHTML = msg;
   }
 }
+// ── Exportação ────────────────────────────────────────────────────────────
+function _dadosExport() {
+  return getLancamentosFiltrados()
+    .sort((a,b) => (a.data||'') < (b.data||'') ? -1 : (a.data||'') > (b.data||'') ? 1 : 0);
+}
+
+function exportarExcel() {
+  const itens = _dadosExport();
+  if (!itens.length) { alert('Nenhum lançamento para exportar.'); return; }
+  const mes = filtros.meses.length === 1 ? filtros.meses[0] : 'periodo';
+
+  // SpreadsheetML — abre nativamente no Excel com formatação correta
+  const esc = v => String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const cell  = (v, t='String') => `<Cell><Data ss:Type="${t}">${esc(v)}</Data></Cell>`;
+  const cellN = v => `<Cell><Data ss:Type="Number">${v}</Data></Cell>`;
+
+  const header = ['Data','Empresa','Banco','Tipo','Histórico','Nome/Razão','Documento','Valor (R$)'];
+  const hRow   = '<Row>' + header.map(h => cell(h)).join('') + '</Row>';
+
+  const dataRows = itens.map(l => '<Row>' + [
+    cell(l.data || ''),
+    cell(l.empresa || ''),
+    cell(l.banco || ''),
+    cell(l.tipo || ''),
+    cell(l.historico || ''),
+    cell(l.nomeRS || ''),
+    cell(l.documento || ''),
+    cellN((l.valor || 0).toFixed(2))
+  ].join('') + '</Row>').join('');
+
+  const total = itens.reduce((s,l)=>s+l.valor,0);
+  const totalRow = '<Row>' + [
+    cell('TOTAL'),cell(''),cell(''),cell(''),cell(''),cell(''),cell(''),
+    cellN(total.toFixed(2))
+  ].join('') + '</Row>';
+
+  const xls = `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+  <Styles>
+    <Style ss:ID="header"><Font ss:Bold="1"/><Interior ss:Color="#13161E" ss:Pattern="Solid"/></Style>
+    <Style ss:ID="total"><Font ss:Bold="1"/></Style>
+    <Style ss:ID="num"><NumberFormat ss:Format="#,##0.00"/></Style>
+  </Styles>
+  <Worksheet ss:Name="Ajustes de Caixa">
+    <Table>${hRow}${dataRows}${totalRow}</Table>
+  </Worksheet>
+</Workbook>`;
+
+  const blob = new Blob([xls], { type: 'application/vnd.ms-excel;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = `ajustes_caixa_${mes}.xls`;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 300);
+}
+
+function exportarPDF() {
+  const itens = _dadosExport();
+  if (!itens.length) { alert('Nenhum lançamento para exportar.'); return; }
+
+  const fmtBRLpdf = v => {
+    const abs = Math.abs(v);
+    const s   = abs.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    return (v < 0 ? '-' : '') + 'R$ ' + s;
+  };
+  const fmtD = d => { if (!d) return '—'; const [y,m,dd]=d.split('-'); return `${dd}/${m}/${y}`; };
+
+  const mes    = filtros.meses.length === 1 ? filtros.meses[0] : 'Período selecionado';
+  const emps   = filtros.empresas.join(', ') || 'Todas';
+  const bancos = filtros.bancos.join(', ')   || 'Todos';
+  const total  = itens.reduce((s,l)=>s+l.valor,0);
+  const gerado = new Date().toLocaleString('pt-BR');
+
+  const EMP_HEX = { MD:'#4f8fff', SEL:'#00e5a0', SIGMA:'#ffb547' };
+  const TIPO_HEX = {
+    'Operacional':'#4f8fff','Transferência Interna':'#ffb547',
+    'Intercompany':'#a78bfa','Aplicação Financeira':'#4ade80'
+  };
+  const TIPO_BG = {
+    'Operacional':'rgba(79,143,255,.12)','Transferência Interna':'rgba(255,181,71,.12)',
+    'Intercompany':'rgba(167,139,250,.12)','Aplicação Financeira':'rgba(74,222,128,.12)'
+  };
+
+  const rows = itens.map(l => {
+    const ec  = EMP_HEX[l.empresa] || '#888';
+    const tc  = TIPO_HEX[l.tipo]   || '#888';
+    const tbg = TIPO_BG[l.tipo]    || 'transparent';
+    const vc  = l.valor > 0 ? '#4ade80' : l.valor < 0 ? '#f87171' : '#6b7280';
+    return `<tr>
+      <td style="color:#9ca3af;white-space:nowrap">${fmtD(l.data)}</td>
+      <td><span style="display:inline-flex;align-items:center;gap:5px">
+        <span style="width:7px;height:7px;border-radius:50%;background:${ec};display:inline-block"></span>
+        <span style="color:${ec};font-weight:600">${l.empresa||''}</span>
+      </span></td>
+      <td style="color:#9ca3af;font-size:10px">${l.banco||''}</td>
+      <td><span style="background:${tbg};color:${tc};font-size:10px;padding:2px 7px;border-radius:4px;font-weight:600;white-space:nowrap">${l.tipo||''}</span></td>
+      <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px">${(l.historico||'').replace(/</g,'&lt;')}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#9ca3af;font-size:10px">${(l.nomeRS||'—').replace(/</g,'&lt;')}</td>
+      <td style="text-align:right;color:${vc};white-space:nowrap;font-weight:600">${fmtBRLpdf(l.valor)}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+  <title>Ajustes de Caixa e Extratos</title>
+  <style>
+    @page { size: A4 landscape; margin: 14mm 10mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #0d0f14; color: #e8eaf0; font-size: 11px; }
+    .header { padding: 10px 0 8px; border-bottom: 1px solid #252b3b; margin-bottom: 10px; display:flex; justify-content:space-between; align-items:flex-end; }
+    .header h1 { font-size: 16px; font-weight: 800; color: #e8eaf0; }
+    .header h1 span { color: #00e5a0; }
+    .meta { font-size: 9px; color: #6b7280; text-align:right; line-height:1.6; }
+    .chips { display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap; }
+    .chip { font-size:9px; padding:2px 8px; border-radius:10px; border:1px solid #252b3b; color:#9ca3af; background:#13161e; }
+    table { width:100%; border-collapse:collapse; }
+    thead th { background:#13161e; color:#6b7280; font-size:9px; text-transform:uppercase; letter-spacing:.06em;
+               padding:5px 7px; text-align:left; border-bottom:1px solid #252b3b; white-space:nowrap; }
+    thead th:last-child { text-align:right; }
+    tbody tr { border-bottom:1px solid rgba(37,43,59,.4); }
+    tbody tr:nth-child(even) { background: rgba(255,255,255,.018); }
+    tbody td { padding: 4px 7px; vertical-align:middle; font-size:10px; }
+    tfoot td { padding:5px 7px; border-top:1px solid #252b3b; font-size:10px; font-weight:700; color:#e8eaf0; }
+    tfoot td:last-child { text-align:right; }
+    @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+  </style></head><body>
+  <div class="header">
+    <div>
+      <h1>Ajustes de Caixa e <span>Extratos</span></h1>
+    </div>
+    <div class="meta">
+      Gerado em: ${gerado}<br>
+      Período: ${mes} &nbsp;|&nbsp; Empresas: ${emps} &nbsp;|&nbsp; Bancos: ${bancos}<br>
+      ${itens.length.toLocaleString('pt-BR')} lançamentos
+    </div>
+  </div>
+  <div class="chips">
+    <div class="chip">Período: ${mes}</div>
+    <div class="chip">Empresas: ${emps}</div>
+    <div class="chip">Bancos: ${bancos}</div>
+    <div class="chip">${itens.length.toLocaleString('pt-BR')} registros</div>
+  </div>
+  <table>
+    <thead><tr>
+      <th>Data</th><th>Empresa</th><th>Banco</th><th>Tipo</th>
+      <th>Histórico</th><th>Nome / Razão</th><th style="text-align:right">Valor</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr>
+      <td colspan="6">${itens.length.toLocaleString('pt-BR')} lançamentos no período</td>
+      <td style="color:${total>=0?'#4ade80':'#f87171'}">${fmtBRLpdf(total)}</td>
+    </tr></tfoot>
+  </table>
+  <script>window.onload=()=>window.print();<\/script>
+  </body></html>`;
+
+  // Escreve direto na nova aba — evita blob: expirar antes do print
+  const w = window.open('', '_blank');
+  if (!w) { alert('Popup bloqueado. Permita pop-ups para esta página e tente novamente.'); return; }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+}
+
 carregarDados();
 </script>
 
