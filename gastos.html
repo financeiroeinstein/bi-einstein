@@ -439,6 +439,39 @@
     .toggle, .grupo-tag, .dot { display:none; }
   }
 
+  /* ── MULTI-PICKERS (Empresa / Mês) ── */
+  .mpicker-wrap { position: relative; display: inline-flex; flex-direction: column; gap: .3rem; width: 100%; }
+  .mpicker-wrap label { font-size: .65rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+  .mpicker-btn {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    font-family: var(--font-head); font-size: .82rem; padding: .52rem .75rem;
+    border-radius: 7px; cursor: pointer; width: 100%;
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+    transition: border-color .15s;
+  }
+  .mpicker-btn:hover, .mpicker-btn.open { border-color: var(--accent); }
+  .mpicker-btn .arrow { font-size: .6rem; color: var(--muted); transition: transform .15s; flex-shrink: 0; }
+  .mpicker-btn.open .arrow { transform: rotate(180deg); }
+  .mpicker-dropdown {
+    display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px; z-index: 300; box-shadow: 0 8px 24px rgba(0,0,0,.5); min-width: 180px;
+  }
+  .mpicker-dropdown.show { display: block; }
+  .mpicker-hdr { display: flex; gap: 4px; padding: 2px 2px 7px; border-bottom: 1px solid var(--border); margin-bottom: 5px; }
+  .mpicker-hdr button {
+    flex: 1; background: var(--surface3); border: 1px solid var(--border); color: var(--muted);
+    font-family: var(--font-head); font-size: .68rem; border-radius: 4px; padding: 3px 5px; cursor: pointer;
+  }
+  .mpicker-hdr button:hover { color: var(--accent); border-color: var(--accent); }
+  .mpicker-opt {
+    display: flex; align-items: center; gap: 8px; padding: 5px 8px;
+    border-radius: 4px; cursor: pointer; font-size: .78rem; color: var(--text); transition: background .1s;
+  }
+  .mpicker-opt:hover { background: rgba(255,255,255,.05); }
+  .mpicker-opt input[type=checkbox] { accent-color: var(--accent); width: 13px; height: 13px; cursor: pointer; flex-shrink: 0; }
+  .mpicker-opt.selected { color: var(--accent); }
+
   /* ── TOOLTIP CONTEXTUAL ── */
   .tip-icon {
     display: inline-flex; align-items: center; justify-content: center;
@@ -490,18 +523,32 @@
 </div>
 
 <div class="filters">
-  <div class="filter-group">
+  <div class="mpicker-wrap" id="wrap-empresa">
     <label>Empresa</label>
-    <select id="sel-empresa">
-      <option value="CONSOLIDADO">Consolidado</option>
-      <option value="MD">MD</option>
-      <option value="SEL">SEL</option>
-      <option value="SIGMA">SIGMA</option>
-    </select>
+    <button class="mpicker-btn" id="btn-empresa" onclick="togglePicker('empresa')">
+      <span id="lbl-empresa">Todas</span><span class="arrow">▼</span>
+    </button>
+    <div class="mpicker-dropdown" id="drop-empresa">
+      <div class="mpicker-hdr">
+        <button onclick="pickerAll('empresa')">Todas</button>
+        <button onclick="pickerClear('empresa')">Limpar</button>
+      </div>
+      <div id="opts-empresa"></div>
+    </div>
   </div>
-  <div class="filter-group">
+  <div class="mpicker-wrap" id="wrap-mes">
     <label>Mês de Referência</label>
-    <select id="sel-mes"></select>
+    <button class="mpicker-btn" id="btn-mes" onclick="togglePicker('mes')">
+      <span id="lbl-mes">Carregando…</span><span class="arrow">▼</span>
+    </button>
+    <div class="mpicker-dropdown" id="drop-mes">
+      <div class="mpicker-hdr">
+        <button onclick="pickerAll('mes')">Todos</button>
+        <button onclick="pickerLast('mes')">Último</button>
+        <button onclick="pickerClear('mes')">Limpar</button>
+      </div>
+      <div id="opts-mes"></div>
+    </div>
   </div>
   <div class="filter-group">
     <label>Grupo de Gasto</label>
@@ -519,8 +566,8 @@
 
 <div class="toolbar">
   <div class="view-toggle-wrap">
-    <button class="view-btn active" id="btn-visao-dre"    onclick="setVisao('dre')">Visão DRE</button>
-    <button class="view-btn"        id="btn-visao-proesc" onclick="setVisao('proesc')">Visão Grupo Proesc</button>
+    <button class="view-btn"        id="btn-visao-dre"    onclick="setVisao('dre')">Visão DRE</button>
+    <button class="view-btn active"  id="btn-visao-proesc" onclick="setVisao('proesc')">Visão Grupo Proesc</button>
   </div>
   <div class="toolbar-sep"></div>
   <button class="btn primary" onclick="expandAll()">Expandir tudo</button>
@@ -598,7 +645,189 @@ const MESES_LABEL = {
 let DATA = null;
 let charts = {};
 let expanded = new Set();
-let visaoAtual = 'dre'; // 'dre' | 'proesc'
+let visaoAtual = 'proesc'; // 'dre' | 'proesc'
+
+// ── Estado dos pickers ──────────────────────────────────────────────────────
+let _empresasSel = new Set(['MD','SEL','SIGMA']);
+let _mesesSel    = new Set();
+
+// ── Fechar pickers ao clicar fora ──────────────────────────────────────────
+document.addEventListener('click', e => {
+  ['empresa','mes'].forEach(id => {
+    const wrap = document.getElementById('wrap-' + id);
+    if (wrap && !wrap.contains(e.target)) {
+      document.getElementById('btn-' + id)?.classList.remove('open');
+      document.getElementById('drop-' + id)?.classList.remove('show');
+    }
+  });
+});
+
+function togglePicker(id) {
+  const btn  = document.getElementById('btn-' + id);
+  const drop = document.getElementById('drop-' + id);
+  btn.classList.toggle('open');
+  drop.classList.toggle('show');
+}
+
+// Constrói as opções de um picker dado um array de {value, label}
+function _buildPicker(id, items, selSet) {
+  const cont = document.getElementById('opts-' + id);
+  cont.innerHTML = '';
+  items.forEach(({value, label}) => {
+    const lbl = document.createElement('label');
+    lbl.className = 'mpicker-opt' + (selSet.has(value) ? ' selected' : '');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.value = value; cb.checked = selSet.has(value);
+    cb.addEventListener('change', () => {
+      if (cb.checked) selSet.add(value); else selSet.delete(value);
+      // Garante pelo menos 1 selecionado
+      if (selSet.size === 0) { selSet.add(value); cb.checked = true; }
+      lbl.classList.toggle('selected', selSet.has(value));
+      _updateLabel(id, selSet, items);
+      expanded.clear();
+      if (id === 'empresa' || id === 'mes') { refreshFilterOptions(); render(); }
+    });
+    lbl.appendChild(cb);
+    lbl.appendChild(document.createTextNode(' ' + label));
+    cont.appendChild(lbl);
+  });
+  _updateLabel(id, selSet, items);
+}
+
+function _updateLabel(id, selSet, items) {
+  const lbl = document.getElementById('lbl-' + id);
+  if (!lbl) return;
+  const sel = [...selSet];
+  if (sel.length === 0)            { lbl.textContent = '—'; return; }
+  if (sel.length === items.length) { lbl.textContent = id === 'empresa' ? 'Todas' : 'Todos os meses'; return; }
+  if (sel.length === 1)            { lbl.textContent = items.find(i => i.value === sel[0])?.label || sel[0]; return; }
+  lbl.textContent = sel.length + (id === 'empresa' ? ' empresas' : ' meses');
+  // Sincroniza checkboxes
+  document.querySelectorAll(`#opts-${id} input[type=checkbox]`).forEach(cb => {
+    cb.checked = selSet.has(cb.value);
+    cb.closest('.mpicker-opt').classList.toggle('selected', selSet.has(cb.value));
+  });
+}
+
+function pickerAll(id) {
+  const selSet = id === 'empresa' ? _empresasSel : _mesesSel;
+  const items  = id === 'empresa'
+    ? [{value:'MD',label:'MD'},{value:'SEL',label:'SEL'},{value:'SIGMA',label:'SIGMA'}]
+    : [...(DATA?.mesesDisponiveis||[])].sort().map(m => ({value:m, label:MESES_LABEL[m]||m}));
+  items.forEach(i => selSet.add(i.value));
+  _updateLabel(id, selSet, items);
+  expanded.clear(); refreshFilterOptions(); render();
+}
+
+function pickerLast(id) {
+  const meses = [...(DATA?.mesesDisponiveis||[])].sort();
+  _mesesSel.clear();
+  if (meses.length) _mesesSel.add(meses[meses.length - 1]);
+  const items = meses.map(m => ({value:m, label:MESES_LABEL[m]||m}));
+  _updateLabel('mes', _mesesSel, items);
+  expanded.clear(); refreshFilterOptions(); render();
+}
+
+function pickerClear(id) {
+  // "Limpar" mantém o último para nunca ficar vazio
+  if (id === 'mes') { pickerLast('mes'); return; }
+  // Empresa: mantém MD como fallback
+  _empresasSel.clear(); _empresasSel.add('MD');
+  const items = [{value:'MD',label:'MD'},{value:'SEL',label:'SEL'},{value:'SIGMA',label:'SIGMA'}];
+  _updateLabel('empresa', _empresasSel, items);
+  expanded.clear(); refreshFilterOptions(); render();
+}
+
+// ── Helpers para obter dados combinados (múltiplos meses × múltiplas empresas) ──
+function _getMesesAtivos() { return [..._mesesSel].sort(); }
+function _getEmpresasAtivas() { return [..._empresasSel].sort(); }
+
+function getFilters() {
+  return {
+    empresas: _getEmpresasAtivas(),   // array
+    meses:    _getMesesAtivos(),       // array
+    empresa:  _getEmpresasAtivas()[0] || 'MD',  // compat legado (single)
+    mes:      _getMesesAtivos()[0]     || '',    // compat legado (single)
+    grupo:    document.getElementById('sel-grupo').value,
+    final:    document.getElementById('sel-final').value
+  };
+}
+
+// Retorna dados brutos para um conjunto de meses × empresas
+function getDetalheMult(meses, empresas) {
+  const out = [];
+  meses.forEach(mes => {
+    empresas.forEach(emp => {
+      const arr = DATA?.gastosDetalhe?.[mes]?.[emp];
+      if (arr && arr.length) {
+        out.push(...arr.map(i => ({...i, empresa: i.empresa || emp, _mes: mes})));
+        return;
+      }
+      const fallback = DATA?.estruturaGastos?.[mes]?.[emp] || [];
+      fallback.forEach(i => {
+        out.push({
+          data: '', empresa: emp, _mes: mes,
+          grupoGastos: i.grupoGastos || i.macro || i.dreGrupo || 'OUTROS',
+          grupoGastosFinal: i.grupoGastosFinal || i.dreLinha || 'SEM GRUPO',
+          categoriaProesc: i.categoriaProesc || i.dreLinha || 'SEM CATEGORIA',
+          descricao: i.dreLinha || '', documento: '', cliente: '',
+          dreGrupo: i.dreGrupo || '', dreLinha: i.dreLinha || '',
+          dreOrdem: Number(i.dreOrdem || 9999),
+          valor: Number(i.valor || 0), qtd: Number(i.qtd || 0)
+        });
+      });
+    });
+  });
+  return out.map(i => ({
+    ...i,
+    valor: Math.abs(Number(i.valor || 0)),
+    dreOrdem: Number(i.dreOrdem || 9999),
+    grupoGastos: i.grupoGastos || 'OUTROS',
+    grupoGastosFinal: i.grupoGastosFinal || i.dreLinha || i.categoriaProesc || 'SEM GRUPO',
+    categoriaProesc: i.categoriaProesc || i.categoria || 'SEM CATEGORIA',
+    grupo: i.grupo || i.grupoProesc || 'SEM GRUPO PROESC',
+    descricao: i.descricao || i['Descrição do Lançamento'] || '',
+    documento: i.documento || '', cliente: i.cliente || '', data: i.data || ''
+  })).filter(i => i.valor > 0).sort(sortDetalhe);
+}
+
+async function loadData() {
+  try {
+    DATA = await _fetchJSON();
+    init();
+  } catch(e) {
+    document.getElementById('kpi-strip').innerHTML = `<div class="error-msg" style="grid-column:1/-1">Erro ao carregar JSON publicado no Drive: ${e.message}</div>`;
+    document.getElementById('main-content').innerHTML = '';
+  }
+}
+
+function init() {
+  const meses = DATA.mesesDisponiveis || [];
+
+  // Seleciona o último mês por padrão
+  if (meses.length) _mesesSel.add(meses[meses.length - 1]);
+
+  // Constrói pickers
+  const empItems = [{value:'MD',label:'MD'},{value:'SEL',label:'SEL'},{value:'SIGMA',label:'SIGMA'}];
+  _buildPicker('empresa', empItems, _empresasSel);
+  const mesItems = [...meses].sort().map(m => ({value:m, label:MESES_LABEL[m]||m}));
+  _buildPicker('mes', mesItems, _mesesSel);
+
+  document.getElementById('sel-grupo').addEventListener('change', () => {
+    expanded.clear(); refreshFinalOptions(); render();
+  });
+  document.getElementById('sel-final').addEventListener('change', () => {
+    expanded.clear(); render();
+  });
+
+  if (DATA.geradoEm) {
+    const dt = new Date(DATA.geradoEm);
+    document.getElementById('last-update').textContent = 'Atualizado em ' + dt.toLocaleString('pt-BR');
+  }
+
+  refreshFilterOptions();
+  render();
+}
 
 const PALETTE = ['#155b9a','#14d9a1','#60a5fa','#7c4dce','#b56af2','#ff4d6a','#ffb547','#34d399','#f472b6','#93c5fd'];
 
@@ -659,99 +888,12 @@ async function loadData() {
   }
 }
 
-function init() {
-  const meses = DATA.mesesDisponiveis || [];
-  const selMes = document.getElementById('sel-mes');
-  selMes.innerHTML = '';
-  meses.forEach(m => {
-    const opt = document.createElement('option');
-    opt.value = m;
-    opt.textContent = MESES_LABEL[m] || m;
-    selMes.appendChild(opt);
-  });
-  selMes.value = meses[0] || '';
 
-  ['sel-empresa','sel-mes'].forEach(id => {
-    document.getElementById(id).addEventListener('change', () => {
-      expanded.clear();
-      refreshFilterOptions();
-      render();
-    });
-  });
-
-  document.getElementById('sel-grupo').addEventListener('change', () => {
-    expanded.clear();
-    refreshFinalOptions();
-    render();
-  });
-
-  document.getElementById('sel-final').addEventListener('change', () => {
-    expanded.clear();
-    render();
-  });
-
-  if (DATA.geradoEm) {
-    const dt = new Date(DATA.geradoEm);
-    document.getElementById('last-update').textContent = 'Atualizado em ' + dt.toLocaleString('pt-BR');
-  }
-
-  refreshFilterOptions();
-  render();
-}
-
-function getFilters() {
-  return {
-    empresa: document.getElementById('sel-empresa').value,
-    mes: document.getElementById('sel-mes').value,
-    grupo: document.getElementById('sel-grupo').value,
-    final: document.getElementById('sel-final').value
-  };
-}
-
+// Compatibilidade legada — delega para getDetalheMult
 function getDetalhe(mes, empresa) {
-  const empresas = empresa === 'CONSOLIDADO' ? EMPRESAS : [empresa];
-  let out = [];
-
-  empresas.forEach(emp => {
-    const arr = DATA?.gastosDetalhe?.[mes]?.[emp];
-    if (arr && arr.length) {
-      out.push(...arr.map(i => ({...i, empresa: i.empresa || emp})));
-      return;
-    }
-
-    const fallback = DATA?.estruturaGastos?.[mes]?.[emp] || [];
-    fallback.forEach(i => {
-      out.push({
-        data: '',
-        empresa: emp,
-        grupoGastos: i.grupoGastos || i.macro || i.dreGrupo || 'OUTROS',
-        grupoGastosFinal: i.grupoGastosFinal || i.dreLinha || 'SEM GRUPO',
-        categoriaProesc: i.categoriaProesc || i.dreLinha || 'SEM CATEGORIA',
-        descricao: i.dreLinha || '',
-        documento: '',
-        cliente: '',
-        dreGrupo: i.dreGrupo || '',
-        dreLinha: i.dreLinha || '',
-        dreOrdem: Number(i.dreOrdem || 9999),
-        valor: Number(i.valor || 0),
-        qtd: Number(i.qtd || 0)
-      });
-    });
-  });
-
-  return out.map(i => ({
-    ...i,
-    valor: Math.abs(Number(i.valor || 0)),
-    dreOrdem: Number(i.dreOrdem || 9999),
-    grupoGastos: i.grupoGastos || 'OUTROS',
-    grupoGastosFinal: i.grupoGastosFinal || i.dreLinha || i.categoriaProesc || 'SEM GRUPO',
-    categoriaProesc: i.categoriaProesc || i.categoria || 'SEM CATEGORIA',
-    grupo: i.grupo || i.grupoProesc || 'SEM GRUPO PROESC',
-    descricao: i.descricao || i['Descrição do Lançamento'] || '',
-    documento: i.documento || '',
-    cliente: i.cliente || '',
-    data: i.data || ''
-  })).filter(i => i.valor > 0).sort(sortDetalhe);
+  const meses    = mes     ? [mes]     : _getMesesAtivos();
+  const empresas = empresa ? (empresa === 'CONSOLIDADO' ? EMPRESAS : [empresa]) : _getEmpresasAtivas();
+  return getDetalheMult(meses, empresas);
 }
 
 function getDetalheFiltrado(mes, empresa) {
@@ -774,10 +916,10 @@ function sortDetalhe(a,b) {
 }
 
 function refreshFilterOptions() {
-  const { empresa, mes } = getFilters();
-  const itens = getDetalhe(mes, empresa);
+  const meses    = _getMesesAtivos();
+  const empresas = _getEmpresasAtivas();
+  const itens    = getDetalheMult(meses, empresas);
 
-  // Visão DRE: filtro por grupoGastos / Visão Proesc: filtro por grupo (Grupo Proesc)
   const groupField = visaoAtual === 'proesc' ? 'grupo' : 'grupoGastos';
   const grupos = [...new Set(itens.map(i => i[groupField] || 'SEM GRUPO'))].sort((a,b) => a.localeCompare(b, 'pt-BR'));
 
@@ -786,7 +928,6 @@ function refreshFilterOptions() {
   selGrupo.innerHTML = '<option value="TODOS">Todos</option>' + grupos.map(g => `<option value="${escapeAttr(g)}">${escapeHtml(g)}</option>`).join('');
   selGrupo.value = grupos.includes(old) ? old : 'TODOS';
 
-  // Atualiza label
   const lbl = document.querySelector('#sel-grupo').closest('.filter-group')?.querySelector('label');
   if (lbl) lbl.textContent = visaoAtual === 'proesc' ? 'Grupo Proesc' : 'Grupo de Gasto';
 
@@ -794,8 +935,9 @@ function refreshFilterOptions() {
 }
 
 function refreshFinalOptions() {
-  const { empresa, mes, grupo } = getFilters();
-  const itens = getDetalhe(mes, empresa).filter(i => grupo === 'TODOS' || i.grupoGastos === grupo);
+  const { grupo } = getFilters();
+  const itens = getDetalheMult(_getMesesAtivos(), _getEmpresasAtivas())
+    .filter(i => grupo === 'TODOS' || i.grupoGastos === grupo);
   const finais = [...new Set(itens.map(i => i.grupoGastosFinal))].sort((a,b) => a.localeCompare(b, 'pt-BR'));
 
   const sel = document.getElementById('sel-final');
@@ -804,26 +946,28 @@ function refreshFinalOptions() {
   sel.value = finais.includes(old) ? old : 'TODOS';
 }
 
-function renderBannerSemMapa(mes, empresa) {
+function renderBannerSemMapa() {
   const bannerEl = document.getElementById('banner-sem-mapa');
   if (!DATA || !DATA._lancamentosProesc) { bannerEl.style.display='none'; return; }
 
-  const empFiltro = (empresa === 'Consolidado' || empresa === 'CONSOLIDADO') ? null : empresa;
-  const empresasList = empFiltro ? [empFiltro] : ['MD','SEL','SIGMA'];
+  const meses    = _getMesesAtivos();
+  const empresas = _getEmpresasAtivas();
 
   const categoriasComMapa = new Set();
-  for (const emp of empresasList) {
-    const arr = DATA?.gastosDetalhe?.[mes]?.[emp] || [];
-    for (const item of arr) {
-      const cat = (item.categoriaProesc || item.categoria || '').trim().toUpperCase();
-      if (cat) categoriasComMapa.add(`${emp}|${cat}`);
-    }
-  }
+  meses.forEach(mes => {
+    empresas.forEach(emp => {
+      const arr = DATA?.gastosDetalhe?.[mes]?.[emp] || [];
+      arr.forEach(item => {
+        const cat = (item.categoriaProesc || item.categoria || '').trim().toUpperCase();
+        if (cat) categoriasComMapa.add(`${emp}|${cat}`);
+      });
+    });
+  });
 
   const proescMes = (DATA._lancamentosProesc || []).filter(p => {
     const pMes = (p.anoMes || (p.data||'').substring(0,7));
-    if (pMes !== mes) return false;
-    if (empFiltro && p.empresa !== empFiltro) return false;
+    if (!meses.includes(pMes)) return false;
+    if (!empresas.includes(p.empresa)) return false;
     return true;
   });
 
@@ -863,11 +1007,20 @@ function renderBannerSemMapa(mes, empresa) {
 }
 
 function render() {
-  const { empresa, mes } = getFilters();
-  const raw = getDetalhe(mes, empresa);
-  const itens = getDetalheFiltrado(mes, empresa);
+  const meses    = _getMesesAtivos();
+  const empresas = _getEmpresasAtivas();
+  const raw   = getDetalheMult(meses, empresas);
+  const itens = (() => {
+    const { grupo, final } = getFilters();
+    const groupField = visaoAtual === 'proesc' ? 'grupo' : 'grupoGastos';
+    return raw.filter(i => {
+      if (grupo !== 'TODOS' && (i[groupField] || 'SEM GRUPO') !== grupo) return false;
+      if (final !== 'TODOS' && i.grupoGastosFinal !== final) return false;
+      return true;
+    });
+  })();
 
-  renderBannerSemMapa(mes, empresa);
+  renderBannerSemMapa();
 
   if (!raw.length) {
     document.getElementById('kpi-strip').innerHTML = '<div class="kpi-card"><div class="kpi-label">Sem dados</div><div class="kpi-value zero">—</div></div>';
@@ -1343,15 +1496,19 @@ function toggleNode(id) {
 }
 
 function expandAll() {
-  const { empresa, mes } = getFilters();
-  const itens = getDetalheFiltrado(mes, empresa);
+  const itens = (() => {
+    const { grupo, final } = getFilters();
+    const groupField = visaoAtual === 'proesc' ? 'grupo' : 'grupoGastos';
+    return getDetalheMult(_getMesesAtivos(), _getEmpresasAtivas()).filter(i => {
+      if (grupo !== 'TODOS' && (i[groupField] || 'SEM GRUPO') !== grupo) return false;
+      if (final !== 'TODOS' && i.grupoGastosFinal !== final) return false;
+      return true;
+    });
+  })();
   const tree = visaoAtual === 'proesc' ? buildTreeProesc(itens) : buildTree(itens);
   const maxLevel = visaoAtual === 'proesc' ? 1 : 2;
   function walk(n) {
-    if (n.level <= maxLevel) {
-      expanded.add(n.id);
-      (n.childrenArr || []).forEach(walk);
-    }
+    if (n.level <= maxLevel) { expanded.add(n.id); (n.childrenArr || []).forEach(walk); }
   }
   tree.forEach(walk);
   render();
@@ -1409,10 +1566,11 @@ function renderDonut(itens) {
 }
 
 function renderTotalLine() {
-  const { empresa, grupo, final } = getFilters();
-  const meses = DATA.mesesDisponiveis || [];
+  const { grupo, final } = getFilters();
+  const meses    = DATA.mesesDisponiveis || [];
+  const empresas = _getEmpresasAtivas();
 
-  const values = meses.map(m => sum(getDetalhe(m, empresa).filter(i => {
+  const values = meses.map(m => sum(getDetalheMult([m], empresas).filter(i => {
     if (grupo !== 'TODOS' && i.grupoGastos !== grupo) return false;
     if (final !== 'TODOS' && i.grupoGastosFinal !== final) return false;
     return true;
@@ -1443,37 +1601,34 @@ function renderTotalLine() {
 }
 
 function renderStack() {
-  const { empresa, grupo, final } = getFilters();
-  const meses = DATA.mesesDisponiveis || [];
+  const { grupo, final } = getFilters();
+  const meses    = DATA.mesesDisponiveis || [];
+  const empresas = _getEmpresasAtivas();
   const groupKey = visaoAtual === 'proesc' ? 'grupo' : 'grupoGastosFinal';
 
-  // Top grupos calculado sobre TODOS os meses (não só o selecionado)
-  const todosItens = meses.flatMap(m => getDetalhe(m, empresa).filter(i => {
+  const todosItens = meses.flatMap(m => getDetalheMult([m], empresas).filter(i => {
     if (grupo !== 'TODOS' && i.grupoGastos !== grupo) return false;
     if (final !== 'TODOS' && i.grupoGastosFinal !== final) return false;
     return true;
   }));
   const topFinal = aggregate([groupKey], todosItens)
-    .sort((a,b) => b.valor - a.valor)
-    .slice(0,6)
+    .sort((a,b) => b.valor - a.valor).slice(0,6)
     .map(i => i[groupKey] || 'SEM GRUPO');
 
   const datasets = topFinal.map((gf, idx) => ({
     label: gf,
-    data: meses.map(m => sum(getDetalhe(m, empresa).filter(i => {
+    data: meses.map(m => sum(getDetalheMult([m], empresas).filter(i => {
       if (grupo !== 'TODOS' && i.grupoGastos !== grupo) return false;
       if (final !== 'TODOS' && i.grupoGastosFinal !== final) return false;
       return (i[groupKey] || 'SEM GRUPO') === gf;
     }))),
     backgroundColor: grupoColor(gf, idx) + '88',
     borderColor: grupoColor(gf, idx),
-    borderWidth: 1,
-    borderRadius: 3
+    borderWidth: 1, borderRadius: 3
   })).filter(ds => ds.data.some(v => v > 0));
 
   const ctx = document.getElementById('chart-stack');
   if (!ctx) return;
-
   charts.stack = new Chart(ctx, {
     type: 'bar',
     data: { labels: meses.map(m => MESES_LABEL[m] || m), datasets },
@@ -1486,40 +1641,32 @@ function renderEmpresa(itens) {
 }
 
 function renderGruposMacro() {
-  const { empresa, grupo, final } = getFilters();
-  const meses = DATA.mesesDisponiveis || [];
+  const { grupo, final } = getFilters();
+  const meses    = DATA.mesesDisponiveis || [];
+  const empresas = _getEmpresasAtivas();
 
   let datasets;
 
   if (visaoAtual === 'proesc') {
-    // Visão Grupo Proesc: uma linha por grupo Proesc (ex: Pessoas, Despesas variáveis…)
-    const todosItens = meses.flatMap(m => getDetalhe(m, empresa));
+    const todosItens = meses.flatMap(m => getDetalheMult([m], empresas));
     const gruposProesc = [...new Set(todosItens.map(i => i.grupo || 'SEM GRUPO PROESC'))]
       .map(gp => ({
         key: gp,
         total: todosItens.filter(i => (i.grupo || 'SEM GRUPO PROESC') === gp).reduce((s,i) => s + i.valor, 0)
       }))
-      .sort((a,b) => b.total - a.total)
-      .slice(0, 6);
+      .sort((a,b) => b.total - a.total).slice(0, 6);
 
     datasets = gruposProesc.map((g, idx) => {
       const color = grupoColor(g.key, idx);
       return {
         label: g.key,
-        data: meses.map(m => sum(getDetalhe(m, empresa).filter(i => (i.grupo || 'SEM GRUPO PROESC') === g.key))),
-        borderColor: color,
-        backgroundColor: color + '22',
-        fill: false,
-        tension: .3,
-        pointRadius: 4,
-        pointBackgroundColor: color,
-        pointBorderColor: color,
-        pointHoverRadius: 6,
-        borderWidth: 2
+        data: meses.map(m => sum(getDetalheMult([m], empresas).filter(i => (i.grupo || 'SEM GRUPO PROESC') === g.key))),
+        borderColor: color, backgroundColor: color + '22', fill: false,
+        tension: .3, pointRadius: 4, pointBackgroundColor: color,
+        pointBorderColor: color, pointHoverRadius: 6, borderWidth: 2
       };
     }).filter(ds => ds.data.some(v => v > 0));
   } else {
-    // Visão DRE: grupos macro fixos
     const GRUPOS = [
       { key: 'CUSTOS OPERACIONAIS',         label: 'Custos Op.',   color: '#4f8fff' },
       { key: 'DESPESAS OPERACIONAIS',        label: 'Despesas Op.', color: '#f87171' },
@@ -1528,16 +1675,10 @@ function renderGruposMacro() {
     ];
     datasets = GRUPOS.map(g => ({
       label: g.label,
-      data: meses.map(m => sum(getDetalhe(m, empresa).filter(i => i.grupoGastos === g.key))),
-      borderColor: g.color,
-      backgroundColor: g.color + '22',
-      fill: false,
-      tension: .3,
-      pointRadius: 4,
-      pointBackgroundColor: g.color,
-      pointBorderColor: g.color,
-      pointHoverRadius: 6,
-      borderWidth: 2
+      data: meses.map(m => sum(getDetalheMult([m], empresas).filter(i => i.grupoGastos === g.key))),
+      borderColor: g.color, backgroundColor: g.color + '22', fill: false,
+      tension: .3, pointRadius: 4, pointBackgroundColor: g.color,
+      pointBorderColor: g.color, pointHoverRadius: 6, borderWidth: 2
     })).filter(ds => ds.data.some(v => v > 0));
   }
 
@@ -1579,16 +1720,12 @@ function tooltipMoney() {
 }
 
 function exportExcel() {
-  const { empresa, mes } = getFilters();
-  // Exporta TODOS os lançamentos de TODOS os meses (sem filtro de mês nem de grupo/final)
-  // para garantir dataset completo. Aplica só o filtro de empresa.
+  const empresas = _getEmpresasAtivas();
+  // Exporta todos os meses disponíveis para as empresas selecionadas
   const meses = DATA.mesesDisponiveis || [];
-  const todosItens = meses.flatMap(m => getDetalhe(m, empresa));
+  const todosItens = getDetalheMult(meses, empresas);
 
-  if (!todosItens.length) {
-    alert('Nenhum dado disponível para exportação.');
-    return;
-  }
+  if (!todosItens.length) { alert('Nenhum dado disponível para exportação.'); return; }
 
   const headers = [
     'AnoMes','Data','Empresa','Grupo_Proesc',
@@ -1604,19 +1741,11 @@ function exportExcel() {
       return sortDetalhe(a, b);
     })
     .map(i => [
-      (i.data||'').substring(0,7),
-      formatDateBR(i.data),
-      i.empresa || '',
-      i.grupo || '',
-      i.grupoGastos || '',
-      i.grupoGastosFinal || '',
-      i.categoriaProesc || '',
-      i.dreLinha || '',
-      i.dreGrupo || '',
+      (i.data||'').substring(0,7), formatDateBR(i.data), i.empresa || '',
+      i.grupo || '', i.grupoGastos || '', i.grupoGastosFinal || '',
+      i.categoriaProesc || '', i.dreLinha || '', i.dreGrupo || '',
       i.dreOrdem !== 9999 ? (i.dreOrdem || '') : '',
-      i.documento || '',
-      i.cliente || '',
-      i.descricao || '',
+      i.documento || '', i.cliente || '', i.descricao || '',
       i.formaPagamento || '',
       i.valor != null ? i.valor.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}) : '0,00'
     ]);
@@ -1626,14 +1755,33 @@ function exportExcel() {
     .join('\n');
 
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-  downloadBlob(blob, `gastos_completo_${empresa}.csv`);
+  downloadBlob(blob, `gastos_completo_${empresas.join('-')}.csv`);
 }
 
 function exportPDF() {
-  const { empresa, mes, grupo, final } = getFilters();
-  const itens  = getDetalheFiltrado(mes, empresa).sort(sortDetalhe);
-  const total  = sum(itens);
-  const raw    = getDetalhe(mes, empresa);
+  const { grupo, final } = getFilters();
+  const meses    = _getMesesAtivos();
+  const empresas = _getEmpresasAtivas();
+
+  const empItems = [{value:'MD',label:'MD'},{value:'SEL',label:'SEL'},{value:'SIGMA',label:'SIGMA'}];
+  const mesItems = [...(DATA?.mesesDisponiveis||[])].sort().map(m => ({value:m, label:MESES_LABEL[m]||m}));
+  // Labels legíveis para o cabeçalho
+  const empresaLabel = empresas.length === 3 ? 'CONSOLIDADO' : empresas.join(', ');
+  const mesLabel     = meses.length === mesItems.length ? 'Todos os meses'
+    : meses.length === 1 ? (MESES_LABEL[meses[0]] || meses[0])
+    : meses.map(m => MESES_LABEL[m]||m).join(', ');
+
+  const rawFull = getDetalheMult(meses, empresas);
+  const itens   = (() => {
+    const groupField = visaoAtual === 'proesc' ? 'grupo' : 'grupoGastos';
+    return rawFull.filter(i => {
+      if (grupo !== 'TODOS' && (i[groupField] || 'SEM GRUPO') !== grupo) return false;
+      if (final !== 'TODOS' && i.grupoGastosFinal !== final) return false;
+      return true;
+    }).sort(sortDetalhe);
+  })();
+  const total = sum(itens);
+  const raw   = rawFull;
 
   const isProesc = visaoAtual === 'proesc';
   const visaoLabel = isProesc ? 'Visão Grupo Proesc' : 'Visão DRE';
@@ -1704,7 +1852,72 @@ function exportPDF() {
       </table>`;
   }
 
-  // ── Linhas da tabela de detalhe ──────────────────────────────────────────────
+  // ── Resumo por Categoria (visão Proesc, exceto grupo Pessoal) ───────────────
+  let categoriasHtml = '';
+  if (isProesc) {
+    const itensSemPessoal = itens.filter(i => {
+      const g = norm(i.grupo || '');
+      return !g.includes('PESSO');
+    });
+
+    if (itensSemPessoal.length > 0) {
+      // Agrega por categoria, ordenado por valor desc
+      const catMap = {};
+      itensSemPessoal.forEach(i => {
+        const cat = (i.categoriaProesc || i.categoria || 'SEM CATEGORIA').trim();
+        const grp = (i.grupo || 'SEM GRUPO').trim();
+        const key = `${grp}||${cat}`;
+        if (!catMap[key]) catMap[key] = { grupo: grp, categoria: cat, valor: 0, qtd: 0 };
+        catMap[key].valor += i.valor || 0;
+        catMap[key].qtd++;
+      });
+
+      const catRows = Object.values(catMap)
+        .map(c => ({ ...c, valor: Math.round(c.valor * 100) / 100 }))
+        .sort((a, b) => {
+          // Ordena por grupo alfabético, depois valor desc dentro do grupo
+          const gc = a.grupo.localeCompare(b.grupo, 'pt-BR');
+          if (gc !== 0) return gc;
+          return b.valor - a.valor;
+        });
+
+      const totalCat = catRows.reduce((s, c) => s + c.valor, 0);
+      let lastGrupo = null;
+      const catRowsHtml = catRows.map(c => {
+        const pct = totalCat ? (c.valor / totalCat * 100).toFixed(1) : '0.0';
+        const grupoCell = c.grupo !== lastGrupo
+          ? `<span style="color:#555;font-size:8px">${escapeHtml(c.grupo)}</span><br>`
+          : '';
+        lastGrupo = c.grupo;
+        return `<tr>
+          <td>${grupoCell}${escapeHtml(c.categoria)}</td>
+          <td style="text-align:right;color:#666">${c.qtd}</td>
+          <td style="text-align:right;font-weight:600">${fmt(c.valor)}</td>
+          <td style="text-align:right">${pct}%</td>
+        </tr>`;
+      }).join('');
+
+      categoriasHtml = `
+        <div class="section-title" style="margin-top:14px">Resumo por Categoria <span style="font-size:9px;font-weight:400;text-transform:none;letter-spacing:0;color:#888">(exceto Pessoal)</span></div>
+        <table style="margin-bottom:16px">
+          <thead><tr>
+            <th>Grupo Proesc · Categoria</th>
+            <th style="text-align:right">Qtd.</th>
+            <th style="text-align:right">Total</th>
+            <th style="text-align:right">%</th>
+          </tr></thead>
+          <tbody>
+            ${catRowsHtml}
+            <tr class="total-row">
+              <td>TOTAL (sem Pessoal)</td>
+              <td style="text-align:right">${itensSemPessoal.length}</td>
+              <td style="text-align:right">${fmt(totalCat)}</td>
+              <td style="text-align:right">100%</td>
+            </tr>
+          </tbody>
+        </table>`;
+    }
+  }
   const linhas = itens.map(i => {
     const classif = isProesc
       ? `${escapeHtml(i.grupo || '')} · ${escapeHtml(i.categoriaProesc || '')}<br><span class="sub2">${escapeHtml(i.descricao || '')}</span>`
@@ -1725,7 +1938,7 @@ function exportPDF() {
 
   const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8">
-<title>Relatório de Gastos — ${empresa} ${MESES_LABEL[mes]||mes} — ${visaoLabel}</title>
+<title>Relatório de Gastos — ${empresaLabel} ${mesLabel} — ${visaoLabel}</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: Arial, sans-serif; color: #111; padding: 28px; font-size: 11px; }
@@ -1750,8 +1963,8 @@ function exportPDF() {
     <div>
       <h1>Relatório de Gastos — Caixa Real <span class="visao-badge">${visaoLabel}</span></h1>
       <div class="meta">
-        Empresa: <strong>${escapeHtml(empresa)}</strong> &nbsp;·&nbsp;
-        Período: <strong>${escapeHtml(MESES_LABEL[mes]||mes)}</strong>
+        Empresa: <strong>${escapeHtml(empresaLabel)}</strong> &nbsp;·&nbsp;
+        Período: <strong>${escapeHtml(mesLabel)}</strong>
         ${grupo !== 'TODOS' ? ` &nbsp;·&nbsp; Grupo: <strong>${escapeHtml(grupo)}</strong>` : ''}
         ${final !== 'TODOS' ? ` &nbsp;·&nbsp; Grupo Final: <strong>${escapeHtml(final)}</strong>` : ''}
       </div>
@@ -1762,6 +1975,8 @@ function exportPDF() {
   <div class="kpis">${kpiHtml}</div>
 
   ${summaryHtml}
+
+  ${categoriasHtml}
 
   <div class="section-title">Detalhamento de Lançamentos</div>
   <table>
