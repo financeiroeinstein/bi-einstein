@@ -77,6 +77,23 @@
   .dropdown-item input { accent-color: var(--accent); width: 13px; height: 13px; cursor: pointer; }
   .dropdown-item.select-all { border-bottom: 1px solid var(--border); color: var(--accent); font-size: .75rem; }
 
+  /* ── MULTI-PICKERS ── */
+  .mpicker-wrap{position:relative;display:flex;flex-direction:column;gap:.3rem}
+  .mpicker-wrap>label{font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+  .mpicker-btn{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--font-h);font-size:.82rem;padding:.48rem .75rem;border-radius:7px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:6px;transition:border-color .15s;white-space:nowrap}
+  .mpicker-btn:hover,.mpicker-btn.open{border-color:var(--accent)}
+  .mpicker-btn .arrow{font-size:.65rem;color:var(--muted);transition:transform .2s;flex-shrink:0}
+  .mpicker-btn.open .arrow{transform:rotate(180deg)}
+  .mpicker-dropdown{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface2);border:1px solid var(--border);border-radius:7px;z-index:200;min-width:160px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+  .mpicker-dropdown.show{display:block}
+  .mpicker-hdr{display:flex;gap:4px;padding:6px 8px;border-bottom:1px solid var(--border)}
+  .mpicker-hdr button{flex:1;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:var(--font-h);font-size:.7rem;border-radius:4px;padding:2px 5px;cursor:pointer}
+  .mpicker-hdr button:hover{color:var(--accent);border-color:var(--accent)}
+  .mpicker-opt{padding:.5rem .75rem;font-size:.8rem;cursor:pointer;display:flex;align-items:center;gap:.5rem;color:var(--text);transition:background .1s}
+  .mpicker-opt:hover{background:var(--surface3)}
+  .mpicker-opt input[type=checkbox]{accent-color:var(--accent);width:13px;height:13px;cursor:pointer;flex-shrink:0}
+  .mpicker-opt.selected{color:var(--accent)}
+
   /* KPI STRIP */
   .kpi-strip {
     display: grid; grid-template-columns: repeat(6, minmax(130px,1fr));
@@ -248,23 +265,31 @@
 </div>
 
 <div class="filters">
-  <div class="filter-group">
+  <div class="mpicker-wrap" id="wrap-emp">
     <label>Empresa</label>
-    <div class="filter-dropdown" id="dropEmp">
-      <button class="filter-btn" onclick="toggleDrop('dropEmp')"><span id="labelEmp">Consolidado</span><span class="arrow">▼</span></button>
-      <div class="dropdown-menu" id="menuEmp">
-        <div class="dropdown-item"><input type="radio" name="emp" value="CONSOLIDADO" onchange="updateEmp(this)" checked> Consolidado</div>
-        <div class="dropdown-item"><input type="radio" name="emp" value="MD"           onchange="updateEmp(this)"> MD</div>
-        <div class="dropdown-item"><input type="radio" name="emp" value="SEL"          onchange="updateEmp(this)"> SEL</div>
-        <div class="dropdown-item"><input type="radio" name="emp" value="SIGMA"        onchange="updateEmp(this)"> SIGMA</div>
+    <button class="mpicker-btn" id="btn-emp" onclick="togglePickerR('emp')">
+      <span id="lbl-emp">Todas</span><span class="arrow">▼</span>
+    </button>
+    <div class="mpicker-dropdown" id="drop-emp">
+      <div class="mpicker-hdr">
+        <button onclick="pickerREmpAll()">Todas</button>
+        <button onclick="pickerREmpClear()">Limpar</button>
       </div>
+      <div id="opts-emp"></div>
     </div>
   </div>
-  <div class="filter-group">
+  <div class="mpicker-wrap" id="wrap-mes">
     <label>Mês de Referência</label>
-    <div class="filter-dropdown" id="dropMes">
-      <button class="filter-btn" onclick="toggleDrop('dropMes')"><span id="labelMes">—</span><span class="arrow">▼</span></button>
-      <div class="dropdown-menu" id="menuMes"></div>
+    <button class="mpicker-btn" id="btn-mes" onclick="togglePickerR('mes')">
+      <span id="lbl-mes">—</span><span class="arrow">▼</span>
+    </button>
+    <div class="mpicker-dropdown" id="drop-mes">
+      <div class="mpicker-hdr">
+        <button onclick="pickerRMesAll()">Todos</button>
+        <button onclick="pickerRMesLast()">Último</button>
+        <button onclick="pickerRMesClear()">Limpar</button>
+      </div>
+      <div id="opts-mes"></div>
     </div>
   </div>
   <div class="filter-group">
@@ -458,6 +483,115 @@ function fmtDate(d) {
   return `${day}/${m}/${y}`;
 }
 
+// ── Pickers multi-seleção ─────────────────────────────────────────────────────
+let _rEmpsSel  = new Set(['MD','SEL','SIGMA']);
+let _rMesesSel = new Set();
+
+const _rEmpItems = [{value:'MD',label:'MD'},{value:'SEL',label:'SEL'},{value:'SIGMA',label:'SIGMA'}];
+function _rMesItems() { return todosOsMeses().map(m=>({value:m,label:formatMes(m)})); }
+function _rGetEmpresa() {
+  const s = [..._rEmpsSel];
+  return s.length === 3 ? 'CONSOLIDADO' : s.length === 1 ? s[0] : 'CONSOLIDADO';
+}
+function _rGetMes()         { return [..._rMesesSel].sort().pop() || ''; }
+function _rGetMesesAtivos() { return [..._rMesesSel].sort(); }
+
+document.addEventListener('click', e => {
+  ['emp','mes'].forEach(id => {
+    const w = document.getElementById('wrap-'+id);
+    if (w && !w.contains(e.target)) {
+      document.getElementById('btn-'+id)?.classList.remove('open');
+      document.getElementById('drop-'+id)?.classList.remove('show');
+    }
+  });
+});
+
+function togglePickerR(id) {
+  document.getElementById('btn-'+id).classList.toggle('open');
+  document.getElementById('drop-'+id).classList.toggle('show');
+}
+
+function _buildREmpPicker() {
+  const cont = document.getElementById('opts-emp');
+  if (!cont) return;
+  cont.innerHTML = '';
+  _rEmpItems.forEach(({value,label}) => {
+    const lbl = document.createElement('label');
+    lbl.className = 'mpicker-opt' + (_rEmpsSel.has(value) ? ' selected' : '');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.value = value; cb.checked = _rEmpsSel.has(value);
+    cb.addEventListener('change', () => {
+      if (cb.checked) _rEmpsSel.add(value); else _rEmpsSel.delete(value);
+      if (_rEmpsSel.size === 0) { _rEmpsSel.add(value); cb.checked = true; }
+      lbl.classList.toggle('selected', _rEmpsSel.has(value));
+      _updateREmpLabel();
+      filtros.empresa = _rGetEmpresa();
+      render();
+    });
+    lbl.appendChild(cb); lbl.appendChild(document.createTextNode(' '+label));
+    cont.appendChild(lbl);
+  });
+  _updateREmpLabel();
+}
+
+function _updateREmpLabel() {
+  const sel = [..._rEmpsSel];
+  const lbl = document.getElementById('lbl-emp'); if (!lbl) return;
+  if (sel.length === 3)      lbl.textContent = 'Todas';
+  else if (sel.length === 1) lbl.textContent = sel[0];
+  else                       lbl.textContent = sel.length + ' empresas';
+  document.querySelectorAll('#opts-emp input[type=checkbox]').forEach(cb => {
+    cb.checked = _rEmpsSel.has(cb.value);
+    cb.closest('.mpicker-opt')?.classList.toggle('selected', _rEmpsSel.has(cb.value));
+  });
+}
+
+function pickerREmpAll()  { _rEmpItems.forEach(i=>_rEmpsSel.add(i.value)); _updateREmpLabel(); filtros.empresa='CONSOLIDADO'; render(); }
+function pickerREmpClear(){ _rEmpsSel.clear(); _rEmpsSel.add('MD'); _updateREmpLabel(); filtros.empresa='MD'; render(); }
+
+function _buildRMesPicker() {
+  const meses = todosOsMeses();
+  const cont  = document.getElementById('opts-mes');
+  if (!cont) return;
+  cont.innerHTML = '';
+  [...meses].reverse().forEach(m => {
+    const lbl = document.createElement('label');
+    lbl.className = 'mpicker-opt' + (_rMesesSel.has(m) ? ' selected' : '');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.value = m; cb.checked = _rMesesSel.has(m);
+    cb.addEventListener('change', () => {
+      if (cb.checked) _rMesesSel.add(m); else _rMesesSel.delete(m);
+      if (_rMesesSel.size === 0) { _rMesesSel.add(m); cb.checked = true; }
+      lbl.classList.toggle('selected', _rMesesSel.has(m));
+      _updateRMesLabel();
+      filtros.mes = _rGetMes();
+      detalhePage = 0;
+      render();
+    });
+    lbl.appendChild(cb); lbl.appendChild(document.createTextNode(' '+formatMes(m)));
+    cont.appendChild(lbl);
+  });
+  _updateRMesLabel();
+}
+
+function _updateRMesLabel() {
+  const sel = _rGetMesesAtivos();
+  const lbl = document.getElementById('lbl-mes'); if (!lbl) return;
+  const all = todosOsMeses();
+  if (!sel.length)                  lbl.textContent = '—';
+  else if (sel.length===all.length) lbl.textContent = 'Todos os meses';
+  else if (sel.length===1)          lbl.textContent = formatMes(sel[0]);
+  else                              lbl.textContent = sel.length+' meses';
+  document.querySelectorAll('#opts-mes input[type=checkbox]').forEach(cb => {
+    cb.checked = _rMesesSel.has(cb.value);
+    cb.closest('.mpicker-opt')?.classList.toggle('selected', _rMesesSel.has(cb.value));
+  });
+}
+
+function pickerRMesAll()  { todosOsMeses().forEach(m=>_rMesesSel.add(m)); _updateRMesLabel(); filtros.mes=_rGetMes(); render(); }
+function pickerRMesLast() { _rMesesSel.clear(); const m=todosOsMeses().pop(); if(m)_rMesesSel.add(m); _updateRMesLabel(); filtros.mes=_rGetMes(); render(); }
+function pickerRMesClear(){ pickerRMesLast(); }
+
 // ── Dropdowns ─────────────────────────────────────────────────────────────
 function toggleDrop(id) {
   document.querySelectorAll('.dropdown-menu').forEach(m=>{if(m.parentElement.parentElement.id!==id)m.classList.remove('show');});
@@ -471,11 +605,6 @@ document.addEventListener('click', e=>{
     document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('open'));
   }
 });
-function updateEmp(radio) {
-  filtros.empresa = radio.value;
-  document.getElementById('labelEmp').textContent = radio.value === 'CONSOLIDADO' ? 'Consolidado' : radio.value;
-  render();
-}
 function updateTipo(radio) {
   filtros.tipo = radio.value;
   document.getElementById('labelTipo').textContent = radio.value === 'TODOS' ? 'Todos' : radio.value;
@@ -544,13 +673,83 @@ function todosOsMeses() {
   return Object.keys(DATA?.receitas||{}).sort();
 }
 
+// ── Agrega lançamentos de MÚLTIPLOS meses em um único objeto de receita ──────
+// Usado quando mais de um mês está selecionado.
+// Para um único mês, delega para getReceita() (mantém comportamento original).
+function getReceitaMulti(mesesArr, emp) {
+  if (!mesesArr || mesesArr.length === 0) return null;
+  if (mesesArr.length === 1) return getReceita(mesesArr[0], emp);
+
+  // Junta todos os lançamentos dos meses selecionados
+  const todosItens = mesesArr.flatMap(m => {
+    const r = DATA?.receitas?.[m]?.[emp];
+    if (!r) return [];
+    const it = filtros.tipo === 'TODOS'
+      ? (r.lancamentos || [])
+      : (r.lancamentos?.filter(l => l.tipoGrupo === filtros.tipo) || []);
+    return it;
+  });
+
+  if (!todosItens.length) return null;
+
+  const previsto  = todosItens.reduce((s,l) => s + l.valorLiquido, 0);
+  const recebido  = todosItens.filter(l => l.status === 'Pago').reduce((s,l) => s + l.valorLiquido, 0);
+  const emAberto  = todosItens.filter(l => l.status === 'Em Aberto').reduce((s,l) => s + l.valorLiquido, 0);
+  const vencido   = todosItens.filter(l => l.flagVencido === 'Sim').reduce((s,l) => s + l.valorLiquido, 0);
+  const gap       = previsto - recebido;
+
+  const pagaramNoPrazoValor = todosItens.filter(l => l.dataPag && l.dataPag <= l.dataVenc)
+    .reduce((s,l) => s + l.valorLiquido, 0);
+  const pagaramNoPrazo = previsto !== 0
+    ? Math.round((pagaramNoPrazoValor / previsto) * 10000) / 100 : 0;
+
+  // inadimplenciaFechamento: não pagou até o último dia do mês de vencimento de cada lançamento
+  const recebidoNoPrazoMes = todosItens.filter(l => {
+    if (!l.dataPag) return false;
+    const ultimoDia = (l.dataVenc||'').substring(0,7) + '-31';
+    return l.dataPag <= ultimoDia;
+  }).reduce((s,l) => s + l.valorLiquido, 0);
+  const inadimplenciaFechamento = previsto !== 0
+    ? Math.round(((previsto - recebidoNoPrazoMes) / previsto) * 10000) / 100 : 0;
+
+  const porTipoMap = {};
+  todosItens.forEach(l => {
+    const key = l.tipoReceita || l.tipo || l.tipoGrupo || 'Outros';
+    if (!porTipoMap[key]) porTipoMap[key] = { tipo: key, tipoGrupo: l.tipoGrupo, previsto: 0, recebido: 0 };
+    porTipoMap[key].previsto += l.valorLiquido;
+    if (l.status === 'Pago') porTipoMap[key].recebido += l.valorLiquido;
+  });
+  const porTipo = Object.values(porTipoMap).map(t => ({
+    ...t,
+    previsto:   Math.round(t.previsto * 100) / 100,
+    recebido:   Math.round(t.recebido * 100) / 100,
+    realizacao: t.previsto !== 0 ? Math.round((t.recebido / t.previsto) * 10000) / 100 : 0
+  }));
+
+  return {
+    previsto:     Math.round(previsto * 100) / 100,
+    recebido:     Math.round(recebido * 100) / 100,
+    emAberto:     Math.round(emAberto * 100) / 100,
+    vencido:      Math.round(vencido * 100) / 100,
+    gap:          Math.round(gap * 100) / 100,
+    realizacao:   previsto !== 0 ? Math.round((recebido / previsto) * 10000) / 100 : 0,
+    inadimplencia:previsto !== 0 ? Math.round((gap / previsto) * 10000) / 100 : 0,
+    inadimplenciaFechamento,
+    pagaramNoPrazo,
+    porTipo,
+    lancamentos: todosItens
+  };
+}
+
 // ── Render principal ───────────────────────────────────────────────────────
 function render() {
-  const { empresa, mes } = filtros;
-  renderKPIs(empresa, mes);
-  renderVisaoGeral(empresa, mes);
+  const { empresa } = filtros;
+  const mesesAtivos = _rGetMesesAtivos();
+  const rMulti = getReceitaMulti(mesesAtivos, empresa);
+  renderKPIs(empresa, mesesAtivos, rMulti);
+  renderVisaoGeral(empresa, mesesAtivos, rMulti);
   renderEvolucao(empresa);
-  renderDetalhe();
+  renderDetalhe(mesesAtivos, rMulti);
   renderAgenda(empresa);
 }
 
@@ -589,19 +788,21 @@ function calcInadYTD(empresa) {
 }
 
 // ── KPI Strip ──────────────────────────────────────────────────────────────
-function renderKPIs(empresa, mes) {
-  const r = getReceita(mes, empresa);
+function renderKPIs(empresa, mesesArr, r) {
   if (!r) { document.getElementById('kpiStrip').innerHTML='<div class="loading" style="grid-column:1/-1">Sem dados</div>'; return; }
 
   const inadYTD = calcInadYTD(empresa);
+  const periodoSub = mesesArr.length === 1
+    ? (filtros.tipo === 'TODOS' ? 'Todos os tipos' : filtros.tipo + ' no mês')
+    : mesesArr.length + ' meses acumulados';
 
   const items = [
-    { label:'Receita Prevista',     value: fmtBRL(r.previsto),      kc:'var(--accent2)',  sub: filtros.tipo==='TODOS'?'Todos os tipos':filtros.tipo+' no mês' },
-    { label:'Receita Recebida',     value: fmtBRL(r.recebido),      kc:'var(--green)',    sub: 'Pago no mês' },
-    { label:'Gap Previsto × Recebido', value: fmtBRL(r.gap),        kc: r.gap>0?'var(--warn)':'var(--accent)', sub: 'Diferença mês' },
-    { label:'% Realização',         value: fmtPct(r.realizacao),    kc: r.realizacao>=95?'var(--accent)':r.realizacao>=85?'var(--warn)':'var(--red)', sub: 'Meta: 100%' },
-    { label:'% Inadimplência Mês',  value: fmtPct(r.inadimplencia), kc: r.inadimplencia<=3?'var(--accent)':r.inadimplencia<=8?'var(--warn)':'var(--red)', sub: 'No mês selecionado' },
-    { label:'% Inadimplência YTD',  value: fmtPct(inadYTD), kc: inadYTD<=3?'var(--accent)':inadYTD<=8?'var(--warn)':'var(--red)', sub: 'Vencidos até '+new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) },
+    { label:'Receita Prevista',        value: fmtBRL(r.previsto),      kc:'var(--accent2)',  sub: periodoSub },
+    { label:'Receita Recebida',        value: fmtBRL(r.recebido),      kc:'var(--green)',    sub: 'Pago no período' },
+    { label:'Gap Previsto × Recebido', value: fmtBRL(r.gap),           kc: r.gap>0?'var(--warn)':'var(--accent)', sub: 'Diferença período' },
+    { label:'% Realização',            value: fmtPct(r.realizacao),    kc: r.realizacao>=95?'var(--accent)':r.realizacao>=85?'var(--warn)':'var(--red)', sub: 'Meta: 100%' },
+    { label:'% Inadimplência Período', value: fmtPct(r.inadimplencia), kc: r.inadimplencia<=3?'var(--accent)':r.inadimplencia<=8?'var(--warn)':'var(--red)', sub: 'No período selecionado' },
+    { label:'% Inadimplência YTD',     value: fmtPct(inadYTD), kc: inadYTD<=3?'var(--accent)':inadYTD<=8?'var(--warn)':'var(--red)', sub: 'Vencidos até '+new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) },
   ];
 
   document.getElementById('kpiStrip').innerHTML = items.map(i=>`
@@ -613,15 +814,14 @@ function renderKPIs(empresa, mes) {
 }
 
 // ── Visão Geral ────────────────────────────────────────────────────────────
-function renderVisaoGeral(empresa, mes) {
-  const r = getReceita(mes, empresa);
+function renderVisaoGeral(empresa, mesesArr, r) {
   if (!r) return;
 
   // Gauge
   const pct = r.realizacao || 0;
   renderGauge(pct, r.previsto);
 
-  // Por tipo — barra de progresso
+  // Por tipo — barra de progresso (dados do período agregado)
   const sec = document.getElementById('porTipoSection');
   const tipos = r.porTipo || [];
   if (!tipos.length) { sec.innerHTML='<div class="empty">Sem dados</div>'; }
@@ -641,18 +841,22 @@ function renderVisaoGeral(empresa, mes) {
     }).join('');
   }
 
-  // Gráfico barras mensal — previsto vs recebido
+  // Gráfico barras mensal — previsto vs recebido (sempre todos os meses, destaca os selecionados)
   const meses = todosOsMeses();
-  const labels = meses.map(m=>formatMes(m));
-  const prev = meses.map(m=>getReceita(m,empresa)?.previsto||0);
-  const receb= meses.map(m=>getReceita(m,empresa)?.recebido||0);
+  const labels = meses.map(m => formatMes(m));
+  const prev  = meses.map(m => getReceita(m, empresa)?.previsto || 0);
+  const receb = meses.map(m => getReceita(m, empresa)?.recebido || 0);
+  // Meses selecionados ficam mais opacos; os outros mais transparentes
+  const mesesSet = new Set(mesesArr);
+  const bgPrev  = meses.map(m => mesesSet.has(m) ? 'rgba(79,143,255,.7)'  : 'rgba(79,143,255,.2)');
+  const bgReceb = meses.map(m => mesesSet.has(m) ? 'rgba(0,229,160,.7)'   : 'rgba(0,229,160,.2)');
   const ctx = document.getElementById('chartMensal');
   if (CHARTS.mensal) CHARTS.mensal.destroy();
   CHARTS.mensal = new Chart(ctx, {
     type:'bar',
     data:{ labels, datasets:[
-      { label:'Previsto',  data:prev,  backgroundColor:'rgba(79,143,255,.5)', borderColor:'#4f8fff', borderWidth:1, borderRadius:4 },
-      { label:'Recebido',  data:receb, backgroundColor:'rgba(0,229,160,.5)', borderColor:'#00e5a0', borderWidth:1, borderRadius:4 }
+      { label:'Previsto',  data:prev,  backgroundColor:bgPrev,  borderColor:'#4f8fff', borderWidth:1, borderRadius:4 },
+      { label:'Recebido',  data:receb, backgroundColor:bgReceb, borderColor:'#00e5a0', borderWidth:1, borderRadius:4 }
     ]},
     options: chartOpts()
   });
@@ -767,9 +971,15 @@ function renderEvolucao(empresa) {
 }
 
 // ── Detalhamento ───────────────────────────────────────────────────────────
-function renderDetalhe() {
-  const { empresa, mes, tipo } = filtros;
-  const r = getReceita(mes, empresa);
+function renderDetalhe(mesesArr, rMulti) {
+  // Se chamado pelo tab-click sem args, reconstrói a partir do estado atual
+  if (!mesesArr) {
+    const { empresa } = filtros;
+    mesesArr = _rGetMesesAtivos();
+    rMulti = getReceitaMulti(mesesArr, empresa);
+  }
+  const { empresa } = filtros;
+  const r = rMulti || getReceitaMulti(mesesArr, empresa);
   const el = document.getElementById('detalheTable');
   const pagEl = document.getElementById('detalhePag');
   if (!r?.lancamentos?.length) { el.innerHTML='<div class="empty">Sem lançamentos.</div>'; pagEl.innerHTML=''; return; }
@@ -1017,32 +1227,17 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById(btn.dataset.tab).classList.add('active');
-    if (btn.dataset.tab==='tab-evolucao')  renderEvolucao(filtros.empresa);
-    if (btn.dataset.tab==='tab-agenda')    renderAgenda(filtros.empresa);
-    if (btn.dataset.tab==='tab-detalhe')   renderDetalhe();
+    const { empresa } = filtros;
+    const mesesAtivos = _rGetMesesAtivos();
+    const rMulti = getReceitaMulti(mesesAtivos, empresa);
+    if (btn.dataset.tab==='tab-visao')    { renderKPIs(empresa, mesesAtivos, rMulti); renderVisaoGeral(empresa, mesesAtivos, rMulti); }
+    if (btn.dataset.tab==='tab-evolucao') renderEvolucao(empresa);
+    if (btn.dataset.tab==='tab-agenda')   renderAgenda(empresa);
+    if (btn.dataset.tab==='tab-detalhe')  renderDetalhe(mesesAtivos, rMulti);
   });
 });
 
 // ── Init ───────────────────────────────────────────────────────────────────
-function buildMenuMes() {
-  const meses = todosOsMeses();
-  const menu  = document.getElementById('menuMes');
-  menu.innerHTML = '';
-  meses.forEach((m,i)=>{
-    menu.innerHTML += `<div class="dropdown-item">
-      <input type="radio" name="mes" value="${m}" onchange="updateMes(this)" ${i===0?'checked':''}> ${formatMes(m)}
-    </div>`;
-  });
-  filtros.mes = meses[0] || '';
-  document.getElementById('labelMes').textContent = formatMes(filtros.mes);
-}
-function updateMes(radio) {
-  filtros.mes = radio.value;
-  document.getElementById('labelMes').textContent = formatMes(radio.value);
-  detalhePage = 0;
-  render();
-}
-
 function fetchT(url,ms=8000) {
   return new Promise((res,rej)=>{
     const t=setTimeout(()=>rej(new Error('Timeout')),ms);
@@ -1056,7 +1251,13 @@ async function loadData() {
     const dt = new Date(DATA.geradoEm);
     document.getElementById('lastUpdate').textContent =
       'Atualizado em '+dt.toLocaleDateString('pt-BR')+' às '+dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-    buildMenuMes();
+    // Seleciona o mês mais recente por padrão
+    const meses = todosOsMeses();
+    if (meses.length) _rMesesSel.add(meses[meses.length-1]);
+    filtros.mes     = _rGetMes();
+    filtros.empresa = _rGetEmpresa();
+    _buildREmpPicker();
+    _buildRMesPicker();
     render();
   } catch(err) {
     document.getElementById('kpiStrip').innerHTML =
