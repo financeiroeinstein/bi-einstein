@@ -1082,14 +1082,23 @@ function exportPDF() {
   let det = '';
   const limit = 500;
   sorted.slice(0, limit).forEach(i => {
+    const isRateado = i.rateado === true;
+    const vlrOrigCell = isRateado
+      ? `<td style="text-align:right;white-space:nowrap;color:#888">${fmt(i.valorOriginal)}</td>`
+      : `<td style="text-align:right;color:#ccc">—</td>`;
+    const pctRateioCell = isRateado
+      ? `<td style="text-align:right;white-space:nowrap;color:#b07000">${fmtPct(i.pctRateio)}</td>`
+      : `<td style="text-align:right;color:#ccc">—</td>`;
     det += `<tr>
       <td>${escH(i.data||'')}</td>
       <td>${escH(i.bloco||'')}</td>
-      <td>${escH(i.subgrupo||'')}</td>
+      <td>${escH(i.subgrupo||'')}${isRateado ? ' <span style="background:#fff3cd;color:#856404;border-radius:3px;padding:0 3px;font-size:7px">rateado</span>' : ''}</td>
       <td>${escH(i.empresa||'')}</td>
       <td>${escH(i.cliente||'')}</td>
       <td>${escH(i.descricao||'')}</td>
-      <td style="text-align:right;white-space:nowrap">${fmt(i.valor)}</td>
+      <td style="text-align:right;white-space:nowrap;font-weight:600">${fmt(i.valor)}</td>
+      ${vlrOrigCell}
+      ${pctRateioCell}
     </tr>`;
   });
 
@@ -1132,10 +1141,15 @@ tr:hover td{background:#f5f9ff}
 <h2>Resumo por Bloco → Subgrupo</h2>
 <table><thead><tr><th>Bloco</th><th>Subgrupo</th><th>Valor</th><th>%</th></tr></thead><tbody>${resumo}</tbody></table>
 <h2>Detalhe de Lançamentos${itens.length>limit?' (primeiros '+limit+')':''}</h2>
+<p style="font-size:8px;color:#666;margin-bottom:6px">
+  <b>Vlr. Considerado</b> = valor usado no somatório (já com rateio aplicado quando aplicável) &nbsp;·&nbsp;
+  <b>Vlr. Original</b> = valor bruto lançado (apenas para Encargos e Benefícios rateados) &nbsp;·&nbsp;
+  <b>% Rateio</b> = percentual do lançamento original atribuído a este bloco (Adm ou Pedagógico), proporcional ao salário
+</p>
 <table>
-  <thead><tr><th>Data</th><th>Bloco</th><th>Subgrupo</th><th>Empresa</th><th>Favorecido</th><th>Descrição</th><th>Valor</th></tr></thead>
+  <thead><tr><th>Data</th><th>Bloco</th><th>Subgrupo</th><th>Empresa</th><th>Favorecido</th><th>Descrição</th><th style="text-align:right">Vlr. Considerado</th><th style="text-align:right">Vlr. Original</th><th style="text-align:right">% Rateio</th></tr></thead>
   <tbody>${det}
-    <tr class="tot"><td colspan="6">TOTAL</td><td style="text-align:right">${fmt(total)}</td></tr>
+    <tr class="tot"><td colspan="8">TOTAL</td><td style="text-align:right">${fmt(total)}</td></tr>
   </tbody>
 </table>
 <script>window.onload=()=>window.print()<\/script></body></html>`;
