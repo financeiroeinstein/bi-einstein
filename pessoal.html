@@ -120,6 +120,27 @@ tbody td:first-child{text-align:left;font-family:var(--font-head)}
 #pdf-box button{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--font-head);padding:7px 16px;border-radius:6px;cursor:pointer;font-size:.8rem}
 #pdf-box button.primary{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700}
 
+/* MES PICKER */
+.mes-picker-wrap{position:relative;display:inline-block}
+.mes-picker-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--font-head);font-size:.8rem;border-radius:6px;padding:6px 12px;cursor:pointer;transition:border-color .15s,background .15s;min-width:140px;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:6px}
+.mes-picker-btn:hover{border-color:var(--accent)}
+.mes-picker-btn.open{border-color:var(--accent)}
+.mes-picker-btn .arrow{font-size:.6rem;color:var(--muted);transition:transform .15s}
+.mes-picker-btn.open .arrow{transform:rotate(180deg)}
+.mes-picker-dropdown{display:none;position:absolute;top:calc(100% + 4px);left:0;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px;z-index:200;min-width:200px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.mes-picker-dropdown.show{display:block}
+.mes-picker-header{display:flex;gap:4px;padding:4px 2px 8px;border-bottom:1px solid var(--border);margin-bottom:6px}
+.mes-picker-header button{flex:1;background:var(--surface3);border:1px solid var(--border);color:var(--muted);font-family:var(--font-head);font-size:.7rem;border-radius:4px;padding:3px 6px;cursor:pointer}
+.mes-picker-header button:hover{color:var(--accent);border-color:var(--accent)}
+.mes-opt{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:4px;cursor:pointer;transition:background .1s;font-size:.78rem;color:var(--text)}
+.mes-opt:hover{background:rgba(255,255,255,.05)}
+.mes-opt input[type=checkbox]{accent-color:var(--accent);width:13px;height:13px;cursor:pointer;flex-shrink:0}
+.mes-opt.selected{color:var(--accent)}
+
+/* BADGE RATEIO no drill */
+.badge-rateio{display:inline-block;background:rgba(255,181,71,.15);border:1px solid rgba(255,181,71,.4);color:var(--warn);border-radius:3px;font-size:.6rem;padding:1px 5px;font-family:var(--font-mono);margin-left:4px;vertical-align:middle}
+.badge-valor-orig{display:inline-block;background:rgba(107,114,128,.12);border:1px solid rgba(107,114,128,.3);color:var(--muted);border-radius:3px;font-size:.6rem;padding:1px 5px;font-family:var(--font-mono);margin-left:4px;vertical-align:middle}
+
 @media(max-width:900px){.charts-grid{grid-template-columns:1fr}}
 @media(max-width:640px){.kpi-strip{grid-template-columns:repeat(2,1fr)}}
 </style>
@@ -158,54 +179,69 @@ tbody td:first-child{text-align:left;font-family:var(--font-head)}
   </div>
   <div class="sep-v"></div>
   <span class="toolbar-label">Mês</span>
-  <select id="sel-mes"></select>
+  <div class="mes-picker-wrap" id="mes-picker-wrap">
+    <button class="mes-picker-btn" id="mes-picker-btn" onclick="toggleMesPicker()">
+      <span id="mes-picker-label">Carregando…</span>
+      <span class="arrow">▼</span>
+    </button>
+    <div class="mes-picker-dropdown" id="mes-picker-dropdown">
+      <div class="mes-picker-header">
+        <button onclick="selecionarTodosMeses()">Todos</button>
+        <button onclick="selecionarUltimoMes()">Último</button>
+        <button onclick="limparMeses()">Limpar</button>
+      </div>
+      <div id="mes-picker-options"></div>
+    </div>
+  </div>
   <div class="sep-v"></div>
   <button class="btn-action" onclick="exportCSV()">⬇ Exportar Excel</button>
   <button class="btn-action" onclick="showPdfModal()">⬇ Exportar PDF</button>
 </div>
 
-<!-- KPI STRIP — 7 cards -->
+<!-- KPI STRIP — 8 cards -->
 <div class="kpi-strip">
   <div class="kpi-card">
     <div class="kpi-label">Folha Bruta
-      <span class="tip-icon">?<span class="tip-bubble">Folha Prof. + Folha Adm. + Folha Estag. + Pró-labore/Retiradas</span></span>
+      <span class="tip-icon">?<span class="tip-bubble">Salário Adm + Salário Pedagógico + Estagiário + Pró-labore</span></span>
     </div>
     <div class="kpi-value accent" id="kpi-folha">—</div>
     <div class="kpi-sub" id="kpi-folha-sub">—</div>
   </div>
   <div class="kpi-card">
+    <div class="kpi-label">Folha Administrativo
+      <span class="tip-icon">?<span class="tip-bubble">Salário lançado no bloco Administrativo</span></span>
+    </div>
+    <div class="kpi-value accent2" id="kpi-folha-adm">—</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Folha Pedagógico
+      <span class="tip-icon">?<span class="tip-bubble">Salário lançado no bloco Pedagógico</span></span>
+    </div>
+    <div class="kpi-value accent" id="kpi-folha-ped">—</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Encargos INSS/FGTS
+      <span class="tip-icon">?<span class="tip-bubble">Total de encargos lançados. No detalhamento são rateados proporcionalmente entre Adm e Pedagógico com base nos salários.</span></span>
+    </div>
+    <div class="kpi-value warn" id="kpi-enc">—</div>
+    <div class="kpi-sub" id="kpi-enc-sub">—</div>
+  </div>
+  <div class="kpi-card">
     <div class="kpi-label">Benefícios
-      <span class="tip-icon">?<span class="tip-bubble">Benefícios Administrativo + Benefícios Professores</span></span>
+      <span class="tip-icon">?<span class="tip-bubble">Total de benefícios lançados. No detalhamento são rateados proporcionalmente entre Adm e Pedagógico com base nos salários.</span></span>
     </div>
     <div class="kpi-value warn" id="kpi-benef">—</div>
   </div>
   <div class="kpi-card">
-    <div class="kpi-label">Encargos INSS/FGTS
-      <span class="tip-icon">?<span class="tip-bubble">Encargos Administrativo + Encargos Professores</span></span>
+    <div class="kpi-label">Outros
+      <span class="tip-icon">?<span class="tip-bubble" id="kpi-outros-tip">Estagiário, Pró-labore/Retiradas, Rescisões e demais lançamentos fora da folha principal</span></span>
     </div>
-    <div class="kpi-value warn" id="kpi-enc">—</div>
-  </div>
-  <div class="kpi-card">
-    <div class="kpi-label">Encargos / Folha Bruta
-      <span class="tip-icon">?<span class="tip-bubble">Percentual dos encargos sobre a folha bruta</span></span>
-    </div>
-    <div class="kpi-value" id="kpi-enc-pct">—</div>
-  </div>
-  <div class="kpi-card">
-    <div class="kpi-label">Total Professores
-      <span class="tip-icon">?<span class="tip-bubble">Folha + Encargos + Benefícios do perfil Professor</span></span>
-    </div>
-    <div class="kpi-value accent" id="kpi-prof">—</div>
-  </div>
-  <div class="kpi-card">
-    <div class="kpi-label">Total Administrativo
-      <span class="tip-icon">?<span class="tip-bubble">Folha + Encargos + Benefícios do perfil Administrativo</span></span>
-    </div>
-    <div class="kpi-value accent2" id="kpi-adm">—</div>
+    <div class="kpi-value purple" id="kpi-outros">—</div>
+    <div class="kpi-sub" id="kpi-outros-sub">—</div>
   </div>
   <div class="kpi-card">
     <div class="kpi-label">Total Geral Pessoal
-      <span class="tip-icon">?<span class="tip-bubble">Soma de todos os lançamentos do grupo Pessoas no mês/empresas selecionadas</span></span>
+      <span class="tip-icon">?<span class="tip-bubble">Soma de todos os lançamentos do grupo Pessoal no período/empresas selecionados</span></span>
     </div>
     <div class="kpi-value purple" id="kpi-total">—</div>
     <div class="kpi-sub" id="kpi-qtd-sub">—</div>
@@ -236,7 +272,7 @@ tbody td:first-child{text-align:left;font-family:var(--font-head)}
   </div>
   <div class="chart-card">
     <div class="chart-title">📊 Evolução por Perfil
-      <span class="tip-icon">?<span class="tip-bubble">Professores vs Administrativo empilhados por mês</span></span>
+      <span class="tip-icon">?<span class="tip-bubble">Pedagógico vs Administrativo empilhados por mês</span></span>
     </div>
     <div class="chart-wrap"><canvas id="chart-perfil-bar"></canvas></div>
   </div>
@@ -255,13 +291,13 @@ tbody td:first-child{text-align:left;font-family:var(--font-head)}
       <table id="drill-table">
         <thead>
           <tr>
-            <th style="text-align:left;min-width:260px">Descrição / Hierarquia</th>
+            <th style="text-align:left;min-width:280px">Descrição / Hierarquia</th>
             <th>MD</th><th>SEL</th><th>SIGMA</th>
-            <th>Total</th><th>% Total</th><th>Qtd.</th>
+            <th>Total</th><th>% Total</th><th>Vlr. Original</th><th>Qtd.</th>
           </tr>
         </thead>
         <tbody id="drill-body">
-          <tr><td colspan="7" class="empty">Carregando dados…</td></tr>
+          <tr><td colspan="8" class="empty">Carregando dados…</td></tr>
         </tbody>
       </table>
     </div>
@@ -343,33 +379,40 @@ const chartOptionsMoney = (stacked=false) => ({
 // Ordem de exibição no drill-down (L0 = bloco principal)
 const BLOCOS_ORDEM = [
   'Administrativo',
-  'Professor',
+  'Pedagógico',
   'Outros'
 ];
 
 // Dentro de cada bloco, subgrupos na ordem:
-// Administrativo: Salário, Encargos, Benefícios
-// Professor:      Salário, Encargos, Benefícios
+// Administrativo: Salário, Encargos, Benefícios, Rescisões
+// Pedagógico:     Salário, Encargos, Benefícios, Rescisões
 // Outros:         Estagiário, Pró-labore/Retiradas, Outros
 
 /**
  * Retorna { bloco, subgrupo, classificacao } para uma categoria Proesc.
  *
- * classificacao = rótulo amigável da linha (ex: "Folha de Pagamento Professores")
- * bloco         = nível L0 do drill (Administrativo | Professor | Outros)
+ * classificacao = rótulo amigável da linha (ex: "Folha de Pagamento Pedagógico")
+ * bloco         = nível L0 do drill (Administrativo | Pedagógico | Outros)
  * subgrupo      = nível L1 do drill (Salário | Encargos | Benefícios | ...)
  */
 function classificarPessoal(categoria) {
   const c = norm(categoria);
 
-  // ── PROFESSORES ────────────────────────────────────
-  if (c.includes('PROFESSOR')) {
+  // ── RESCISÕES E MULTAS TRABALHISTAS ──────────────
+  // norm() remove acentos: Rescisões→RESCISOES, Multas→MULTAS
+  // Captura: Rescisões e Multas Trabalhistas – Administrativo/Pedagógico – MD/SEL/SIGMA
+  if (c.includes('RESCISOES') || c.includes('MULTAS TRABALHISTAS')) {
+    const bloco = c.includes('PEDAGOGICO') ? 'Pedagógico' : 'Administrativo';
+    return { bloco, subgrupo:'Rescisões', classificacao:'Rescisões e Multas Trabalhistas' };
+  }
+
+  // ── PEDAGÓGICO (antigo Professor) ─────────────────
+  if (c.includes('PEDAGOGICO') || c.includes('PROFESSOR')) {
     if (c.includes('BENEFICIO'))
-      return { bloco:'Professor', subgrupo:'Benefícios', classificacao:'Benefícios Professores' };
+      return { bloco:'Pedagógico', subgrupo:'Benefícios', classificacao:'Benefícios Pedagógico' };
     if (c.includes('ENCARGO') || c.includes('INSS') || c.includes('FGTS'))
-      return { bloco:'Professor', subgrupo:'Encargos', classificacao:'Encargos Professores' };
-    // Salário ou Adiantamento → folha
-    return { bloco:'Professor', subgrupo:'Salário', classificacao:'Folha de Pagamento Professores' };
+      return { bloco:'Pedagógico', subgrupo:'Encargos', classificacao:'Encargos Pedagógico' };
+    return { bloco:'Pedagógico', subgrupo:'Salário', classificacao:'Folha de Pagamento Pedagógico' };
   }
 
   // ── ADMINISTRATIVO ────────────────────────────────
@@ -382,7 +425,7 @@ function classificarPessoal(categoria) {
   }
 
   // ── ESTAGIÁRIO ────────────────────────────────────
-  if (c.includes('ESTAGIARIO') || c.includes('ESTAGIARIO'))
+  if (c.includes('ESTAGIARIO'))
     return { bloco:'Outros', subgrupo:'Estagiário', classificacao:'Folha de Pagamento Estagiário' };
 
   // ── PRÓ-LABORE / RETIRADAS ────────────────────────
@@ -399,17 +442,16 @@ function classificarPessoal(categoria) {
 ═══════════════════════════════════════════════════════ */
 let DATA = null;
 let _empresasSel = new Set(['MD','SEL','SIGMA']);
+let _mesesSel    = new Set();   // meses selecionados no picker
 let chartDonut=null, chartTotalLine=null, chartCompLine=null, chartPerfilBar=null;
 
 /* ═══════════════════════════════════════════════════════
    EMPRESA TOGGLES
 ═══════════════════════════════════════════════════════ */
 function toggleEmp(emp) {
-  // Garante que pelo menos uma empresa fique ativa
   if (_empresasSel.has(emp) && _empresasSel.size === 1) return;
   if (_empresasSel.has(emp)) _empresasSel.delete(emp);
   else _empresasSel.add(emp);
-  // Atualiza visual dos botões
   document.querySelectorAll('.emp-toggle').forEach(btn => {
     const e = btn.dataset.emp;
     btn.className = 'emp-toggle';
@@ -420,27 +462,144 @@ function toggleEmp(emp) {
 }
 
 /* ═══════════════════════════════════════════════════════
+   SELETOR DE MESES MÚLTIPLOS
+═══════════════════════════════════════════════════════ */
+function toggleMesPicker() {
+  const btn  = document.getElementById('mes-picker-btn');
+  const drop = document.getElementById('mes-picker-dropdown');
+  btn.classList.toggle('open');
+  drop.classList.toggle('show');
+}
+document.addEventListener('click', e => {
+  if (!document.getElementById('mes-picker-wrap').contains(e.target)) {
+    document.getElementById('mes-picker-btn').classList.remove('open');
+    document.getElementById('mes-picker-dropdown').classList.remove('show');
+  }
+});
+
+function _buildMesPicker(meses) {
+  const cont = document.getElementById('mes-picker-options');
+  cont.innerHTML = '';
+  [...meses].reverse().forEach(m => {
+    const lbl = document.createElement('label');
+    lbl.className = 'mes-opt' + (_mesesSel.has(m) ? ' selected' : '');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.value = m; cb.checked = _mesesSel.has(m);
+    cb.addEventListener('change', () => {
+      if (cb.checked) _mesesSel.add(m); else _mesesSel.delete(m);
+      if (_mesesSel.size === 0) { _mesesSel.add(m); cb.checked = true; }
+      lbl.classList.toggle('selected', _mesesSel.has(m));
+      _atualizarLabelMes();
+      render();
+    });
+    lbl.appendChild(cb);
+    lbl.appendChild(document.createTextNode(' ' + monthLabel(m)));
+    cont.appendChild(lbl);
+  });
+  _atualizarLabelMes();
+}
+function _atualizarLabelMes() {
+  const sel = [..._mesesSel].sort();
+  const lbl = document.getElementById('mes-picker-label');
+  if (sel.length === 0) { lbl.textContent = '—'; return; }
+  const all = DATA?.mesesDisponiveis || [];
+  if (sel.length === all.length) { lbl.textContent = 'Todos os meses'; return; }
+  if (sel.length === 1) { lbl.textContent = monthLabel(sel[0]); return; }
+  lbl.textContent = sel.length + ' meses selecionados';
+  // sincroniza checkboxes
+  document.querySelectorAll('#mes-picker-options input[type=checkbox]').forEach(cb => {
+    cb.checked = _mesesSel.has(cb.value);
+    cb.closest('.mes-opt').classList.toggle('selected', _mesesSel.has(cb.value));
+  });
+}
+function selecionarTodosMeses() {
+  (DATA?.mesesDisponiveis||[]).forEach(m => _mesesSel.add(m));
+  _atualizarLabelMes(); render();
+}
+function selecionarUltimoMes() {
+  const meses = [...(DATA?.mesesDisponiveis||[])].sort();
+  _mesesSel.clear();
+  if (meses.length) _mesesSel.add(meses[meses.length-1]);
+  _atualizarLabelMes(); render();
+}
+function limparMeses() {
+  const meses = [...(DATA?.mesesDisponiveis||[])].sort();
+  _mesesSel.clear();
+  if (meses.length) _mesesSel.add(meses[meses.length-1]);
+  _atualizarLabelMes(); render();
+}
+
+/* ═══════════════════════════════════════════════════════
    DADOS: PESSOAL ENRIQUECIDO
 ═══════════════════════════════════════════════════════ */
 function getDetalhe(mes, empresa) {
   if (!DATA.gastosDetalhe || !DATA.gastosDetalhe[mes]) return [];
-  if (empresa === '__ALL__') {
-    return Object.values(DATA.gastosDetalhe[mes]).flat();
-  }
+  if (empresa === '__ALL__') return Object.values(DATA.gastosDetalhe[mes]).flat();
   return DATA.gastosDetalhe[mes][empresa] || [];
 }
 
+/**
+ * Retorna itens de pessoal com encargos e benefícios rateados.
+ *
+ * Lógica de rateio:
+ *  - Todos os encargos e benefícios são lançados sob Administrativo.
+ *  - Calculamos pctAdm = folhaAdm / (folhaAdm + folhaPed) e pctPed = 1 - pctAdm.
+ *  - Cada lançamento de Encargo ou Benefício gera DOIS registros virtuais:
+ *      → um para Administrativo com valor * pctAdm
+ *      → um para Pedagógico   com valor * pctPed
+ *  - O campo `valorOriginal` preserva o valor cheio para conferência.
+ *  - O campo `rateado` = true sinaliza que é item virtual de rateio.
+ */
 function getPessoal(mes, empresas) {
-  // empresas = Set ou array de strings
   const emps = [...empresas];
-  const itens = emps.flatMap(emp => getDetalhe(mes, emp));
-  return itens
+  const brutos = emps.flatMap(emp => getDetalhe(mes, emp));
+  const pessoal = brutos
     .filter(i => norm(i.grupo||'').includes('PESSO'))
     .map(i => {
       const cat = i.categoriaProesc || i.categoria || '';
-      const cl = classificarPessoal(cat);
-      return { ...i, ...cl };
+      const cl  = classificarPessoal(cat);
+      return { ...i, ...cl, anoMesItem: mes };
     });
+
+  // Base para rateio: soma de salários por grupo
+  const folhaAdm = sum(pessoal.filter(i => i.bloco === 'Administrativo' && i.subgrupo === 'Salário'));
+  const folhaPed = sum(pessoal.filter(i => i.bloco === 'Pedagógico'     && i.subgrupo === 'Salário'));
+  const baseFolha = folhaAdm + folhaPed;
+  const pctAdm = baseFolha > 0 ? folhaAdm / baseFolha : 0.5;
+  const pctPed = 1 - pctAdm;
+
+  const resultado = [];
+  pessoal.forEach(i => {
+    const isEncBenef = i.subgrupo === 'Encargos' || i.subgrupo === 'Benefícios';
+    if (!isEncBenef || baseFolha === 0) {
+      resultado.push(i);
+      return;
+    }
+    // Gera dois registros rateados
+    const vAdm = Math.round(i.valor * pctAdm * 100) / 100;
+    const vPed  = Math.round(i.valor * pctPed  * 100) / 100;
+    resultado.push({
+      ...i,
+      bloco: 'Administrativo',
+      valor: vAdm,
+      valorOriginal: i.valor,
+      pctRateio: Math.round(pctAdm * 10000) / 100,
+      rateado: true,
+      rateadoBloco: 'Administrativo'
+    });
+    if (vPed > 0) {
+      resultado.push({
+        ...i,
+        bloco: 'Pedagógico',
+        valor: vPed,
+        valorOriginal: i.valor,
+        pctRateio: Math.round(pctPed * 10000) / 100,
+        rateado: true,
+        rateadoBloco: 'Pedagógico'
+      });
+    }
+  });
+  return resultado;
 }
 
 function getPessoalTodosMeses(empresas) {
@@ -462,14 +621,10 @@ async function init() {
     document.getElementById('data-badge').textContent =
       'Atualizado: ' + new Date(DATA.geradoEm || Date.now()).toLocaleString('pt-BR');
 
-    const selMes = document.getElementById('sel-mes');
-    const meses = [...(DATA.mesesDisponiveis || [])].reverse();
-    meses.forEach(m => {
-      const o = document.createElement('option');
-      o.value = m; o.textContent = monthLabel(m);
-      selMes.appendChild(o);
-    });
-    selMes.addEventListener('change', render);
+    const meses = [...(DATA.mesesDisponiveis || [])].sort();
+    // Seleciona o último mês por padrão
+    if (meses.length) _mesesSel.add(meses[meses.length - 1]);
+    _buildMesPicker(meses);
 
     bar.style.width = '100%';
     setTimeout(() => { bar.style.opacity='0'; }, 400);
@@ -486,11 +641,10 @@ async function init() {
    RENDER PRINCIPAL
 ═══════════════════════════════════════════════════════ */
 function render() {
-  if (!DATA) return;
-  const mes = document.getElementById('sel-mes').value;
-  if (!mes) return;
-
-  const itens = getPessoal(mes, _empresasSel);
+  if (!DATA || _mesesSel.size === 0) return;
+  const mesesAtivos = [..._mesesSel].sort();
+  const itens = mesesAtivos.flatMap(m => getPessoal(m, _empresasSel));
+  // Acrescenta anoMes em cada item (para filtros futuros)
   renderKPIs(itens);
   renderDonut(itens);
   renderTotalLine();
@@ -503,29 +657,39 @@ function render() {
    KPIs
 ═══════════════════════════════════════════════════════ */
 function renderKPIs(itens) {
-  // Folha bruta = Salário (prof+adm) + Estagiários + Pró-labore
-  const isFolha = i =>
-    (i.bloco === 'Professor'      && i.subgrupo === 'Salário') ||
-    (i.bloco === 'Administrativo' && i.subgrupo === 'Salário') ||
-    i.subgrupo === 'Estagiário'   ||
-    i.subgrupo === 'Pró-labore/Retiradas';
+  const folhaAdm  = sum(itens.filter(i => i.bloco === 'Administrativo' && i.subgrupo === 'Salário'));
+  const folhaPed  = sum(itens.filter(i => i.bloco === 'Pedagógico'     && i.subgrupo === 'Salário'));
+  const folhaOut  = sum(itens.filter(i => i.subgrupo === 'Estagiário' || i.subgrupo === 'Pró-labore/Retiradas'));
+  const folha     = folhaAdm + folhaPed + folhaOut;
+  const enc       = sum(itens.filter(i => i.subgrupo === 'Encargos'));
+  const benef     = sum(itens.filter(i => i.subgrupo === 'Benefícios'));
+  const rescisoes = sum(itens.filter(i => i.subgrupo === 'Rescisões'));
 
-  const folha   = sum(itens.filter(isFolha));
-  const benef   = sum(itens.filter(i => i.subgrupo === 'Benefícios'));
-  const enc     = sum(itens.filter(i => i.subgrupo === 'Encargos'));
-  const prof    = sum(itens.filter(i => i.bloco    === 'Professor'));
-  const adm     = sum(itens.filter(i => i.bloco    === 'Administrativo'));
-  const total   = sum(itens);
+  // KPI Outros = Estagiário + Pró-labore + Rescisões + bloco Outros sem folha/enc/benef
+  const outros    = sum(itens.filter(i => i.bloco === 'Outros')) + rescisoes;
+  const total     = sum(itens);
 
-  document.getElementById('kpi-folha').textContent    = fmtK(folha);
-  document.getElementById('kpi-folha-sub').textContent= `Prof + Adm + Estag + Pró-labore`;
-  document.getElementById('kpi-benef').textContent    = fmtK(benef);
-  document.getElementById('kpi-enc').textContent      = fmtK(enc);
-  document.getElementById('kpi-enc-pct').textContent  = folha > 0 ? fmtPct(enc/folha*100) : '—';
-  document.getElementById('kpi-prof').textContent     = fmtK(prof);
-  document.getElementById('kpi-adm').textContent      = fmtK(adm);
-  document.getElementById('kpi-total').textContent    = fmtK(total);
-  document.getElementById('kpi-qtd-sub').textContent  = `${itens.length} lançamentos`;
+  // Composição do sub de Outros para tooltip dinâmico
+  const parcOutros = [];
+  const estag  = sum(itens.filter(i => i.subgrupo === 'Estagiário'));
+  const prolab = sum(itens.filter(i => i.subgrupo === 'Pró-labore/Retiradas'));
+  const outOut = sum(itens.filter(i => i.bloco === 'Outros' && i.subgrupo === 'Outros'));
+  if (estag  > 0) parcOutros.push(`Estag. ${fmtK(estag)}`);
+  if (prolab > 0) parcOutros.push(`Pró-lab. ${fmtK(prolab)}`);
+  if (rescisoes > 0) parcOutros.push(`Rescisões ${fmtK(rescisoes)}`);
+  if (outOut  > 0) parcOutros.push(`Outros ${fmtK(outOut)}`);
+
+  document.getElementById('kpi-folha').textContent      = fmtK(folha);
+  document.getElementById('kpi-folha-sub').textContent  = `Adm ${fmtK(folhaAdm)} · Ped ${fmtK(folhaPed)}`;
+  document.getElementById('kpi-folha-adm').textContent  = fmtK(folhaAdm);
+  document.getElementById('kpi-folha-ped').textContent  = fmtK(folhaPed);
+  document.getElementById('kpi-enc').textContent        = fmtK(enc);
+  document.getElementById('kpi-enc-sub').textContent    = folha > 0 ? `${fmtPct(enc/folha*100)} da folha` : '';
+  document.getElementById('kpi-benef').textContent      = fmtK(benef);
+  document.getElementById('kpi-outros').textContent     = fmtK(outros);
+  document.getElementById('kpi-outros-sub').textContent = parcOutros.join(' · ') || '—';
+  document.getElementById('kpi-total').textContent      = fmtK(total);
+  document.getElementById('kpi-qtd-sub').textContent    = `${itens.length} lançamentos`;
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -534,19 +698,20 @@ function renderKPIs(itens) {
 function renderDonut(itens) {
   // 9 categorias amigáveis
   const cats = [
-    'Folha de Pagamento Professores',
+    'Folha de Pagamento Pedagógico',
     'Folha de Pagamento Administrativo',
     'Folha de Pagamento Estagiário',
     'Pró-labore/Retirada de Sócios',
     'Benefícios Administrativo',
-    'Benefícios Professores',
+    'Benefícios Pedagógico',
     'Encargos Administrativo',
-    'Encargos Professores',
+    'Encargos Pedagógico',
+    'Rescisões e Multas Trabalhistas',
     'Outros'
   ];
   const colors = [
     '#00e5a0','#4f8fff','#c084fc','#ffb547',
-    '#60a5fa','#34d399','#fb923c','#f87171','#6b7280'
+    '#60a5fa','#34d399','#fb923c','#f87171','#e879f9','#6b7280'
   ];
   const vals = cats.map(c => sum(itens.filter(i => i.classificacao === c)));
 
@@ -604,14 +769,15 @@ function renderTotalLine() {
 function renderCompLine() {
   const meses = [...(DATA.mesesDisponiveis||[])].sort();
   const isFolha = i =>
-    (i.bloco === 'Professor'      && i.subgrupo === 'Salário') ||
+    (i.bloco === 'Pedagógico'      && i.subgrupo === 'Salário') ||
     (i.bloco === 'Administrativo' && i.subgrupo === 'Salário') ||
     i.subgrupo === 'Estagiário' || i.subgrupo === 'Pró-labore/Retiradas';
 
   const series = [
     { label:'Folha Bruta',  color:'#4f8fff', fn: i => isFolha(i) },
     { label:'Encargos',     color:'#ffb547', fn: i => i.subgrupo === 'Encargos' },
-    { label:'Benefícios',   color:'#00e5a0', fn: i => i.subgrupo === 'Benefícios' }
+    { label:'Benefícios',   color:'#00e5a0', fn: i => i.subgrupo === 'Benefícios' },
+    { label:'Rescisões',    color:'#e879f9', fn: i => i.subgrupo === 'Rescisões' }
   ];
 
   const datasets = series.map(s => ({
@@ -637,7 +803,7 @@ function renderPerfilBar() {
   const meses = [...(DATA.mesesDisponiveis||[])].sort();
   const datasets = [
     { label:'Administrativo', color:'#4f8fff', bloco:'Administrativo' },
-    { label:'Professor',      color:'#00e5a0', bloco:'Professor' },
+    { label:'Pedagógico',     color:'#00e5a0', bloco:'Pedagógico' },
     { label:'Outros',         color:'#c084fc', bloco:'Outros' }
   ].map(({label,color,bloco}) => ({
     label,
@@ -657,6 +823,7 @@ function renderPerfilBar() {
 /* ═══════════════════════════════════════════════════════
    DRILL-DOWN TABLE
    Hierarquia: Bloco (L0) → Subgrupo (L1) → Categoria (L2) → Lançamentos (L3)
+   Encargos e Benefícios têm valor rateado; col "Vlr. Original" mostra o cheio.
 ═══════════════════════════════════════════════════════ */
 let _open = {};
 
@@ -672,52 +839,56 @@ function toggleGroup(key) {
 function expandAll()  { Object.keys(_open).forEach(k => { if(!_open[k]) toggleGroup(k); }); }
 function collapseAll(){ Object.keys(_open).forEach(k => { if(_open[k])  toggleGroup(k); }); }
 
-function empSum(arr, emp) {
-  return sum(arr.filter(i => i.empresa === emp));
-}
-function empSumSel(arr) {
-  return sum(arr.filter(i => _empresasSel.has(i.empresa)));
+function empSum(arr, emp) { return sum(arr.filter(i => i.empresa === emp)); }
+function empSumSel(arr)   { return sum(arr.filter(i => _empresasSel.has(i.empresa))); }
+
+// Para linhas de subtotal, "Vlr. Original" = soma dos valores originais (não rateados)
+function origSum(arr) {
+  return arr.reduce((a, i) => {
+    // Evita somar duplicado: rateado gera dois registros do mesmo lançamento
+    // Para subtotais, soma valorOriginal só uma vez por registro rateado (bloco Adm)
+    if (i.rateado && i.rateadoBloco !== 'Administrativo') return a;
+    return a + (i.rateado ? (i.valorOriginal || i.valor) : i.valor);
+  }, 0);
 }
 
 function renderDrill(itens) {
   _open = {};
   const tbody = document.getElementById('drill-body');
+  const NCOLS = 8; // Descrição + MD + SEL + SIGMA + Total + %Total + VlrOrig + Qtd
 
   if (!itens.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhum lançamento encontrado.</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="${NCOLS}" class="empty">Nenhum lançamento encontrado.</td></tr>`;
     return;
   }
 
   const totalGeral = sum(itens);
 
-  // Agrupa: bloco → subgrupo → classificacao → lançamentos
   const tree = {};
   itens.forEach(i => {
     const b = i.bloco, sg = i.subgrupo, cl = i.classificacao;
-    if (!tree[b])       tree[b] = {};
-    if (!tree[b][sg])   tree[b][sg] = {};
+    if (!tree[b])         tree[b] = {};
+    if (!tree[b][sg])     tree[b][sg] = {};
     if (!tree[b][sg][cl]) tree[b][sg][cl] = [];
     tree[b][sg][cl].push(i);
   });
 
   const rows = [];
-
-  // Ordem dos blocos
-  const blocosOrdem = ['Administrativo','Professor','Outros'];
-  // Ordem dos subgrupos por bloco
+  const blocosOrdem = ['Administrativo','Pedagógico','Outros'];
   const subgOrdem = {
-    'Administrativo': ['Salário','Encargos','Benefícios'],
-    'Professor':      ['Salário','Encargos','Benefícios'],
+    'Administrativo': ['Salário','Encargos','Benefícios','Rescisões'],
+    'Pedagógico':     ['Salário','Encargos','Benefícios','Rescisões'],
     'Outros':         ['Estagiário','Pró-labore/Retiradas','Outros']
   };
 
   blocosOrdem.forEach(bloco => {
     if (!tree[bloco]) return;
     const blocoItens = Object.values(tree[bloco]).flatMap(sg => Object.values(sg).flat());
-    const bTotal = sum(blocoItens);
-    const bMD = empSum(blocoItens,'MD'), bSEL = empSum(blocoItens,'SEL'), bSIGMA = empSum(blocoItens,'SIGMA');
-    const bKey = `b_${bloco}`;
-    _open[bKey] = false;
+    const bTotal  = sum(blocoItens);
+    const bOrig   = origSum(blocoItens);
+    const bMD     = empSum(blocoItens,'MD'), bSEL = empSum(blocoItens,'SEL'), bSIGMA = empSum(blocoItens,'SIGMA');
+    const bKey    = `b_${bloco}`;
+    _open[bKey]   = false;
 
     rows.push(`<tr class="row-l0">
       <td><span class="toggle-btn" data-toggle="${escH(bKey)}" onclick="toggleGroup('${escH(bKey)}')">${escH(bloco)}</span></td>
@@ -726,34 +897,40 @@ function renderDrill(itens) {
       <td>${_empresasSel.has('SIGMA') ? fmtK(bSIGMA) : '—'}</td>
       <td>${fmtK(bTotal)}</td>
       <td>${fmtPct(totalGeral > 0 ? bTotal/totalGeral*100 : 0)}</td>
+      <td style="color:var(--muted)">${bOrig !== bTotal ? fmtK(bOrig) : '—'}</td>
       <td>${blocoItens.length}</td>
     </tr>`);
 
     const sgs = subgOrdem[bloco] || Object.keys(tree[bloco]);
     sgs.forEach(sg => {
       if (!tree[bloco][sg]) return;
-      const sgItens = Object.values(tree[bloco][sg]).flat();
-      const sgTotal = sum(sgItens);
-      const sgMD = empSum(sgItens,'MD'), sgSEL = empSum(sgItens,'SEL'), sgSIGMA = empSum(sgItens,'SIGMA');
-      const sgKey = `sg_${bloco}_${sg}`;
-      _open[sgKey] = false;
+      const sgItens  = Object.values(tree[bloco][sg]).flat();
+      const sgTotal  = sum(sgItens);
+      const sgOrig   = origSum(sgItens);
+      const sgMD     = empSum(sgItens,'MD'), sgSEL = empSum(sgItens,'SEL'), sgSIGMA = empSum(sgItens,'SIGMA');
+      const sgKey    = `sg_${bloco}_${sg}`;
+      _open[sgKey]   = false;
+      const isRateado = sg === 'Encargos' || sg === 'Benefícios';
+      const rateioNote = isRateado ? ` <span class="badge-rateio" title="Valores rateados prop. ao salário">rateado</span>` : '';
 
       rows.push(`<tr class="row-l1" data-parent="${escH(bKey)}" style="display:none">
-        <td><span class="toggle-btn" data-toggle="${escH(sgKey)}" onclick="toggleGroup('${escH(sgKey)}')">${escH(sg)}</span></td>
+        <td><span class="toggle-btn" data-toggle="${escH(sgKey)}" onclick="toggleGroup('${escH(sgKey)}')">${escH(sg)}${rateioNote}</span></td>
         <td>${_empresasSel.has('MD')    ? fmtK(sgMD)    : '—'}</td>
         <td>${_empresasSel.has('SEL')   ? fmtK(sgSEL)   : '—'}</td>
         <td>${_empresasSel.has('SIGMA') ? fmtK(sgSIGMA) : '—'}</td>
         <td>${fmtK(sgTotal)}</td>
         <td>${fmtPct(totalGeral > 0 ? sgTotal/totalGeral*100 : 0)}</td>
+        <td style="color:var(--muted)">${isRateado ? fmtK(sgOrig) : '—'}</td>
         <td>${sgItens.length}</td>
       </tr>`);
 
       Object.keys(tree[bloco][sg]).sort().forEach(cl => {
-        const clItens = tree[bloco][sg][cl];
-        const clTotal = sum(clItens);
-        const clMD = empSum(clItens,'MD'), clSEL = empSum(clItens,'SEL'), clSIGMA = empSum(clItens,'SIGMA');
-        const clKey = `cl_${bloco}_${sg}_${cl}`;
-        _open[clKey] = false;
+        const clItens  = tree[bloco][sg][cl];
+        const clTotal  = sum(clItens);
+        const clOrig   = origSum(clItens);
+        const clMD     = empSum(clItens,'MD'), clSEL = empSum(clItens,'SEL'), clSIGMA = empSum(clItens,'SIGMA');
+        const clKey    = `cl_${bloco}_${sg}_${cl}`;
+        _open[clKey]   = false;
 
         rows.push(`<tr class="row-l2" data-parent="${escH(sgKey)}" style="display:none">
           <td><span class="toggle-btn" data-toggle="${escH(clKey)}" onclick="toggleGroup('${escH(clKey)}')">${escH(cl)}</span></td>
@@ -762,18 +939,29 @@ function renderDrill(itens) {
           <td>${_empresasSel.has('SIGMA') ? fmtK(clSIGMA) : '—'}</td>
           <td>${fmtK(clTotal)}</td>
           <td>${fmtPct(totalGeral > 0 ? clTotal/totalGeral*100 : 0)}</td>
+          <td style="color:var(--muted)">${isRateado ? fmtK(clOrig) : '—'}</td>
           <td>${clItens.length}</td>
         </tr>`);
 
         clItens.forEach(i => {
           const badge = `<span class="emp-badge emp-${escH(i.empresa)}">${escH(i.empresa)}</span>`;
+          // Para itens rateados: mostra valor rateado E valor original para conferência
+          let rateioInfo = '';
+          if (i.rateado) {
+            rateioInfo = ` <span class="badge-rateio" title="Rateio ${fmtPct(i.pctRateio)} do lançamento">${fmtPct(i.pctRateio)}</span>`;
+          }
+          const valorOrigCell = i.rateado
+            ? `<span style="color:var(--muted)">${fmt(i.valorOriginal)}</span>`
+            : '—';
+
           rows.push(`<tr class="row-l3" data-parent="${escH(clKey)}" style="display:none">
-            <td>${escH(i.data||'')} · ${badge} · ${escH(i.documento||'')} · ${escH(i.cliente||'')} · ${escH(i.descricao||'')}</td>
+            <td>${escH(i.data||'')} · ${badge} · ${escH(i.documento||'')} · ${escH(i.cliente||'')} · ${escH(i.descricao||'')}${rateioInfo}</td>
             <td>${i.empresa==='MD'    ? fmt(i.valor) : ''}</td>
             <td>${i.empresa==='SEL'   ? fmt(i.valor) : ''}</td>
             <td>${i.empresa==='SIGMA' ? fmt(i.valor) : ''}</td>
             <td>${fmt(i.valor)}</td>
             <td>${fmtPct(totalGeral > 0 ? i.valor/totalGeral*100 : 0)}</td>
+            <td>${valorOrigCell}</td>
             <td>1</td>
           </tr>`);
         });
@@ -781,7 +969,6 @@ function renderDrill(itens) {
     });
   });
 
-  // Linha total
   const tMD = empSum(itens,'MD'), tSEL = empSum(itens,'SEL'), tSIGMA = empSum(itens,'SIGMA');
   rows.push(`<tr class="row-total">
     <td>TOTAL</td>
@@ -790,6 +977,7 @@ function renderDrill(itens) {
     <td>${_empresasSel.has('SIGMA') ? fmtK(tSIGMA) : '—'}</td>
     <td>${fmtK(totalGeral)}</td>
     <td>100,00%</td>
+    <td>—</td>
     <td>${itens.length}</td>
   </tr>`);
 
@@ -801,19 +989,22 @@ function renderDrill(itens) {
 ═══════════════════════════════════════════════════════ */
 function exportCSV() {
   if (!DATA) return;
-  const meses = [...(DATA.mesesDisponiveis||[])].sort();
+  const meses = [..._mesesSel].sort();
   const cols = ['AnoMes','Data','Empresa','Bloco','Subgrupo','Classificacao','Categoria_Proesc',
-                'Cliente','Documento','Descricao','Forma_Pagamento','Valor'];
+                'Cliente','Documento','Descricao','Forma_Pagamento','Valor','Valor_Original','Rateado','Pct_Rateio'];
   const rows = [cols];
   meses.forEach(m => {
     getPessoal(m, _empresasSel).forEach(i => {
       rows.push([
-        i.anoMes||m, i.data||'', i.empresa||'',
+        i.anoMesItem||m, i.data||'', i.empresa||'',
         i.bloco||'', i.subgrupo||'', i.classificacao||'',
         i.categoriaProesc||i.categoria||'',
         i.cliente||'', i.documento||'', i.descricao||'',
         i.formaPagamento||'',
-        String(i.valor||0).replace('.',',')
+        String(i.valor||0).replace('.',','),
+        i.rateado ? String(i.valorOriginal||0).replace('.',',') : '',
+        i.rateado ? 'Sim' : 'Não',
+        i.rateado ? String(i.pctRateio||0).replace('.',',') : ''
       ]);
     });
   });
@@ -835,20 +1026,30 @@ function closePdfModal() { document.getElementById('pdf-overlay').classList.remo
 function exportPDF() {
   closePdfModal();
   if (!DATA) return;
-  const mes = document.getElementById('sel-mes').value;
-  const itens = getPessoal(mes, _empresasSel);
+  const mesesAtivos = [..._mesesSel].sort();
+  const itens = mesesAtivos.flatMap(m => getPessoal(m, _empresasSel));
 
-  const isFolha = i =>
-    (i.bloco === 'Professor'      && i.subgrupo === 'Salário') ||
-    (i.bloco === 'Administrativo' && i.subgrupo === 'Salário') ||
-    i.subgrupo === 'Estagiário' || i.subgrupo === 'Pró-labore/Retiradas';
+  // ── Cálculos idênticos aos KPIs da página ─────────────
+  const folhaAdm  = sum(itens.filter(i => i.bloco === 'Administrativo' && i.subgrupo === 'Salário'));
+  const folhaPed  = sum(itens.filter(i => i.bloco === 'Pedagógico'     && i.subgrupo === 'Salário'));
+  const folhaOut  = sum(itens.filter(i => i.subgrupo === 'Estagiário' || i.subgrupo === 'Pró-labore/Retiradas'));
+  const folha     = folhaAdm + folhaPed + folhaOut;
+  const enc       = sum(itens.filter(i => i.subgrupo === 'Encargos'));
+  const benef     = sum(itens.filter(i => i.subgrupo === 'Benefícios'));
+  const rescisoes = sum(itens.filter(i => i.subgrupo === 'Rescisões'));
+  const outros    = sum(itens.filter(i => i.bloco === 'Outros')) + rescisoes;
+  const total     = sum(itens);
 
-  const folha  = sum(itens.filter(isFolha));
-  const benef  = sum(itens.filter(i => i.subgrupo === 'Benefícios'));
-  const enc    = sum(itens.filter(i => i.subgrupo === 'Encargos'));
-  const prof   = sum(itens.filter(i => i.bloco === 'Professor'));
-  const adm    = sum(itens.filter(i => i.bloco === 'Administrativo'));
-  const total  = sum(itens);
+  // sub-labels de Outros
+  const estag  = sum(itens.filter(i => i.subgrupo === 'Estagiário'));
+  const prolab = sum(itens.filter(i => i.subgrupo === 'Pró-labore/Retiradas'));
+  const outOut = sum(itens.filter(i => i.bloco === 'Outros' && i.subgrupo === 'Outros'));
+  const parcOutros = [];
+  if (estag     > 0) parcOutros.push(`Estag. ${fmtK(estag)}`);
+  if (prolab    > 0) parcOutros.push(`Pró-lab. ${fmtK(prolab)}`);
+  if (rescisoes > 0) parcOutros.push(`Rescisões ${fmtK(rescisoes)}`);
+  if (outOut    > 0) parcOutros.push(`Outros ${fmtK(outOut)}`);
+  const outrosSub = parcOutros.join(' · ') || '—';
 
   // ── Resumo por bloco/subgrupo ──────────────────────────
   const treeRes = {};
@@ -858,7 +1059,7 @@ function exportPDF() {
     treeRes[i.bloco][i.subgrupo] += i.valor||0;
   });
   let resumo = '';
-  ['Administrativo','Professor','Outros'].forEach(b => {
+  ['Administrativo','Pedagógico','Outros'].forEach(b => {
     if (!treeRes[b]) return;
     const bTotal = Object.values(treeRes[b]).reduce((a,v) => a+v, 0);
     resumo += `<tr style="background:#e8e8e8;font-weight:700"><td colspan="2">${escH(b)}</td><td style="text-align:right">${fmt(bTotal)}</td><td style="text-align:right">${fmtPct(total>0?bTotal/total*100:0)}</td></tr>`;
@@ -868,8 +1069,8 @@ function exportPDF() {
   });
 
   // ── Detalhe: ordenar por Bloco → Subgrupo → Data ───────
-  const blocoOrd = {Administrativo:0, Professor:1, Outros:2};
-  const subgOrd  = {Salário:0, Encargos:1, Benefícios:2, Estagiário:0, 'Pró-labore/Retiradas':1, Outros:2};
+  const blocoOrd = {Administrativo:0, Pedagógico:1, Outros:2};
+  const subgOrd  = {Salário:0, Encargos:1, Benefícios:2, Rescisões:3, Estagiário:0, 'Pró-labore/Retiradas':1, Outros:2};
   const sorted = [...itens].sort((a,b) => {
     const bo = (blocoOrd[a.bloco]??9) - (blocoOrd[b.bloco]??9);
     if (bo !== 0) return bo;
@@ -893,16 +1094,18 @@ function exportPDF() {
   });
 
   const empsLabel = [..._empresasSel].join(', ');
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pessoal — ${escH(empsLabel)} — ${monthLabel(mes)}</title>
+  const mesLabel  = mesesAtivos.length === 1 ? monthLabel(mesesAtivos[0]) : mesesAtivos.map(monthLabel).join(', ');
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pessoal — ${escH(empsLabel)} — ${escH(mesLabel)}</title>
 <style>
 body{font-family:Arial,sans-serif;font-size:10px;color:#111;margin:16px}
 h1{font-size:15px;margin-bottom:3px}
 h2{font-size:11px;margin:14px 0 5px;color:#333;border-bottom:1px solid #ccc;padding-bottom:3px}
 p{font-size:10px;margin-bottom:8px;color:#555}
 .kgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0}
-.kcard{background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:7px;text-align:center}
+.kcard{background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:7px}
 .klbl{font-size:8px;color:#777;text-transform:uppercase;margin-bottom:2px}
 .kval{font-size:12px;font-weight:700}
+.ksub{font-size:7.5px;color:#888;margin-top:2px}
 table{width:100%;border-collapse:collapse;font-size:9px}
 th{background:#2c2c2c;color:#fff;padding:5px 7px;text-align:left;font-size:9px}
 td{padding:3px 7px;border-bottom:1px solid #e8e8e8;vertical-align:middle}
@@ -916,16 +1119,15 @@ tr:hover td{background:#f5f9ff}
 }
 </style></head><body>
 <h1>Relatório de Pessoal</h1>
-<p><b>Empresas:</b> ${escH(empsLabel)} &nbsp;&nbsp; <b>Mês:</b> ${monthLabel(mes)} &nbsp;&nbsp; <b>Gerado em:</b> ${new Date().toLocaleString('pt-BR')}</p>
+<p><b>Empresas:</b> ${escH(empsLabel)} &nbsp;&nbsp; <b>Período:</b> ${escH(mesLabel)} &nbsp;&nbsp; <b>Gerado em:</b> ${new Date().toLocaleString('pt-BR')}</p>
 <div class="kgrid">
-  <div class="kcard"><div class="klbl">Folha Bruta</div><div class="kval">${fmtK(folha)}</div></div>
+  <div class="kcard"><div class="klbl">Folha Bruta</div><div class="kval">${fmtK(folha)}</div><div class="ksub">Adm ${fmtK(folhaAdm)} · Ped ${fmtK(folhaPed)}</div></div>
+  <div class="kcard"><div class="klbl">Folha Administrativo</div><div class="kval">${fmtK(folhaAdm)}</div></div>
+  <div class="kcard"><div class="klbl">Folha Pedagógico</div><div class="kval">${fmtK(folhaPed)}</div></div>
+  <div class="kcard"><div class="klbl">Encargos INSS/FGTS</div><div class="kval">${fmtK(enc)}</div><div class="ksub">${folha > 0 ? fmtPct(enc/folha*100) + ' da folha' : ''}</div></div>
   <div class="kcard"><div class="klbl">Benefícios</div><div class="kval">${fmtK(benef)}</div></div>
-  <div class="kcard"><div class="klbl">Encargos</div><div class="kval">${fmtK(enc)}</div></div>
-  <div class="kcard"><div class="klbl">Enc / Folha</div><div class="kval">${fmtPct(folha>0?enc/folha*100:0)}</div></div>
-  <div class="kcard"><div class="klbl">Professores</div><div class="kval">${fmtK(prof)}</div></div>
-  <div class="kcard"><div class="klbl">Administrativo</div><div class="kval">${fmtK(adm)}</div></div>
-  <div class="kcard"><div class="klbl">Total Pessoal</div><div class="kval">${fmtK(total)}</div></div>
-  <div class="kcard"><div class="klbl">Lançamentos</div><div class="kval">${itens.length}</div></div>
+  <div class="kcard"><div class="klbl">Outros</div><div class="kval">${fmtK(outros)}</div><div class="ksub">${escH(outrosSub)}</div></div>
+  <div class="kcard"><div class="klbl">Total Geral Pessoal</div><div class="kval">${fmtK(total)}</div><div class="ksub">${itens.length} lançamentos</div></div>
 </div>
 <h2>Resumo por Bloco → Subgrupo</h2>
 <table><thead><tr><th>Bloco</th><th>Subgrupo</th><th>Valor</th><th>%</th></tr></thead><tbody>${resumo}</tbody></table>
