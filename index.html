@@ -231,6 +231,77 @@
     flex-wrap: wrap; gap: .5rem;
   }
 
+  /* ── SEÇÃO DOCUMENTOS ── */
+  .doc-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  @media (max-width: 1100px) { .doc-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px)  { .doc-grid { grid-template-columns: 1fr; } }
+
+  .doc-card {
+    position: relative; overflow: hidden;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.4rem 1.6rem 1.2rem;
+    text-decoration: none; color: inherit;
+    display: flex; flex-direction: column; gap: .45rem;
+    cursor: pointer;
+    transition: transform .2s ease, border-color .2s ease, box-shadow .25s ease;
+  }
+  .doc-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--dc, #8892a0);
+    border-radius: 14px 14px 0 0;
+    opacity: .5; transition: opacity .2s;
+  }
+  .doc-card:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--dc, #8892a0) 40%, var(--border));
+    box-shadow: 0 12px 36px rgba(0,0,0,.45);
+  }
+  .doc-card:hover::before { opacity: 1; }
+
+  .doc-badge {
+    display: inline-flex; align-items: center; gap: .3rem;
+    font-size: .58rem; font-family: var(--font-m); letter-spacing: .08em;
+    text-transform: uppercase; font-weight: 600;
+    padding: .2rem .5rem; border-radius: 4px;
+    width: fit-content;
+  }
+  .doc-badge.docx { background: rgba(79,143,255,.12); color: #4f8fff; border: 1px solid rgba(79,143,255,.25); }
+  .doc-badge.xlsx { background: rgba(0,229,160,.12); color: #00e5a0; border: 1px solid rgba(0,229,160,.25); }
+  .doc-badge.pdf  { background: rgba(248,113,113,.12); color: #f87171; border: 1px solid rgba(248,113,113,.25); }
+
+  .doc-title { font-size: .9rem; font-weight: 700; color: var(--text); line-height: 1.3; }
+  .doc-desc  { font-size: .73rem; color: var(--muted2); line-height: 1.5; flex: 1; }
+
+  .doc-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: .4rem; padding-top: .65rem;
+    border-top: 1px solid var(--border);
+  }
+  .doc-size { font-size: .62rem; font-family: var(--font-m); color: var(--muted); }
+  .doc-dl-btn {
+    display: flex; align-items: center; gap: .35rem;
+    font-size: .65rem; font-family: var(--font-m); letter-spacing: .05em;
+    text-transform: uppercase; font-weight: 500;
+    color: var(--dc, #8892a0);
+    background: color-mix(in srgb, var(--dc, #8892a0) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--dc, #8892a0) 25%, transparent);
+    border-radius: 6px; padding: .28rem .65rem;
+    cursor: pointer; text-decoration: none;
+    transition: background .2s, border-color .2s;
+  }
+  .doc-dl-btn:hover {
+    background: color-mix(in srgb, var(--dc, #8892a0) 16%, transparent);
+    border-color: color-mix(in srgb, var(--dc, #8892a0) 50%, transparent);
+  }
+
   @media (max-width: 640px) {
     header, main, footer { padding: 1.5rem; }
     .status-bar { padding: .6rem 1.5rem; }
@@ -375,6 +446,43 @@
     </a>
 
   </div>
+  <!-- ── SEÇÃO DOCUMENTOS ── -->
+  <div class="section-label" style="margin-top:2rem">Documentos e manuais</div>
+
+  <div class="doc-grid">
+
+    <div class="doc-card" style="--dc:#4f8fff" onclick="dlDoc('POP_Atualizacao_BI_Einstein.docx')">
+      <span class="doc-badge docx">⬇ DOCX</span>
+      <div class="doc-title">POP — Atualização do BI</div>
+      <div class="doc-desc">Procedimento Operacional Padrão para o Contas a Pagar: exportação de extratos, parcelas, Proesc Pagas e atualização dos painéis. Inclui checklist mensal.</div>
+      <div class="doc-footer">
+        <span class="doc-size">Word · .docx</span>
+        <a class="doc-dl-btn" href="POP_Atualizacao_BI_Einstein.docx" download>↓ Baixar</a>
+      </div>
+    </div>
+
+    <div class="doc-card" style="--dc:#00e5a0" onclick="dlDoc('Guia_Lancamentos_PROESC_2026.xlsx')">
+      <span class="doc-badge xlsx">⬇ XLSX</span>
+      <div class="doc-title">Guia de Lançamentos Proesc 2026</div>
+      <div class="doc-desc">Referência de categorias, grupos e tipos de débito utilizados no Proesc. Base para classificação correta dos lançamentos na DRE e Gastos.</div>
+      <div class="doc-footer">
+        <span class="doc-size">Excel · .xlsx</span>
+        <a class="doc-dl-btn" href="Guia_Lancamentos_PROESC_2026.xlsx" download>↓ Baixar</a>
+      </div>
+    </div>
+
+    <div class="doc-card" style="--dc:#a78bfa" onclick="dlDoc('classificacao_funcionarios_022026.xlsx')">
+      <span class="doc-badge xlsx">⬇ XLSX</span>
+      <div class="doc-title">Classificação de Funcionários 02/2026</div>
+      <div class="doc-desc">Mapeamento dos funcionários por perfil (professor, administrativo, operacional) e empresa. Utilizado como base para a análise de Pessoal.</div>
+      <div class="doc-footer">
+        <span class="doc-size">Excel · .xlsx</span>
+        <a class="doc-dl-btn" href="classificacao_funcionarios_022026.xlsx" download>↓ Baixar</a>
+      </div>
+    </div>
+
+  </div>
+
 </main>
 
 <footer>
@@ -385,7 +493,12 @@
 <div id="toast"></div>
 
 <script>
-// ─── CONFIGURAÇÃO ────────────────────────────────────────────────
+// ─── DOWNLOAD DE DOCUMENTOS ──────────────────────────────────────
+function dlDoc(filename) {
+  // Dispara o download apenas se o clique não veio do botão filho
+  // (o botão <a download> já cuida de si mesmo)
+}
+
 const DRIVE_FILE_ID = '1uHgfvF8CU2qJSbYjv_MtmgRxJFJzJR-Z';
 
 // Cole aqui a URL do Web App após publicar no Apps Script
