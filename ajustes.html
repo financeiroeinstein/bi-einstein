@@ -283,6 +283,45 @@
   .tip-bubble strong { color: #e8eaf0; font-weight: 600; display: block; margin-bottom: .25rem; font-size: .76rem; }
   .tip-bubble .tip-meta { color: #6b7280; font-size: .68rem; margin-top: .3rem; border-top: 1px solid #252b3b; padding-top: .3rem; }
 
+
+  /* ── AJUSTE MANUAL DE CLASSIFICAÇÃO ─────────────── */
+  .tipo-badge.tb-edit { cursor: pointer; transition: filter .15s, outline-color .15s; outline: 1px dashed transparent; outline-offset: 2px; }
+  .tipo-badge.tb-edit:hover { filter: brightness(1.35); outline-color: currentColor; }
+  .tipo-badge.tb-manual { box-shadow: inset 0 0 0 1px currentColor; }
+  .tb-pend { color: var(--warn); font-weight: 700; margin-left: .3rem; }
+  .aj-banner { display:none; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;
+    background: rgba(255,181,71,.08); border:1px solid rgba(255,181,71,.35); color: var(--warn);
+    border-radius: 10px; padding: .7rem 1rem; margin-bottom: .9rem; font-size: .78rem; }
+  .aj-banner.show { display:flex; }
+  .aj-banner .aj-sub { color: var(--muted); font-size: .7rem; margin-top: .2rem; }
+  .aj-btn { background: var(--warn); color: #111; border: 0; border-radius: 7px; padding: .45rem .9rem;
+    font-family: var(--font-h); font-weight: 700; font-size: .74rem; cursor: pointer; }
+  .aj-btn:disabled { opacity: .5; cursor: wait; }
+  .aj-btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); font-weight: 600; }
+  .aj-btn.danger { background: transparent; color: var(--red); border: 1px solid rgba(248,113,113,.4); }
+  .aj-btn.primary { background: var(--accent); color: #0d0f14; }
+  .export-btn.on { border-color: var(--warn); color: var(--warn); }
+  .aj-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items: center; justify-content: center; z-index: 500; padding: 1rem; }
+  .aj-overlay.show { display: flex; }
+  .aj-modal { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; width: 100%; max-width: 560px; padding: 1.4rem 1.5rem; max-height: 92vh; overflow-y: auto; }
+  .aj-modal h3 { font-size: .9rem; letter-spacing: .07em; text-transform: uppercase; margin-bottom: 1rem; }
+  .aj-info { display: grid; grid-template-columns: 100px 1fr; gap: .35rem .75rem; font-size: .76rem; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 8px; padding: .75rem .9rem; margin-bottom: 1rem; }
+  .aj-info dt { color: var(--muted); text-transform: uppercase; font-size: .6rem; letter-spacing: .08em; padding-top: .18rem; }
+  .aj-info dd { font-family: var(--font-m); word-break: break-word; }
+  .aj-field { margin-bottom: .85rem; }
+  .aj-field label { display:block; font-size: .62rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: .35rem; }
+  .aj-tipos { display: grid; grid-template-columns: 1fr 1fr; gap: .45rem; }
+  .aj-tipo { border: 1px solid var(--border); background: var(--surface2); color: var(--text); border-radius: 8px; padding: .5rem .6rem;
+    font-family: var(--font-h); font-size: .76rem; cursor: pointer; text-align: left; }
+  .aj-tipo.sel { border-color: var(--accent); background: rgba(0,229,160,.1); color: var(--accent); }
+  .aj-tipo small { display:block; color: var(--muted); font-size: .6rem; margin-top: .1rem; }
+  .aj-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 7px;
+    padding: .5rem .7rem; font-family: var(--font-h); font-size: .8rem; }
+  textarea.aj-input { min-height: 64px; resize: vertical; }
+  .aj-warn { font-size: .7rem; color: var(--warn); margin-top: .4rem; display: none; }
+  .aj-erro { font-size: .74rem; color: var(--red); margin-bottom: .6rem; min-height: 1em; }
+  .aj-actions { display: flex; justify-content: space-between; gap: .5rem; margin-top: .4rem; flex-wrap: wrap; }
 </style>
 </head>
 <body>
@@ -387,7 +426,11 @@
         </div>
       </div>
     </div>
+    <div class="aj-banner" id="ajBanner"></div>
     <div style="display:flex;justify-content:flex-end;gap:.5rem;margin-bottom:.75rem">
+      <button class="export-btn" id="btnSoManuais" onclick="toggleSoManuais()" title="Exibir apenas lançamentos com classificação alterada manualmente">
+        ✎ Só ajustados (<span id="cntManuais">0</span>)
+      </button>
       <button class="export-btn" onclick="exportarExcel()" title="Exportar todos os registros filtrados para Excel (.xls)">
         📄 Excel
       </button>
@@ -399,6 +442,34 @@
     <div class="pagination" id="tablePag"></div>
   </div>
 
+</div>
+
+<div class="aj-overlay" id="ajOverlay" onclick="if(event.target===this)fecharAjuste()">
+  <div class="aj-modal">
+    <h3>Reclassificar lançamento</h3>
+    <dl class="aj-info" id="ajInfo"></dl>
+    <div class="aj-field">
+      <label>Nova classificação</label>
+      <div class="aj-tipos" id="ajTipos"></div>
+      <div class="aj-warn" id="ajWarnAF">⚠ Entrar/sair de Aplicação Financeira também altera o saldo de <b>Investimentos</b> (Painel/Planejamento).</div>
+    </div>
+    <div class="aj-field">
+      <label>Motivo (obrigatório — fica registrado na auditoria)</label>
+      <textarea class="aj-input" id="ajMotivo" placeholder="Ex.: resgate de consórcio lançado como PIX; aporte de sócio…"></textarea>
+    </div>
+    <div class="aj-field" id="ajPinWrap">
+      <label>PIN de ajuste</label>
+      <input class="aj-input" id="ajPin" type="password" autocomplete="off" placeholder="PIN definido no Apps Script">
+    </div>
+    <div class="aj-erro" id="ajErro"></div>
+    <div class="aj-actions">
+      <button class="aj-btn danger" id="ajBtnRemover" onclick="removerAjuste()">↺ Voltar ao automático</button>
+      <div style="display:flex;gap:.5rem;margin-left:auto">
+        <button class="aj-btn ghost" onclick="fecharAjuste()">Cancelar</button>
+        <button class="aj-btn primary" id="ajBtnSalvar" onclick="salvarAjuste()">Salvar</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -577,7 +648,8 @@ function getLancamentosFiltrados() {
     // Filtro de sinal por tipo (chips do sumário)
     const sf = sinalFiltro[l.tipo];
     const sinalOk = !sf || (sf === 'pos' ? l.valor > 0 : l.valor < 0);
-    return mesOk && empOk && bcOk && tipoOk && buscaOk && sinalOk && sinalGlobalOk;
+    const manualOk = !soManuais || l.manual || l.pendente;
+    return mesOk && empOk && bcOk && tipoOk && buscaOk && sinalOk && sinalGlobalOk && manualOk;
   });
 }
 
@@ -589,7 +661,20 @@ function renderKPIs() {
     : dadosGlobais.mesesDisponiveis;
 
   let entCaixa=0, saiCaixa=0, entOp=0, saiOp=0, ti=0, ic=0, af=0;
-  for (const mes of mesesAtivos) {
+  const lancs = dadosGlobais._lancamentosCaixa;
+  if (lancs && lancs.length) {
+    // Mesma lógica do calcularKPIs (Apps Script), sobre os lançamentos já com ajustes manuais
+    for (const l of lancs) {
+      if (!mesesAtivos.includes((l.data||'').substring(0,7))) continue;
+      if (!filtros.empresas.includes(l.empresa) || !filtros.bancos.includes(l.banco)) continue;
+      const v = l.valor||0;
+      if (v > 0) entCaixa += v; else saiCaixa += v;
+      if (l.tipo === 'Operacional') { if (v > 0) entOp += v; else saiOp += v; }
+      else if (l.tipo === 'Transferência Interna') ti += v;
+      else if (l.tipo === 'Intercompany') ic += v;
+      else if (l.tipo === 'Aplicação Financeira') af += v;
+    }
+  } else for (const mes of mesesAtivos) {
     const km = dadosGlobais.kpisPorMesEmpresaBanco?.[mes];
     if (!km) continue;
     for (const emp of filtros.empresas) {
@@ -753,7 +838,7 @@ function renderTable() {
       <td>${fmtDate(l.data)}</td>
       <td>${empDot}${l.empresa}</td>
       <td><span style="font-size:.7rem;color:var(--muted)">${l.banco}</span></td>
-      <td><span class="tipo-badge ${tipoCss}">${l.tipo}</span></td>
+      <td>${badgeTipo(l, tipoCss)}</td>
       <td style="max-width:320px;overflow:hidden;text-overflow:ellipsis;font-family:var(--font-h);font-size:.76rem" title="${(l.historico||'').replace(/"/g,"'")}">
         ${l.historico||'—'}
       </td>
@@ -828,7 +913,9 @@ async function carregarDados() {
     document.getElementById('lastUpdate').textContent =
       'Atualizado em '+dt.toLocaleDateString('pt-BR')+' às '+dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
     buildMenuMes(dadosGlobais.mesesDisponiveis);
+    prepararLancamentos();
     render();
+    carregarAjustesServidor(); // assíncrono: aplica ajustes gravados após a última geração do JSON
   } catch(err) {
     const msg = `<div class="error-msg">Erro ao carregar dados: ${err.message}</div>`;
     document.getElementById('kpiStrip').innerHTML = msg;
@@ -851,7 +938,7 @@ function exportarExcel() {
   const cell  = (v, t='String') => `<Cell><Data ss:Type="${t}">${esc(v)}</Data></Cell>`;
   const cellN = v => `<Cell><Data ss:Type="Number">${v}</Data></Cell>`;
 
-  const header = ['Data','Empresa','Banco','Tipo','Histórico','Nome/Razão','Documento','Valor (R$)'];
+  const header = ['Data','Empresa','Banco','Tipo','Tipo Automático','Ajuste Manual','Motivo do Ajuste','Histórico','Nome/Razão','Documento','Valor (R$)'];
   const hRow   = '<Row>' + header.map(h => cell(h)).join('') + '</Row>';
 
   const dataRows = itens.map(l => '<Row>' + [
@@ -859,6 +946,9 @@ function exportarExcel() {
     cell(l.empresa || ''),
     cell(l.banco || ''),
     cell(l.tipo || ''),
+    cell(l.tipoAuto || l.tipo || ''),
+    cell(l.manual ? (l.pendente ? 'Sim (pendente)' : 'Sim') : (l.pendente ? 'Removido (pendente)' : 'Não')),
+    cell(l.motivoAjuste || ''),
     cell(l.historico || ''),
     cell(l.nomeRS || ''),
     cell(l.documento || ''),
@@ -867,7 +957,7 @@ function exportarExcel() {
 
   const total = itens.reduce((s,l)=>s+l.valor,0);
   const totalRow = '<Row>' + [
-    cell('TOTAL'),cell(''),cell(''),cell(''),cell(''),cell(''),cell(''),
+    cell('TOTAL'),cell(''),cell(''),cell(''),cell(''),cell(''),cell(''),cell(''),cell(''),cell(''),
     cellN(total.toFixed(2))
   ].join('') + '</Row>';
 
@@ -999,6 +1089,247 @@ function exportarPDF() {
   w.document.write(html);
   w.document.close();
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AJUSTES MANUAIS DE CLASSIFICAÇÃO
+// Persistência: planilha BI_Einstein_Ajustes_Manuais (via doPost do Apps Script)
+// Efeito: esta página reflete na hora; as demais após o reprocessamento do JSON
+// ═══════════════════════════════════════════════════════════════════════════
+const _AS_EXEC  = _AS_URL.split('?')[0];
+const _PIN_KEY  = 'bi_einstein_ajuste_pin';
+const TIPOS_AJ  = ['Operacional','Transferência Interna','Intercompany','Aplicação Financeira'];
+const TIPO_DESC = {
+  'Operacional':           'Entra no resultado operacional',
+  'Transferência Interna': 'Entre contas da mesma empresa',
+  'Intercompany':          'Entre MD / SEL / SIGMA',
+  'Aplicação Financeira':  'Aplicação / resgate'
+};
+let soManuais = false;
+let ajustesServidor = null;   // id → ajuste ativo na planilha
+let _lancPorId = {};
+let _ajAtual = null, _ajTipoSel = null;
+let _suportaAjuste = false;
+
+function _escHtml(v) { return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+async function _postAS(payload) {
+  // body string → Content-Type text/plain → requisição simples (sem preflight CORS)
+  const r = await fetch(_AS_EXEC, { method: 'POST', body: JSON.stringify(payload) });
+  return await r.json();
+}
+
+// Guarda o estado "como veio no JSON" para detectar o que está pendente de reprocessamento
+function prepararLancamentos() {
+  const lancs = dadosGlobais._lancamentosCaixa || [];
+  _suportaAjuste = lancs.length > 0 && lancs.every(l => l.id);
+  _lancPorId = {};
+  lancs.forEach(l => {
+    if (l.tipoAuto === undefined) l.tipoAuto = l.tipo;
+    l.manual       = !!l.manual;
+    l.motivoAjuste = l.motivoAjuste || '';
+    l._tipoJSON    = l.tipo;
+    l._manualJSON  = l.manual;
+    l.pendente     = false;
+    if (l.id) _lancPorId[l.id] = l;
+  });
+}
+
+// Se a listagem do servidor falhou, parte do que já veio aplicado no JSON
+function _garantirMapaAjustes() {
+  if (ajustesServidor) return;
+  ajustesServidor = {};
+  (dadosGlobais._lancamentosCaixa || []).forEach(l => {
+    if (l.id && l._manualJSON) ajustesServidor[l.id] = { id: l.id, tipoManual: l._tipoJSON, motivo: l.motivoAjuste };
+  });
+}
+
+async function carregarAjustesServidor() {
+  if (!_suportaAjuste) { renderBanner(); return; }
+  try {
+    const j = await _postAS({ action: 'listarAjustes' });
+    if (!j.ok) throw new Error(j.erro || 'falha');
+    ajustesServidor = {};
+    (j.ajustes || []).forEach(a => { ajustesServidor[a.id] = a; });
+    sincronizarAjustes();
+    render();
+  } catch (e) {
+    console.warn('Ajustes: não foi possível listar do servidor →', e.message);
+    renderBanner('Não foi possível consultar os ajustes gravados (' + e.message + '). Confirme se o doPost foi publicado em nova versão da implantação.');
+  }
+}
+
+// Planilha (verdade) × JSON (último processamento): diverge → aplica localmente e marca pendente
+function sincronizarAjustes() {
+  if (!ajustesServidor) return;
+  for (const l of (dadosGlobais._lancamentosCaixa || [])) {
+    if (!l.id) continue;
+    const a = ajustesServidor[l.id];
+    l.tipo         = a ? a.tipoManual : l.tipoAuto;
+    l.manual       = !!a;
+    l.motivoAjuste = a ? (a.motivo || '') : '';
+    l.pendente     = (l.tipo !== l._tipoJSON) || (l.manual !== l._manualJSON);
+  }
+}
+
+function badgeTipo(l, tipoCss) {
+  const cls = ['tipo-badge', tipoCss];
+  if (l.manual) cls.push('tb-manual');
+  const podeEditar = _suportaAjuste && !!l.id;
+  if (podeEditar) cls.push('tb-edit');
+  let title = podeEditar ? 'Clique para reclassificar' : '';
+  if (l.manual) title = `Ajuste manual — automático: ${l.tipoAuto}\nMotivo: ${l.motivoAjuste||'—'}` + (podeEditar ? '\n(clique para editar)' : '');
+  if (l.pendente) title += '\n• Pendente de reprocessamento';
+  const onclick = podeEditar ? ` onclick="abrirAjuste('${l.id}')"` : '';
+  return `<span class="${cls.join(' ')}" title="${_escHtml(title)}"${onclick}>${l.tipo}${l.manual?' ✎':''}</span>`
+       + (l.pendente ? '<span class="tb-pend" title="Pendente de reprocessamento">•</span>' : '');
+}
+
+function toggleSoManuais() {
+  soManuais = !soManuais;
+  document.getElementById('btnSoManuais').classList.toggle('on', soManuais);
+  page = 0; renderTable();
+}
+
+function renderBanner(msgErro) {
+  const el = document.getElementById('ajBanner');
+  if (!el || !dadosGlobais) return;
+  const lancs = dadosGlobais._lancamentosCaixa || [];
+  const cnt = document.getElementById('cntManuais');
+  if (cnt) cnt.textContent = lancs.filter(l => l.manual).length;
+
+  if (lancs.length && !_suportaAjuste) {
+    el.innerHTML = `<div>⚠ O JSON atual não traz o <b>id</b> dos lançamentos — reclassificação manual indisponível.
+      <div class="aj-sub">Publique o Ajustes_Manuais.gs + ajustes do Codigo.gs e reprocesse os dados.</div></div>`;
+    el.classList.add('show'); return;
+  }
+  if (msgErro) { el.innerHTML = `<div>⚠ ${_escHtml(msgErro)}</div>`; el.classList.add('show'); return; }
+
+  const pend   = lancs.filter(l => l.pendente).length;
+  const orfaos = dadosGlobais.ajustesManuais?.orfaos || [];
+  if (!pend && !orfaos.length) { el.classList.remove('show'); el.innerHTML = ''; return; }
+
+  const partes = [];
+  if (pend) partes.push(`<b>${pend}</b> ajuste${pend>1?'s':''} pendente${pend>1?'s':''} de reprocessamento`);
+  if (orfaos.length) partes.push(`<b>${orfaos.length}</b> ajuste${orfaos.length>1?'s':''} órfão${orfaos.length>1?'s':''} (lançamento não localizado no extrato atual)`);
+  const orfTitle = orfaos.map(o => `${o.data} ${o.empresa}/${o.banco} · ${o.historico} · R$ ${o.valor} → ${o.tipoManual}`).join('\n');
+  el.innerHTML = `<div>
+      ${partes.join(' · ')}
+      <div class="aj-sub"${orfaos.length ? ` title="${_escHtml(orfTitle)}"` : ''}>Esta página já mostra os valores corrigidos. Painel, Fluxo, Conciliação e Planejamento refletem após reprocessar.${orfaos.length ? ' Passe o mouse aqui para ver os órfãos.' : ''}</div>
+    </div>
+    ${pend ? `<button class="aj-btn" id="ajBtnReproc" onclick="reprocessarAgora()">⟳ Reprocessar agora</button>` : ''}`;
+  el.classList.add('show');
+}
+
+// Mantém banner e contador sincronizados com qualquer re-render
+const _renderOriginal = render;
+render = function() { _renderOriginal(); renderBanner(); };
+
+// ── Modal ─────────────────────────────────────────────────────────────────
+function abrirAjuste(id) {
+  const l = _lancPorId[id]; if (!l) return;
+  _ajAtual = l; _ajTipoSel = l.tipo;
+  document.getElementById('ajInfo').innerHTML = `
+    <dt>Data</dt><dd>${fmtDate(l.data)}</dd>
+    <dt>Empresa</dt><dd>${_escHtml(l.empresa)} · ${_escHtml(l.banco)}</dd>
+    <dt>Histórico</dt><dd>${_escHtml(l.historico||'—')}</dd>
+    <dt>Nome/Razão</dt><dd>${_escHtml(l.nomeRS||'—')}</dd>
+    <dt>Valor</dt><dd style="color:${l.valor>=0?'var(--green)':'var(--red)'}">${fmtBRL(l.valor)}</dd>
+    <dt>Automático</dt><dd>${_escHtml(l.tipoAuto)}</dd>
+    <dt>Atual</dt><dd>${_escHtml(l.tipo)}${l.manual?' <span style="color:var(--warn)">(manual)</span>':''}</dd>`;
+  document.getElementById('ajMotivo').value = l.manual ? (l.motivoAjuste||'') : '';
+  document.getElementById('ajPin').value = '';
+  document.getElementById('ajPinWrap').style.display = localStorage.getItem(_PIN_KEY) ? 'none' : '';
+  document.getElementById('ajBtnRemover').style.display = l.manual ? '' : 'none';
+  document.getElementById('ajErro').textContent = '';
+  renderTiposModal();
+  document.getElementById('ajOverlay').classList.add('show');
+  setTimeout(() => document.getElementById('ajMotivo').focus(), 50);
+}
+function fecharAjuste() { document.getElementById('ajOverlay').classList.remove('show'); _ajAtual = null; }
+function selTipoAj(t) { _ajTipoSel = t; renderTiposModal(); }
+function renderTiposModal() {
+  document.getElementById('ajTipos').innerHTML = TIPOS_AJ.map(t =>
+    `<button class="aj-tipo ${t===_ajTipoSel?'sel':''}" onclick="selTipoAj('${t}')">${t}<small>${t===_ajAtual?.tipoAuto ? 'classificação automática' : TIPO_DESC[t]}</small></button>`
+  ).join('');
+  document.getElementById('ajWarnAF').style.display =
+    (_ajTipoSel === 'Aplicação Financeira') !== (_ajAtual?.tipoAuto === 'Aplicação Financeira') ? 'block' : 'none';
+}
+function _pinAtual() { return document.getElementById('ajPin').value.trim() || localStorage.getItem(_PIN_KEY) || ''; }
+function _tratarErroPin(j) {
+  if (j.codigo === 'PIN') { localStorage.removeItem(_PIN_KEY); document.getElementById('ajPinWrap').style.display = ''; }
+}
+function _setBusy(b) {
+  ['ajBtnSalvar','ajBtnRemover'].forEach(id => { const e = document.getElementById(id); if (e) e.disabled = b; });
+  document.getElementById('ajBtnSalvar').textContent = b ? 'Salvando…' : 'Salvar';
+}
+
+async function salvarAjuste() {
+  const l = _ajAtual; if (!l) return;
+  const motivo = document.getElementById('ajMotivo').value.trim();
+  const erroEl = document.getElementById('ajErro');
+  if (_ajTipoSel === l.tipoAuto && l.manual) return removerAjuste();
+  if (_ajTipoSel === l.tipoAuto) { erroEl.textContent = 'Esse já é o tipo automático — nada a ajustar.'; return; }
+  if (_ajTipoSel === l.tipo && motivo === (l.motivoAjuste||'')) { erroEl.textContent = 'Nenhuma alteração.'; return; }
+  if (motivo.length < 3) { erroEl.textContent = 'Informe o motivo do ajuste.'; return; }
+  const pin = _pinAtual();
+  if (!pin) { erroEl.textContent = 'Informe o PIN.'; document.getElementById('ajPinWrap').style.display = ''; return; }
+
+  _setBusy(true); erroEl.textContent = '';
+  try {
+    const j = await _postAS({
+      action: 'salvarAjuste', pin, id: l.id, tipoManual: _ajTipoSel, motivo,
+      lancamento: { data: l.data, empresa: l.empresa, banco: l.banco, historico: l.historico, nomeRS: l.nomeRS, valor: l.valor, tipoAuto: l.tipoAuto }
+    });
+    if (!j.ok) { _tratarErroPin(j); erroEl.textContent = j.erro || 'Falha ao salvar.'; return; }
+    localStorage.setItem(_PIN_KEY, pin);
+    _garantirMapaAjustes();
+    if (j.ajuste) ajustesServidor[l.id] = j.ajuste; else delete ajustesServidor[l.id];
+    sincronizarAjustes(); fecharAjuste(); render();
+  } catch (e) {
+    erroEl.textContent = 'Erro de comunicação: ' + e.message;
+  } finally { _setBusy(false); }
+}
+
+async function removerAjuste() {
+  const l = _ajAtual; if (!l) return;
+  const erroEl = document.getElementById('ajErro');
+  const pin = _pinAtual();
+  if (!pin) { erroEl.textContent = 'Informe o PIN.'; document.getElementById('ajPinWrap').style.display = ''; return; }
+  _setBusy(true); erroEl.textContent = '';
+  try {
+    const j = await _postAS({ action: 'removerAjuste', pin, id: l.id, motivo: document.getElementById('ajMotivo').value.trim() });
+    if (!j.ok) { _tratarErroPin(j); erroEl.textContent = j.erro || 'Falha ao remover.'; return; }
+    localStorage.setItem(_PIN_KEY, pin);
+    _garantirMapaAjustes();
+    delete ajustesServidor[l.id];
+    sincronizarAjustes(); fecharAjuste(); render();
+  } catch (e) {
+    erroEl.textContent = 'Erro de comunicação: ' + e.message;
+  } finally { _setBusy(false); }
+}
+
+// ── Reprocessamento (mesmo gatilho do botão "Atualizar dados" do Menu) ─────
+async function reprocessarAgora() {
+  const btn = document.getElementById('ajBtnReproc');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Iniciando…'; }
+  const geradoAntes = dadosGlobais?.geradoEm;
+  try { await fetch(_AS_EXEC, { method: 'GET', mode: 'no-cors' }); } catch(_) {}
+  const inicio = Date.now(), LIMITE = 8 * 60 * 1000;
+  const tick = async () => {
+    const b = document.getElementById('ajBtnReproc');
+    if (b) b.textContent = `⏳ Processando… ${Math.round((Date.now()-inicio)/1000)}s`;
+    try {
+      const r = await _fetchTimeout(_AS_URL + Date.now(), 12000);
+      const j = await r.json();
+      if (j.geradoEm && j.geradoEm !== geradoAntes) { location.reload(); return; }
+    } catch(_) {}
+    if (Date.now() - inicio < LIMITE) setTimeout(tick, 15000);
+    else if (b) { b.disabled = false; b.textContent = '⟳ Tentar novamente'; }
+  };
+  setTimeout(tick, 20000);
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharAjuste(); });
 
 carregarDados();
 </script>
