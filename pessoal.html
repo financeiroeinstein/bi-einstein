@@ -316,6 +316,7 @@ tbody td:first-child{text-align:left;font-family:var(--font-head)}
   </div>
 </div>
 
+<script src="bi_data.js"></script>
 <script>
 /* ═══════════════════════════════════════════════════════
    FETCH
@@ -327,20 +328,7 @@ const _DRIVE_PROXIES = [
   id => `https://corsproxy.io/?${encodeURIComponent(`https://drive.google.com/uc?export=download&id=${id}`)}`,
   id => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`https://drive.google.com/uc?export=download&id=${id}`)}`
 ];
-async function _fetchJSON() {
-  const ts = Date.now();
-  try {
-    const r = await fetch(_AS_URL + ts, { signal: AbortSignal.timeout(8000) });
-    if (r.ok) { const d = await r.json(); if (d && d.mesesDisponiveis) return d; }
-  } catch(e) {}
-  for (const proxy of _DRIVE_PROXIES) {
-    try {
-      const r = await fetch(proxy(DRIVE_FILE_ID), { signal: AbortSignal.timeout(8000) });
-      if (r.ok) { const d = await r.json(); if (d && d.mesesDisponiveis) return d; }
-    } catch(e) {}
-  }
-  throw new Error('Não foi possível carregar o JSON. Verifique a conexão ou a publicação do Apps Script.');
-}
+async function _fetchJSON() { return BIData.load(); }
 
 /* ═══════════════════════════════════════════════════════
    UTILITÁRIOS

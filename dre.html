@@ -409,6 +409,7 @@
   </div>
 </div>
 
+<script src="bi_data.js"></script>
 <script>
 // ── CONFIG ──────────────────────────────────────────────────────────────────
 const DRIVE_FILE_ID = '1uHgfvF8CU2qJSbYjv_MtmgRxJFJzJR-Z';
@@ -431,25 +432,7 @@ function _fetchTimeout(url, ms=10000) {
   });
 }
 
-async function _fetchJSON() {
-  // 1) Apps Script direto (sem proxy, sem CORS problem pois AS retorna CORS header)
-  try {
-    const r = await _fetchTimeout(_AS_URL + Date.now(), 12000);
-    return await r.json();
-  } catch(e1) {
-    console.warn('AS falhou (' + e1.message + '), tentando proxies…');
-  }
-  // 2) Proxies sequenciais (fallback)
-  for (const url of _DRIVE_PROXIES) {
-    try {
-      const r = await _fetchTimeout(url, 10000);
-      return await r.json();
-    } catch(e2) {
-      console.warn('Proxy falhou: ' + url.split('?')[0]);
-    }
-  }
-  throw new Error('Todas as fontes falharam');
-}
+async function _fetchJSON() { return BIData.load(); }
 // ────────────────────────────────────────────────────────────────────────────
 
 

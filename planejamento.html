@@ -469,6 +469,7 @@ tr.total-row td{background:var(--sf2);border-top:2px solid var(--bd);font-weight
 
 <div id="tipBubble" class="tip-bubble"></div>
 
+<script src="bi_data.js"></script>
 <script>
 // ─── FONTE DE DADOS (idêntico ao painel) ──────────────────────────────────
 const DRIVE_FILE_ID = '1uHgfvF8CU2qJSbYjv_MtmgRxJFJzJR-Z';
@@ -480,7 +481,7 @@ const _DRIVE_PROXIES = [
   `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(_DRIVE_BASE)}`
 ];
 function _fetchTimeout(url,ms=10000){return new Promise((res,rej)=>{const t=setTimeout(()=>rej(new Error('Timeout')),ms);fetch(url).then(r=>{clearTimeout(t);r.ok?res(r):rej(new Error('HTTP '+r.status));}).catch(e=>{clearTimeout(t);rej(e);});});}
-async function _fetchJSON(){try{const r=await _fetchTimeout(_AS_URL+Date.now(),12000);return await r.json();}catch(e){console.warn('AS falhou:',e.message);}for(const url of _DRIVE_PROXIES){try{const r=await _fetchTimeout(url,10000);return await r.json();}catch(e){console.warn('Proxy falhou:',url.split('?')[0]);}}throw new Error('Todas as fontes falharam');}
+async function _fetchJSON(){ return BIData.load(); }
 // ─────────────────────────────────────────────────────────────────────────
 
 let DATA = null;
