@@ -90,6 +90,8 @@
   .kpi-grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: .7rem; }
   .kpi-grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: .7rem; }
   @media (max-width: 1400px) { .kpi-grid-4 { grid-template-columns: repeat(2,1fr); } }
+  .emp-flag { color: var(--warn); margin-left: .35rem; font-size: .7rem; cursor: help; }
+  .tip-emp { margin-top: .5rem; padding-top: .45rem; border-top: 1px dashed rgba(255,181,71,.35); color: #ffb547; }
   .kc-rt { --kc:#f472b6; background:rgba(244,114,182,.06); border:1px solid rgba(244,114,182,.18); }
 
   .kpi-card {
@@ -299,15 +301,6 @@ function updateFilter(tipo) {
     document.getElementById('labelBanco').textContent = n===2?'Seleções múltiplas':n===0?'Nenhum':filtros.bancos.join(', ');
   }
   renderKPIs();
-  // Alertas inteligentes
-  const k2 = calcKPIs();
-  if (k2) {
-    const alertHtml = gerarAlertas(k2);
-    if (alertHtml) {
-      const el = document.getElementById('painelContent');
-      el.insertAdjacentHTML('beforeend', alertHtml);
-    }
-  }
 }
 
 function fmtBRL(val) {
@@ -320,6 +313,23 @@ function formatMes(m) {
   const [ano,mes]=m.split('-');
   return ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][parseInt(mes)-1]+'/'+ano;
 }
+
+// Entradas operacionais vindas de empréstimo: identificadas pelo histórico do extrato.
+// Para incluir outros termos (ex.: 'PRONAMPE'), acrescente na expressão abaixo.
+const RE_EMPRESTIMO = /EMPR[EÉ]STIMO|CAPITAL DE GIRO/i;
+function calcEmprestimo(mesesAtivos) {
+  const lancs = dadosGlobais?._lancamentosCaixa || [];
+  let valor = 0, qtd = 0;
+  for (const l of lancs) {
+    if (l.tipo !== 'Operacional' || !(l.valor > 0)) continue;
+    if (!mesesAtivos.includes((l.data||'').substring(0,7))) continue;
+    if (!filtros.empresas.includes(l.empresa) || !filtros.bancos.includes(l.banco)) continue;
+    if (!RE_EMPRESTIMO.test(l.historico || '')) continue;
+    valor += l.valor; qtd++;
+  }
+  return { valor: Math.round(valor*100)/100, qtd };
+}
+function _attr(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function calcKPIs() {
   if (!dadosGlobais) return null;
@@ -341,7 +351,9 @@ function calcKPIs() {
     disponivel    += dadosGlobais.disponivel?.[mesLimite]?.[emp]?.[bc]    || 0;
     investimentos += dadosGlobais.investimentos?.[mesLimite]?.[emp]?.[bc] || 0;
   }
+  const emp = calcEmprestimo(mesesAtivos);
   return { entradasCaixa, saidasCaixa, resultadoBancario:entradasCaixa+saidasCaixa,
+           entOpEmprestimo: emp.valor, qtdEmprestimo: emp.qtd,
            entOp, saiOp, resultadoOp:entOp+saiOp,
            transInternas, intercompany, aplicacoes, terceiros,
            disponivel, investimentos, totalPatrimonio:disponivel+investimentos };
@@ -351,20 +363,26 @@ function adjCls(v) { return v===0?'kc-muted':v>0?'kc-green':'kc-red'; }
 
 function renderKPIs() {
   const k=calcKPIs(); if (!k) return;
+  const temEmp = k.entOpEmprestimo > 0;
+  const tipEntOp = _attr('Dinheiro que efetivamente entrou no caixa do grupo e fica disponível para uso. Exclui transferências internas, intercompany, aplicações e recursos de terceiros.'
+    + (temEmp ? `<div class="tip-emp">⚑ Inclui <b>${fmtBRL(k.entOpEmprestimo)}</b> de empréstimo (${k.qtdEmprestimo} lançamento${k.qtdEmprestimo>1?'s':''}).<br>Sem o empréstimo: <b>${fmtBRL(k.entOp - k.entOpEmprestimo)}</b></div>` : ''));
+  const tipResOp = _attr('Diferença entre entradas e saídas operacionais — o fluxo de caixa real do grupo no período.'
+    + (temEmp ? `<div class="tip-emp">⚑ Inclui <b>${fmtBRL(k.entOpEmprestimo)}</b> de empréstimo.<br>Sem o empréstimo: <b>${fmtBRL(k.resultadoOp - k.entOpEmprestimo)}</b></div>` : ''));
+  const empMark = temEmp ? '<span class="emp-flag" title="Inclui entrada de empréstimo — passe o mouse no ícone i">⚑</span>' : '';
   document.getElementById('painelContent').innerHTML = `
     <div class="kpi-row">
       <div class="kpi-section">
         <div class="section-label">Entradas</div>
         <div class="kpi-grid-2">
           <div class="kpi-card kc-green"><div class="kc-label">Bancárias<span class="tip-icon" data-title="Entradas Bancárias" data-tip="Total de créditos lançados no extrato bancário no período. Inclui recebimentos operacionais, transferências recebidas e outras entradas." data-meta="Fonte: extrato bancário">i</span></div><div class="kc-value">${fmtBRL(k.entradasCaixa)}</div></div>
-          <div class="kpi-card kc-green"><div class="kc-label">Operacionais<span class="tip-icon" data-title="Entradas Operacionais" data-tip="Receitas efetivamente ligadas à operação do grupo: mensalidades, matrículas e demais recebimentos classificados como operacionais." data-meta="Fonte: Proesc">i</span></div><div class="kc-value">${fmtBRL(k.entOp)}</div></div>
+          <div class="kpi-card kc-green"><div class="kc-label">Operacionais<span class="tip-icon" data-title="Entradas Operacionais" data-tip="${tipEntOp}" data-meta="Fonte: extrato bancário (tipo Operacional)">i</span>${empMark}</div><div class="kc-value">${fmtBRL(k.entOp)}</div></div>
         </div>
       </div>
       <div class="kpi-section">
         <div class="section-label">Resultados</div>
         <div class="kpi-grid-2">
           <div class="kpi-card kc-blue"><div class="kc-label">Resultado Bancário<span class="tip-icon" data-title="Resultado Bancário" data-tip="Diferença entre todas as entradas e saídas bancárias do período. Reflete o fluxo líquido em conta — pode incluir transferências internas." data-meta="Entradas − Saídas bancárias">i</span></div><div class="kc-value">${fmtBRL(k.resultadoBancario)}</div></div>
-          <div class="kpi-card kc-blue2"><div class="kc-label">Resultado Operacional<span class="tip-icon" data-title="Resultado Operacional" data-tip="Diferença entre entradas e saídas operacionais. É o indicador mais limpo do desempenho financeiro real, excluindo transferências e aplicações." data-meta="Entradas op. − Saídas op.">i</span></div><div class="kc-value large">${fmtBRL(k.resultadoOp)}</div></div>
+          <div class="kpi-card kc-blue2"><div class="kc-label">Resultado Operacional<span class="tip-icon" data-title="Resultado Operacional" data-tip="${tipResOp}" data-meta="Entradas op. − Saídas op.">i</span>${empMark}</div><div class="kc-value large">${fmtBRL(k.resultadoOp)}</div></div>
         </div>
       </div>
     </div>
@@ -373,8 +391,8 @@ function renderKPIs() {
       <div class="kpi-section">
         <div class="section-label">Saídas</div>
         <div class="kpi-grid-2">
-          <div class="kpi-card kc-red"><div class="kc-label">Bancárias<span class="tip-icon" data-title="Entradas Bancárias" data-tip="Total de créditos lançados no extrato bancário no período. Inclui recebimentos operacionais, transferências recebidas e outras entradas." data-meta="Fonte: extrato bancário">i</span></div><div class="kc-value">${fmtBRL(k.saidasCaixa)}</div></div>
-          <div class="kpi-card kc-red"><div class="kc-label">Operacionais<span class="tip-icon" data-title="Entradas Operacionais" data-tip="Receitas efetivamente ligadas à operação do grupo: mensalidades, matrículas e demais recebimentos classificados como operacionais." data-meta="Fonte: Proesc">i</span></div><div class="kc-value">${fmtBRL(k.saiOp)}</div></div>
+          <div class="kpi-card kc-red"><div class="kc-label">Bancárias<span class="tip-icon" data-title="Saídas Bancárias" data-tip="Total de débitos lançados no extrato bancário no período. Inclui pagamentos operacionais, transferências enviadas, aplicações e repasses." data-meta="Fonte: extrato bancário">i</span></div><div class="kc-value">${fmtBRL(k.saidasCaixa)}</div></div>
+          <div class="kpi-card kc-red"><div class="kc-label">Operacionais<span class="tip-icon" data-title="Saídas Operacionais" data-tip="Dinheiro que efetivamente saiu do caixa do grupo: fornecedores, pessoal, impostos e demais pagamentos. Exclui transferências internas, intercompany, aplicações e repasses a terceiros." data-meta="Fonte: extrato bancário (tipo Operacional)">i</span></div><div class="kc-value">${fmtBRL(k.saiOp)}</div></div>
         </div>
       </div>
       <div class="kpi-section">
@@ -406,6 +424,9 @@ function renderKPIs() {
       </div>
     </div>
   `;
+  // Destaques do período (antes só apareciam após mudar um filtro)
+  const alertHtml = gerarAlertas(k);
+  if (alertHtml) document.getElementById('painelContent').insertAdjacentHTML('beforeend', alertHtml);
 }
 
 function buildMenuMes(meses) {
@@ -447,6 +468,12 @@ function gerarAlertas(k, mesesAtivos) {
     items.push({ cls: 'ok', txt: `Resultado operacional positivo de <strong>${fmtBRL(k.resultadoOp)}</strong> no período.` });
   } else if (k.resultadoOp < 0) {
     items.push({ cls: 'danger', txt: `Resultado operacional negativo em <strong>${fmtBRL(k.resultadoOp)}</strong>. As saídas operacionais superam as entradas no período.` });
+  }
+
+  // Empréstimo dentro do operacional
+  if (k.entOpEmprestimo > 0) {
+    const sem = k.resultadoOp - k.entOpEmprestimo;
+    items.push({ cls: 'warn', txt: `O operacional inclui <strong>${fmtBRL(k.entOpEmprestimo)}</strong> de empréstimo. Sem ele, o resultado operacional seria <strong>${fmtBRL(sem)}</strong>${sem < 0 ? ' (negativo)' : ''}.` });
   }
 
   // Transferências internas

@@ -219,6 +219,9 @@
   .ts-chip.ent:hover { background: rgba(74,222,128,.22); }
   .ts-chip.sai:hover { background: rgba(248,113,113,.22); }
   .ts-chip.ent.sel { background: rgba(74,222,128,.28); border-color: var(--green); font-weight:700; }
+  .ts-emp { margin-top: .45rem; font-size: .64rem; color: var(--warn); background: rgba(255,181,71,.08); border: 1px dashed rgba(255,181,71,.35);
+    border-radius: 6px; padding: .22rem .5rem; cursor: pointer; font-family: var(--font-m); display: inline-block; }
+  .ts-emp:hover { background: rgba(255,181,71,.16); }
   .ts-chip.sai.sel { background: rgba(248,113,113,.28); border-color: var(--red);  font-weight:700; }
 
   .loading { text-align: center; padding: 3rem; color: var(--muted); font-size: .85rem; }
@@ -540,6 +543,11 @@ const _BASE = `https://drive.google.com/uc?export=download&id=${DRIVE_FILE_ID}&_
 
 
 const EMP_COLORS = { MD: '#4f8fff', SEL: '#00e5a0', SIGMA: '#ffb547' };
+// Entradas operacionais vindas de empréstimo: identificadas pelo histórico do extrato.
+// Para incluir outros termos (ex.: 'PRONAMPE'), acrescente na expressão abaixo.
+const RE_EMPRESTIMO = /EMPR[EÉ]STIMO|CAPITAL DE GIRO/i;
+const ehEntradaEmprestimo = l => l.tipo === 'Operacional' && l.valor > 0 && RE_EMPRESTIMO.test(l.historico || '');
+
 const TIPO_CSS   = {
   'Operacional':           'tb-op',
   'Transferência Interna': 'tb-ti',
@@ -815,8 +823,23 @@ function renderSummary(itens) {
           ↓ ${qtdSai} · ${fmtBRL(valSai)}
         </span>
       </div>
+      ${t === 'Operacional' ? _linhaEmprestimo(sub) : ''}
     </div>`;
   }).join('');
+}
+
+function _linhaEmprestimo(sub) {
+  const emp = sub.filter(ehEntradaEmprestimo);
+  if (!emp.length) return '';
+  const v = emp.reduce((s,l)=>s+l.valor,0);
+  const ops = sub.reduce((s,l)=>s+l.valor,0);
+  const tip = `Entradas operacionais vindas de empréstimo: ${fmtBRL(v)} (${emp.length} lançamento${emp.length>1?'s':''}).\nSem elas, o operacional líquido seria ${fmtBRL(ops - v)}.\nClique para listar.`;
+  return `<div class="ts-emp" title="${tip}" onclick="filtrarEmprestimo()">⚑ inclui ${fmtBRL(v)} de empréstimo · sem ele: ${fmtBRL(ops - v)}</div>`;
+}
+function filtrarEmprestimo() {
+  const el = document.getElementById('searchInput');
+  if (el) el.value = 'EMPRESTIMO';
+  page = 0; render();
 }
 
 // ── Tabela detalhada ──────────────────────────────────────────────────────
