@@ -543,9 +543,10 @@ const _BASE = `https://drive.google.com/uc?export=download&id=${DRIVE_FILE_ID}&_
 
 
 const EMP_COLORS = { MD: '#4f8fff', SEL: '#00e5a0', SIGMA: '#ffb547' };
-// Entradas operacionais vindas de empréstimo: identificadas pelo histórico do extrato.
-// Para incluir outros termos (ex.: 'PRONAMPE'), acrescente na expressão abaixo.
-const RE_EMPRESTIMO = /EMPR[EÉ]STIMO|CAPITAL DE GIRO/i;
+// Entradas operacionais vindas de empréstimo: histórico EXATO do extrato.
+// Para incluir outro empréstimo no futuro, acrescente o histórico exato na lista.
+const HIST_EMPRESTIMO = ['CREDITO EMPRESTIMO SIEMP'];
+const RE_EMPRESTIMO = { test: h => HIST_EMPRESTIMO.includes(String(h || '').trim().toUpperCase()) };
 const ehEntradaEmprestimo = l => l.tipo === 'Operacional' && l.valor > 0 && RE_EMPRESTIMO.test(l.historico || '');
 
 const TIPO_CSS   = {
@@ -838,7 +839,7 @@ function _linhaEmprestimo(sub) {
 }
 function filtrarEmprestimo() {
   const el = document.getElementById('searchInput');
-  if (el) el.value = 'EMPRESTIMO';
+  if (el) el.value = HIST_EMPRESTIMO[0];
   page = 0; render();
 }
 

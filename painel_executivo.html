@@ -314,9 +314,10 @@ function formatMes(m) {
   return ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][parseInt(mes)-1]+'/'+ano;
 }
 
-// Entradas operacionais vindas de empréstimo: identificadas pelo histórico do extrato.
-// Para incluir outros termos (ex.: 'PRONAMPE'), acrescente na expressão abaixo.
-const RE_EMPRESTIMO = /EMPR[EÉ]STIMO|CAPITAL DE GIRO/i;
+// Entradas operacionais vindas de empréstimo: histórico EXATO do extrato.
+// Para incluir outro empréstimo no futuro, acrescente o histórico exato na lista.
+const HIST_EMPRESTIMO = ['CREDITO EMPRESTIMO SIEMP'];
+const RE_EMPRESTIMO = { test: h => HIST_EMPRESTIMO.includes(String(h || '').trim().toUpperCase()) };
 function calcEmprestimo(mesesAtivos) {
   const lancs = dadosGlobais?._lancamentosCaixa || [];
   let valor = 0, qtd = 0;
