@@ -79,10 +79,10 @@
 
   /* KPI STRIP */
   .kpi-strip {
-    display: grid; grid-template-columns: repeat(6, 1fr);
+    display: grid; grid-template-columns: repeat(7, 1fr);
     gap: .75rem;
   }
-  @media (max-width: 1100px) { .kpi-strip { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 1100px) { .kpi-strip { grid-template-columns: repeat(4, 1fr); } }
   @media (max-width: 600px)  { .kpi-strip { grid-template-columns: repeat(2, 1fr); } }
 
   .kpi-card {
@@ -127,6 +127,7 @@
   .pill-ti.active    { background: var(--warn);    border-color: var(--warn); }
   .pill-ic.active    { background: #a78bfa;        border-color: #a78bfa; }
   .pill-af.active    { background: var(--green);   border-color: var(--green); }
+  .pill-rt.active    { background: #f472b6;        border-color: #f472b6; }
   .pill-count {
     font-size: .6rem; background: rgba(255,255,255,.15);
     padding: .05rem .3rem; border-radius: 8px;
@@ -173,6 +174,8 @@
   .tb-ti { background: rgba(255,181,71,.15); color: var(--warn); }
   .tb-ic { background: rgba(167,139,250,.15); color: #a78bfa; }
   .tb-af { background: rgba(74,222,128,.15);  color: var(--green); }
+  .tb-rt { background: rgba(244,114,182,.15); color: #f472b6; }
+  .tb-parte { font-family: var(--font-m); font-size: .56rem; opacity: .8; margin-left: .15rem; }
 
   .emp-dot {
     display: inline-block; width: 7px; height: 7px;
@@ -192,8 +195,9 @@
 
   /* SUMÁRIO POR TIPO */
   .tipo-summary {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: .75rem;
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: .75rem;
   }
+  @media (max-width: 1200px) { .tipo-summary { grid-template-columns: repeat(3, 1fr); } }
   @media (max-width: 900px) { .tipo-summary { grid-template-columns: repeat(2, 1fr); } }
 
   .ts-card {
@@ -322,6 +326,32 @@
   .aj-warn { font-size: .7rem; color: var(--warn); margin-top: .4rem; display: none; }
   .aj-erro { font-size: .74rem; color: var(--red); margin-bottom: .6rem; min-height: 1em; }
   .aj-actions { display: flex; justify-content: space-between; gap: .5rem; margin-top: .4rem; flex-wrap: wrap; }
+  .aj-btn.primary:disabled { cursor: not-allowed; }
+  .aj-tipos > .aj-tipo:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  /* Rateio */
+  .aj-modo { display: inline-flex; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 3px; margin-bottom: .6rem; }
+  .aj-modo button { background: transparent; border: 0; color: var(--muted); font-family: var(--font-h); font-size: .74rem; padding: .35rem .85rem; border-radius: 6px; cursor: pointer; }
+  .aj-modo button.sel { background: var(--surface); color: var(--accent); box-shadow: inset 0 0 0 1px var(--border); font-weight: 600; }
+  .aj-rateio { display: none; }
+  .rt-rows { display: flex; flex-direction: column; gap: .4rem; }
+  .rt-row { display: grid; grid-template-columns: 18px 1fr 1.25fr auto auto; gap: .4rem; align-items: center; }
+  .rt-n { font-family: var(--font-m); font-size: .7rem; color: var(--muted); text-align: center; }
+  .rt-row .aj-input { padding: .42rem .6rem; font-size: .78rem; }
+  .rt-valor { font-family: var(--font-m) !important; text-align: right; }
+  .rt-mini { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: .38rem .5rem;
+    font-family: var(--font-h); font-size: .64rem; cursor: pointer; white-space: nowrap; }
+  .rt-mini:hover { border-color: var(--accent); color: var(--accent); }
+  .rt-del:hover { border-color: var(--red); color: var(--red); }
+  .rt-add { margin-top: .45rem; background: transparent; border: 1px dashed var(--border); color: var(--muted); border-radius: 7px;
+    padding: .38rem .8rem; font-family: var(--font-h); font-size: .72rem; cursor: pointer; }
+  .rt-add:hover { border-color: var(--accent); color: var(--accent); }
+  .rt-tot { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; margin-top: .65rem; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 8px; padding: .55rem .75rem; }
+  .rt-tot div { display: flex; flex-direction: column; gap: .1rem; }
+  .rt-tot span { font-size: .58rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .rt-tot b { font-family: var(--font-m); font-size: .82rem; font-weight: 600; }
+  .rt-hint { font-size: .68rem; color: var(--muted); margin-top: .4rem; min-height: 1em; }
+  @media (max-width: 520px) { .rt-row { grid-template-columns: 18px 1fr 1fr; } .rt-row .rt-mini { grid-column: span 1; } }
 </style>
 </head>
 <body>
@@ -423,6 +453,7 @@
           <div class="pill pill-ti active" data-tipo="Transferência Interna" onclick="toggleTipo(this)"><span>Transf. Interna</span><span class="pill-count" id="cnt-ti">0</span></div>
           <div class="pill pill-ic active" data-tipo="Intercompany"          onclick="toggleTipo(this)"><span>Intercompany</span><span class="pill-count" id="cnt-ic">0</span></div>
           <div class="pill pill-af active" data-tipo="Aplicação Financeira"  onclick="toggleTipo(this)"><span>Aplicação Fin.</span><span class="pill-count" id="cnt-af">0</span></div>
+          <div class="pill pill-rt active" data-tipo="Recurso de Terceiros"  onclick="toggleTipo(this)"><span>Rec. Terceiros</span><span class="pill-count" id="cnt-rt">0</span></div>
         </div>
       </div>
     </div>
@@ -446,12 +477,17 @@
 
 <div class="aj-overlay" id="ajOverlay" onclick="if(event.target===this)fecharAjuste()">
   <div class="aj-modal">
-    <h3>Reclassificar lançamento</h3>
+    <h3>Ajustar lançamento</h3>
     <dl class="aj-info" id="ajInfo"></dl>
     <div class="aj-field">
       <label>Nova classificação</label>
+      <div class="aj-modo" id="ajModo">
+        <button data-modo="tipo"   onclick="setModoAj('tipo')">Reclassificar</button>
+        <button data-modo="partes" onclick="setModoAj('partes')">Ratear</button>
+      </div>
       <div class="aj-tipos" id="ajTipos"></div>
-      <div class="aj-warn" id="ajWarnAF">⚠ Entrar/sair de Aplicação Financeira também altera o saldo de <b>Investimentos</b> (Painel/Planejamento).</div>
+      <div class="aj-rateio" id="ajRateio"></div>
+      <div class="aj-warn" id="ajWarnAF">⚠ Envolver Aplicação Financeira também altera o saldo de <b>Investimentos</b> (Painel/Planejamento).</div>
     </div>
     <div class="aj-field">
       <label>Motivo (obrigatório — fica registrado na auditoria)</label>
@@ -508,12 +544,13 @@ const TIPO_CSS   = {
   'Operacional':           'tb-op',
   'Transferência Interna': 'tb-ti',
   'Intercompany':          'tb-ic',
-  'Aplicação Financeira':  'tb-af'
+  'Aplicação Financeira':  'tb-af',
+  'Recurso de Terceiros':  'tb-rt'
 };
 
 let dadosGlobais = null;
 let filtros = { meses: [], empresas: ['MD','SEL','SIGMA'], bancos: ['CAIXA','SICOOB'] };
-let tiposAtivos = new Set(['Operacional','Transferência Interna','Intercompany','Aplicação Financeira']);
+let tiposAtivos = new Set(['Operacional','Transferência Interna','Intercompany','Aplicação Financeira','Recurso de Terceiros']);
 let sinalGlobal = 'todos'; // 'todos' | 'entrada' | 'saida'
 let page = 0;
 const PAGE_SIZE = 50;
@@ -643,7 +680,7 @@ function renderKPIs() {
     ? filtros.meses
     : dadosGlobais.mesesDisponiveis;
 
-  let entCaixa=0, saiCaixa=0, entOp=0, saiOp=0, ti=0, ic=0, af=0;
+  let entCaixa=0, saiCaixa=0, entOp=0, saiOp=0, ti=0, ic=0, af=0, rt=0;
   const lancs = dadosGlobais._lancamentosCaixa;
   if (lancs && lancs.length) {
     // Mesma lógica do calcularKPIs (Apps Script), sobre os lançamentos já com ajustes manuais
@@ -656,6 +693,7 @@ function renderKPIs() {
       else if (l.tipo === 'Transferência Interna') ti += v;
       else if (l.tipo === 'Intercompany') ic += v;
       else if (l.tipo === 'Aplicação Financeira') af += v;
+      else if (l.tipo === 'Recurso de Terceiros') rt += v;
     }
   } else for (const mes of mesesAtivos) {
     const km = dadosGlobais.kpisPorMesEmpresaBanco?.[mes];
@@ -666,13 +704,13 @@ function renderKPIs() {
         entCaixa += k.entradasCaixa||0; saiCaixa += k.saidasCaixa||0;
         entOp    += k.entOp||0;         saiOp    += k.saiOp||0;
         ti       += k.transInternas||0; ic       += k.intercompany||0;
-        af       += k.aplicacoes||0;
+        af       += k.aplicacoes||0;     rt       += k.terceiros||0;
       }
     }
   }
   const resultBanc = entCaixa + saiCaixa;
   const resultOp   = entOp + saiOp;
-  const totalAjust = ti + ic + af;
+  const totalAjust = ti + ic + af + rt;
 
   document.getElementById('kpiStrip').innerHTML = `
     <div class="kpi-card kc-green">
@@ -700,24 +738,29 @@ function renderKPIs() {
       <div class="kc-value" style="color:${af===0?'var(--muted)':af>0?'var(--red)':'var(--green)'}">${fmtBRL(af)}</div>
       <div class="kc-sub">Movimentação líquida</div>
     </div>
+    <div class="kpi-card" style="border-top:2px solid #f472b6">
+      <div class="kc-label">Rec. Terceiros</div>
+      <div class="kc-value" style="color:${Math.abs(rt)<0.005?'var(--muted)':rt>0?'var(--warn)':'var(--red)'}">${fmtBRL(rt)}</div>
+      <div class="kc-sub">${Math.abs(rt)<0.005?'Zerado — tudo repassado':rt>0?'A repassar':'Repassado a mais'}</div>
+    </div>
     <div class="kpi-card kc-muted">
       <div class="kc-label">Total Ajustes</div>
       <div class="kc-value" style="color:${totalAjust===0?'var(--muted)':totalAjust>0?'var(--green)':'var(--red)'}">${fmtBRL(totalAjust)}</div>
-      <div class="kc-sub">TI + IC + AF</div>
+      <div class="kc-sub">TI + IC + AF + RT</div>
     </div>
   `;
 }
 
 // ── Sumário por tipo ──────────────────────────────────────────────────────
 // sinalFiltro: null = todos | 'pos' = só entradas | 'neg' = só saídas
-const sinalFiltro = { 'Operacional': null, 'Transferência Interna': null, 'Intercompany': null, 'Aplicação Financeira': null };
+const sinalFiltro = { 'Operacional': null, 'Transferência Interna': null, 'Intercompany': null, 'Aplicação Financeira': null, 'Recurso de Terceiros': null };
 
 function toggleSinal(tipo, sinal) {
   sinalFiltro[tipo] = sinalFiltro[tipo] === sinal ? null : sinal;
   // Se ativou filtro de sinal, garante que o tipo está ativo na tabela
   if (sinalFiltro[tipo] !== null && !tiposAtivos.has(tipo)) {
     tiposAtivos.add(tipo);
-    const key = { 'Operacional':'op','Transferência Interna':'ti','Intercompany':'ic','Aplicação Financeira':'af' }[tipo];
+    const key = { 'Operacional':'op','Transferência Interna':'ti','Intercompany':'ic','Aplicação Financeira':'af','Recurso de Terceiros':'rt' }[tipo];
     document.querySelector(`.pill-${key}`)?.classList.add('active');
   }
   page = 0;
@@ -726,10 +769,10 @@ function toggleSinal(tipo, sinal) {
 }
 
 function renderSummary(itens) {
-  const tipos = ['Operacional','Transferência Interna','Intercompany','Aplicação Financeira'];
-  const cores  = { 'Operacional':'var(--accent2)', 'Transferência Interna':'var(--warn)', 'Intercompany':'#a78bfa', 'Aplicação Financeira':'var(--green)' };
-  const labels = { 'Operacional':'Operacional', 'Transferência Interna':'Transf. Interna', 'Intercompany':'Intercompany', 'Aplicação Financeira':'Aplicação Fin.' };
-  const chaveKey = { 'Operacional':'op','Transferência Interna':'ti','Intercompany':'ic','Aplicação Financeira':'af' };
+  const tipos = ['Operacional','Transferência Interna','Intercompany','Aplicação Financeira','Recurso de Terceiros'];
+  const cores  = { 'Operacional':'var(--accent2)', 'Transferência Interna':'var(--warn)', 'Intercompany':'#a78bfa', 'Aplicação Financeira':'var(--green)', 'Recurso de Terceiros':'#f472b6' };
+  const labels = { 'Operacional':'Operacional', 'Transferência Interna':'Transf. Interna', 'Intercompany':'Intercompany', 'Aplicação Financeira':'Aplicação Fin.', 'Recurso de Terceiros':'Rec. Terceiros' };
+  const chaveKey = { 'Operacional':'op','Transferência Interna':'ti','Intercompany':'ic','Aplicação Financeira':'af','Recurso de Terceiros':'rt' };
 
   const mesesAtivos = filtros.meses.length > 0 ? filtros.meses : (dadosGlobais?.mesesDisponiveis || []);
   const busca = (document.getElementById('searchInput')?.value || '').toLowerCase().trim();
@@ -930,7 +973,7 @@ function exportarExcel() {
     cell(l.banco || ''),
     cell(l.tipo || ''),
     cell(l.tipoAuto || l.tipo || ''),
-    cell(l.manual ? (l.pendente ? 'Sim (pendente)' : 'Sim') : (l.pendente ? 'Removido (pendente)' : 'Não')),
+    cell(l.desmembrado ? `Rateio ${l.parteN}/${l.parteTot}${l.pendente?' (pendente)':''}` : l.manual ? (l.pendente ? 'Sim (pendente)' : 'Sim') : (l.pendente ? 'Removido (pendente)' : 'Não')),
     cell(l.motivoAjuste || ''),
     cell(l.historico || ''),
     cell(l.nomeRS || ''),
@@ -986,11 +1029,11 @@ function exportarPDF() {
   const EMP_HEX = { MD:'#4f8fff', SEL:'#00e5a0', SIGMA:'#ffb547' };
   const TIPO_HEX = {
     'Operacional':'#4f8fff','Transferência Interna':'#ffb547',
-    'Intercompany':'#a78bfa','Aplicação Financeira':'#4ade80'
+    'Intercompany':'#a78bfa','Aplicação Financeira':'#4ade80','Recurso de Terceiros':'#f472b6'
   };
   const TIPO_BG = {
     'Operacional':'rgba(79,143,255,.12)','Transferência Interna':'rgba(255,181,71,.12)',
-    'Intercompany':'rgba(167,139,250,.12)','Aplicação Financeira':'rgba(74,222,128,.12)'
+    'Intercompany':'rgba(167,139,250,.12)','Aplicação Financeira':'rgba(74,222,128,.12)','Recurso de Terceiros':'rgba(244,114,182,.12)'
   };
 
   const rows = itens.map(l => {
@@ -1080,20 +1123,23 @@ function exportarPDF() {
 // ═══════════════════════════════════════════════════════════════════════════
 const _AS_EXEC  = _AS_URL.split('?')[0];
 const _PIN_KEY  = 'bi_einstein_ajuste_pin';
-const TIPOS_AJ  = ['Operacional','Transferência Interna','Intercompany','Aplicação Financeira'];
+const TIPOS_AJ  = ['Operacional','Transferência Interna','Intercompany','Aplicação Financeira','Recurso de Terceiros'];
 const TIPO_DESC = {
   'Operacional':           'Entra no resultado operacional',
   'Transferência Interna': 'Entre contas da mesma empresa',
   'Intercompany':          'Entre MD / SEL / SIGMA',
-  'Aplicação Financeira':  'Aplicação / resgate'
+  'Aplicação Financeira':  'Aplicação / resgate',
+  'Recurso de Terceiros':  'Valor de terceiro que transita pela conta'
 };
 let soManuais = false;
-let ajustesServidor = null;   // id → ajuste ativo na planilha
-let _lancPorId = {};
-let _ajAtual = null, _ajTipoSel = null;
+let ajustesServidor = null;   // id ORIGINAL → ajuste ativo na planilha
+let _base = [];               // lançamentos do extrato, sem rateio (1 por id original)
+let _lancPorId = {};          // id ORIGINAL → item de _base
+let _ajAtual = null, _ajEstado = null, _ajTipoSel = null, _ajModo = 'tipo', _ajPartes = [];
 let _suportaAjuste = false;
 
 function _escHtml(v) { return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function _r2(v) { return Math.round((Number(v)||0)*100)/100; }
 
 async function _postAS(payload) {
   // body string → Content-Type text/plain → requisição simples (sem preflight CORS)
@@ -1101,28 +1147,95 @@ async function _postAS(payload) {
   return await r.json();
 }
 
-// Guarda o estado "como veio no JSON" para detectar o que está pendente de reprocessamento
+// ── Estado de ajuste de um lançamento ─────────────────────────────────────
+//   { modo:'auto' } | { modo:'tipo', tipo, motivo } | { modo:'partes', partes:[{valor,tipo}], motivo }
+function _partesDe(v) {
+  if (!v) return null;
+  if (Array.isArray(v)) return v.length ? v : null;
+  try { const p = JSON.parse(v); return Array.isArray(p) && p.length ? p : null; } catch (_) { return null; }
+}
+function _sigEstado(e) {
+  if (!e || e.modo === 'auto') return 'A';
+  if (e.modo === 'tipo') return 'T:' + e.tipo;
+  return 'P:' + e.partes.map(p => p.tipo + '=' + _r2(p.valor).toFixed(2)).join(';');
+}
+function _estadoJSON(o) {
+  if (o._partesJSON)  return { modo:'partes', partes:o._partesJSON, motivo:o._motivoJSON };
+  if (o._manualJSON)  return { modo:'tipo', tipo:o._tipoJSON, motivo:o._motivoJSON };
+  return { modo:'auto' };
+}
+function _estadoServidor(o) {
+  const a = ajustesServidor?.[o.id];
+  if (!a) return { modo:'auto' };
+  const partes = _partesDe(a.partes);
+  if (partes) return { modo:'partes', partes, motivo:a.motivo||'' };
+  return { modo:'tipo', tipo:a.tipoManual, motivo:a.motivo||'' };
+}
+function _estadoAtual(o) { return ajustesServidor ? _estadoServidor(o) : _estadoJSON(o); }
+
+// Reconstrói a base "como no extrato": partes de rateio vindas do JSON (idOrigem)
+// voltam a ser 1 lançamento, guardando o estado processado para detectar pendências.
 function prepararLancamentos() {
-  const lancs = dadosGlobais._lancamentosCaixa || [];
-  _suportaAjuste = lancs.length > 0 && lancs.every(l => l.id);
-  _lancPorId = {};
-  lancs.forEach(l => {
-    if (l.tipoAuto === undefined) l.tipoAuto = l.tipo;
-    l.manual       = !!l.manual;
-    l.motivoAjuste = l.motivoAjuste || '';
-    l._tipoJSON    = l.tipo;
-    l._manualJSON  = l.manual;
-    l.pendente     = false;
-    if (l.id) _lancPorId[l.id] = l;
+  const brutos = dadosGlobais._lancamentosCaixa || [];
+  _suportaAjuste = brutos.length > 0 && brutos.every(l => l.id);
+  _base = []; _lancPorId = {};
+  const grupos = {};
+  brutos.forEach(l => {
+    if (l.idOrigem) {
+      let o = grupos[l.idOrigem];
+      if (!o) {
+        o = Object.assign({}, l, { id: l.idOrigem, valor: 0, _partesJSON: [], _manualJSON: true, _tipoJSON: null, _motivoJSON: l.motivoAjuste || '' });
+        ['idOrigem','parteN','parteTot','desmembrado'].forEach(k => delete o[k]);
+        grupos[l.idOrigem] = o; _base.push(o);
+      }
+      o.valor = _r2(o.valor + (l.valor||0));
+      o._partesJSON.push({ valor: l.valor, tipo: l.tipo });
+      return;
+    }
+    const o = Object.assign({}, l);
+    if (o.tipoAuto === undefined) o.tipoAuto = o.tipo;
+    o._tipoJSON = o.tipo; o._manualJSON = !!o.manual; o._motivoJSON = o.motivoAjuste || '';
+    _base.push(o);
   });
+  _base.forEach(o => {
+    if (o.tipoAuto === undefined) o.tipoAuto = o.tipo;
+    o._sigJSON = _sigEstado(_estadoJSON(o));
+    if (o.id) _lancPorId[o.id] = o;
+  });
+  _montarExibicao();
+}
+
+// Gera a lista exibida (com rateios expandidos) a partir da base + estado atual
+function _montarExibicao() {
+  const out = [];
+  for (const o of _base) {
+    const e = _estadoAtual(o);
+    const pend = !!ajustesServidor && _sigEstado(e) !== o._sigJSON;
+    if (e.modo === 'partes') {
+      const n = e.partes.length;
+      e.partes.forEach((p, i) => out.push(Object.assign({}, o, {
+        id: o.id + '-p' + (i+1), idOrigem: o.id, parteN: i+1, parteTot: n,
+        valor: _r2(p.valor), tipo: p.tipo, manual: true, desmembrado: true,
+        motivoAjuste: p.motivo || e.motivo || '', pendente: pend
+      })));
+    } else {
+      out.push(Object.assign({}, o, {
+        tipo: e.modo === 'tipo' ? e.tipo : o.tipoAuto, manual: e.modo === 'tipo',
+        desmembrado: false, motivoAjuste: e.motivo || '', pendente: pend
+      }));
+    }
+  }
+  dadosGlobais._lancamentosCaixa = out;
 }
 
 // Se a listagem do servidor falhou, parte do que já veio aplicado no JSON
 function _garantirMapaAjustes() {
   if (ajustesServidor) return;
   ajustesServidor = {};
-  (dadosGlobais._lancamentosCaixa || []).forEach(l => {
-    if (l.id && l._manualJSON) ajustesServidor[l.id] = { id: l.id, tipoManual: l._tipoJSON, motivo: l.motivoAjuste };
+  _base.forEach(o => {
+    const e = _estadoJSON(o);
+    if (e.modo === 'tipo')   ajustesServidor[o.id] = { id:o.id, tipoManual:e.tipo, motivo:e.motivo };
+    if (e.modo === 'partes') ajustesServidor[o.id] = { id:o.id, tipoManual:e.partes[0].tipo, motivo:e.motivo, partes:JSON.stringify(e.partes) };
   });
 }
 
@@ -1144,26 +1257,22 @@ async function carregarAjustesServidor() {
 // Planilha (verdade) × JSON (último processamento): diverge → aplica localmente e marca pendente
 function sincronizarAjustes() {
   if (!ajustesServidor) return;
-  for (const l of (dadosGlobais._lancamentosCaixa || [])) {
-    if (!l.id) continue;
-    const a = ajustesServidor[l.id];
-    l.tipo         = a ? a.tipoManual : l.tipoAuto;
-    l.manual       = !!a;
-    l.motivoAjuste = a ? (a.motivo || '') : '';
-    l.pendente     = (l.tipo !== l._tipoJSON) || (l.manual !== l._manualJSON);
-  }
+  _montarExibicao();
 }
 
 function badgeTipo(l, tipoCss) {
   const cls = ['tipo-badge', tipoCss];
   if (l.manual) cls.push('tb-manual');
-  const podeEditar = _suportaAjuste && !!l.id;
+  const idEdit = l.idOrigem || l.id;
+  const podeEditar = _suportaAjuste && !!idEdit;
   if (podeEditar) cls.push('tb-edit');
-  let title = podeEditar ? 'Clique para reclassificar' : '';
-  if (l.manual) title = `Ajuste manual — automático: ${l.tipoAuto}\nMotivo: ${l.motivoAjuste||'—'}` + (podeEditar ? '\n(clique para editar)' : '');
+  let title = podeEditar ? 'Clique para reclassificar ou ratear' : '';
+  if (l.desmembrado) title = `Rateio — parte ${l.parteN} de ${l.parteTot}\nAutomático: ${l.tipoAuto}\nMotivo: ${l.motivoAjuste||'—'}` + (podeEditar ? '\n(clique para editar o rateio)' : '');
+  else if (l.manual) title = `Ajuste manual — automático: ${l.tipoAuto}\nMotivo: ${l.motivoAjuste||'—'}` + (podeEditar ? '\n(clique para editar)' : '');
   if (l.pendente) title += '\n• Pendente de reprocessamento';
-  const onclick = podeEditar ? ` onclick="abrirAjuste('${l.id}')"` : '';
-  return `<span class="${cls.join(' ')}" title="${_escHtml(title)}"${onclick}>${l.tipo}${l.manual?' ✎':''}</span>`
+  const onclick = podeEditar ? ` onclick="abrirAjuste('${idEdit}')"` : '';
+  const parte = l.desmembrado ? `<span class="tb-parte">${l.parteN}/${l.parteTot}</span>` : '';
+  return `<span class="${cls.join(' ')}" title="${_escHtml(title)}"${onclick}>${l.tipo}${l.manual?' ✎':''}${parte}</span>`
        + (l.pendente ? '<span class="tb-pend" title="Pendente de reprocessamento">•</span>' : '');
 }
 
@@ -1177,8 +1286,9 @@ function renderBanner(msgErro) {
   const el = document.getElementById('ajBanner');
   if (!el || !dadosGlobais) return;
   const lancs = dadosGlobais._lancamentosCaixa || [];
+  const unicos = arr => new Set(arr.map(l => l.idOrigem || l.id)).size;   // rateio conta 1 ajuste
   const cnt = document.getElementById('cntManuais');
-  if (cnt) cnt.textContent = lancs.filter(l => l.manual).length;
+  if (cnt) cnt.textContent = unicos(lancs.filter(l => l.manual));
 
   if (lancs.length && !_suportaAjuste) {
     el.innerHTML = `<div>⚠ O JSON atual não traz o <b>id</b> dos lançamentos — reclassificação manual indisponível.
@@ -1187,17 +1297,17 @@ function renderBanner(msgErro) {
   }
   if (msgErro) { el.innerHTML = `<div>⚠ ${_escHtml(msgErro)}</div>`; el.classList.add('show'); return; }
 
-  const pend   = lancs.filter(l => l.pendente).length;
+  const pend   = unicos(lancs.filter(l => l.pendente));
   const orfaos = dadosGlobais.ajustesManuais?.orfaos || [];
   if (!pend && !orfaos.length) { el.classList.remove('show'); el.innerHTML = ''; return; }
 
   const partes = [];
   if (pend) partes.push(`<b>${pend}</b> ajuste${pend>1?'s':''} pendente${pend>1?'s':''} de reprocessamento`);
-  if (orfaos.length) partes.push(`<b>${orfaos.length}</b> ajuste${orfaos.length>1?'s':''} órfão${orfaos.length>1?'s':''} (lançamento não localizado no extrato atual)`);
-  const orfTitle = orfaos.map(o => `${o.data} ${o.empresa}/${o.banco} · ${o.historico} · R$ ${o.valor} → ${o.tipoManual}`).join('\n');
+  if (orfaos.length) partes.push(`<b>${orfaos.length}</b> ajuste${orfaos.length>1?'s':''} órfão${orfaos.length>1?'s':''} ou inválido${orfaos.length>1?'s':''}`);
+  const orfTitle = orfaos.map(o => `${o.data} ${o.empresa}/${o.banco} · ${o.historico} · R$ ${o.valor} → ${o.partes ? 'rateio' : o.tipoManual}${o.erroRateio ? ' ⚠ ' + o.erroRateio : ''}`).join('\n');
   el.innerHTML = `<div>
       ${partes.join(' · ')}
-      <div class="aj-sub"${orfaos.length ? ` title="${_escHtml(orfTitle)}"` : ''}>Esta página já mostra os valores corrigidos. Painel, Fluxo, Conciliação e Planejamento refletem após reprocessar.${orfaos.length ? ' Passe o mouse aqui para ver os órfãos.' : ''}</div>
+      <div class="aj-sub"${orfaos.length ? ` title="${_escHtml(orfTitle)}"` : ''}>Esta página já mostra os valores corrigidos. Painel, Fluxo, Conciliação e Planejamento refletem após reprocessar.${orfaos.length ? ' Passe o mouse aqui para ver os órfãos/inválidos.' : ''}</div>
     </div>
     ${pend ? `<button class="aj-btn" id="ajBtnReproc" onclick="reprocessarAgora()">⟳ Reprocessar agora</button>` : ''}`;
   el.classList.add('show');
@@ -1208,35 +1318,137 @@ const _renderOriginal = render;
 render = function() { _renderOriginal(); renderBanner(); };
 
 // ── Modal ─────────────────────────────────────────────────────────────────
+function _descEstado(o, e) {
+  if (e.modo === 'auto')  return _escHtml(o.tipoAuto);
+  if (e.modo === 'tipo')  return `${_escHtml(e.tipo)} <span style="color:var(--warn)">(manual)</span>`;
+  return `<span style="color:var(--warn)">Rateio em ${e.partes.length} partes</span><br>` +
+    e.partes.map(p => `${_escHtml(p.tipo)}: ${fmtBRL(p.valor)}`).join('<br>');
+}
+
 function abrirAjuste(id) {
-  const l = _lancPorId[id]; if (!l) return;
-  _ajAtual = l; _ajTipoSel = l.tipo;
+  const o = _lancPorId[id]; if (!o) return;
+  const e = _estadoAtual(o);
+  _ajAtual = o; _ajEstado = e;
+  _ajModo    = e.modo === 'partes' ? 'partes' : 'tipo';
+  _ajTipoSel = e.modo === 'tipo' ? e.tipo : o.tipoAuto;
+  _ajPartes  = e.modo === 'partes'
+    ? e.partes.map(p => ({ valor: Math.abs(_r2(p.valor)), tipo: p.tipo }))
+    : _partesIniciais(o, e);
   document.getElementById('ajInfo').innerHTML = `
-    <dt>Data</dt><dd>${fmtDate(l.data)}</dd>
-    <dt>Empresa</dt><dd>${_escHtml(l.empresa)} · ${_escHtml(l.banco)}</dd>
-    <dt>Histórico</dt><dd>${_escHtml(l.historico||'—')}</dd>
-    <dt>Nome/Razão</dt><dd>${_escHtml(l.nomeRS||'—')}</dd>
-    <dt>Valor</dt><dd style="color:${l.valor>=0?'var(--green)':'var(--red)'}">${fmtBRL(l.valor)}</dd>
-    <dt>Automático</dt><dd>${_escHtml(l.tipoAuto)}</dd>
-    <dt>Atual</dt><dd>${_escHtml(l.tipo)}${l.manual?' <span style="color:var(--warn)">(manual)</span>':''}</dd>`;
-  document.getElementById('ajMotivo').value = l.manual ? (l.motivoAjuste||'') : '';
+    <dt>Data</dt><dd>${fmtDate(o.data)}</dd>
+    <dt>Empresa</dt><dd>${_escHtml(o.empresa)} · ${_escHtml(o.banco)}</dd>
+    <dt>Histórico</dt><dd>${_escHtml(o.historico||'—')}</dd>
+    <dt>Nome/Razão</dt><dd>${_escHtml(o.nomeRS||'—')}</dd>
+    <dt>Valor</dt><dd style="color:${o.valor>=0?'var(--green)':'var(--red)'}">${fmtBRL(o.valor)}</dd>
+    <dt>Automático</dt><dd>${_escHtml(o.tipoAuto)}</dd>
+    <dt>Atual</dt><dd>${_descEstado(o, e)}</dd>`;
+  document.getElementById('ajMotivo').value = e.motivo || '';
   document.getElementById('ajPin').value = '';
   document.getElementById('ajPinWrap').style.display = localStorage.getItem(_PIN_KEY) ? 'none' : '';
-  document.getElementById('ajBtnRemover').style.display = l.manual ? '' : 'none';
+  document.getElementById('ajBtnRemover').style.display = e.modo !== 'auto' ? '' : 'none';
   document.getElementById('ajErro').textContent = '';
-  renderTiposModal();
+  renderModalAj();
   document.getElementById('ajOverlay').classList.add('show');
   setTimeout(() => document.getElementById('ajMotivo').focus(), 50);
 }
-function fecharAjuste() { document.getElementById('ajOverlay').classList.remove('show'); _ajAtual = null; }
+function _partesIniciais(o, e) {
+  const atual = e.modo === 'tipo' ? e.tipo : o.tipoAuto;
+  const outro = atual === 'Recurso de Terceiros' ? 'Operacional' : 'Recurso de Terceiros';
+  return [{ valor: null, tipo: atual }, { valor: null, tipo: outro }];
+}
+function fecharAjuste() { document.getElementById('ajOverlay').classList.remove('show'); _ajAtual = null; _ajEstado = null; }
+function setModoAj(m) { _ajModo = m; document.getElementById('ajErro').textContent = ''; renderModalAj(); }
+function renderModalAj() {
+  document.querySelectorAll('#ajModo button').forEach(b => b.classList.toggle('sel', b.dataset.modo === _ajModo));
+  const tipos = document.getElementById('ajTipos'), rat = document.getElementById('ajRateio');
+  if (_ajModo === 'partes') { tipos.style.display = 'none'; rat.style.display = 'block'; renderRateio(); }
+  else { rat.style.display = 'none'; tipos.style.display = ''; renderTiposModal(); }
+}
 function selTipoAj(t) { _ajTipoSel = t; renderTiposModal(); }
 function renderTiposModal() {
   document.getElementById('ajTipos').innerHTML = TIPOS_AJ.map(t =>
     `<button class="aj-tipo ${t===_ajTipoSel?'sel':''}" onclick="selTipoAj('${t}')">${t}<small>${t===_ajAtual?.tipoAuto ? 'classificação automática' : TIPO_DESC[t]}</small></button>`
   ).join('');
-  document.getElementById('ajWarnAF').style.display =
-    (_ajTipoSel === 'Aplicação Financeira') !== (_ajAtual?.tipoAuto === 'Aplicação Financeira') ? 'block' : 'none';
+  _atualizarWarnAF();
+  const btn = document.getElementById('ajBtnSalvar'); if (btn) btn.disabled = false;
 }
+function _atualizarWarnAF() {
+  const auto = _ajAtual?.tipoAuto === 'Aplicação Financeira';
+  const novo = _ajModo === 'partes'
+    ? _ajPartes.some(p => p.tipo === 'Aplicação Financeira')
+    : _ajTipoSel === 'Aplicação Financeira';
+  const mostrar = _ajModo === 'partes' ? (auto || novo) : (novo !== auto);
+  document.getElementById('ajWarnAF').style.display = mostrar ? 'block' : 'none';
+}
+
+// ── Rateio ────────────────────────────────────────────────────────────────
+// Valores digitados sempre positivos; o sinal do lançamento original é aplicado ao salvar.
+function _parseValorBR(v) {
+  let s = String(v == null ? '' : v).replace(/R\$|\s/g, '');
+  if (!s) return null;
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+  else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');   // "70.000" = setenta mil
+  const n = parseFloat(s);
+  return isNaN(n) ? null : _r2(Math.abs(n));
+}
+function _fmtIn(n) { return n == null ? '' : Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function _fmtFull(n) { return (n < 0 ? '-' : '') + 'R$ ' + _fmtIn(Math.abs(n)); }
+
+function renderRateio() {
+  const opts = t => TIPOS_AJ.map(x => `<option value="${x}" ${x===t?'selected':''}>${x}</option>`).join('');
+  document.getElementById('ajRateio').innerHTML = `
+    <div class="rt-rows">${_ajPartes.map((p, i) => `
+      <div class="rt-row">
+        <span class="rt-n">${i+1}</span>
+        <input class="aj-input rt-valor" inputmode="decimal" placeholder="0,00" value="${_fmtIn(p.valor)}"
+               oninput="rtValor(${i}, this.value)" onblur="this.value=_fmtIn(_ajPartes[${i}].valor)">
+        <select class="aj-input rt-tipo" onchange="rtTipo(${i}, this.value)">${opts(p.tipo)}</select>
+        <button class="rt-mini" title="Preencher com o valor que falta para fechar o total" onclick="rtRestante(${i})">= restante</button>
+        ${_ajPartes.length > 2 ? `<button class="rt-mini rt-del" title="Remover parte" onclick="rtDel(${i})">×</button>` : '<span></span>'}
+      </div>`).join('')}
+    </div>
+    <button class="rt-add" onclick="rtAdd()">+ parte</button>
+    <div class="rt-tot" id="rtTot"></div>
+    <div class="rt-hint" id="rtHint"></div>`;
+  _atualizarTotaisRateio();
+}
+function rtValor(i, v) { _ajPartes[i].valor = _parseValorBR(v); _atualizarTotaisRateio(); }
+function rtTipo(i, t)  { _ajPartes[i].tipo = t; _atualizarTotaisRateio(); }
+function rtAdd() { _ajPartes.push({ valor: null, tipo: 'Operacional' }); renderRateio(); }
+function rtDel(i) { _ajPartes.splice(i, 1); renderRateio(); }
+function rtRestante(i) {
+  const total = Math.abs(_ajAtual.valor);
+  const outros = _ajPartes.reduce((s, p, j) => j === i ? s : s + (p.valor || 0), 0);
+  const resto = _r2(total - outros);
+  if (resto <= 0) { document.getElementById('rtHint').textContent = 'As outras partes já somam o valor total (ou mais).'; return; }
+  _ajPartes[i].valor = resto;
+  renderRateio();
+}
+function _validarRateio() {
+  const total = _r2(Math.abs(_ajAtual.valor));
+  const soma  = _r2(_ajPartes.reduce((s, p) => s + (p.valor || 0), 0));
+  const dif   = _r2(total - soma);
+  let erro = '';
+  if (_ajPartes.length < 2) erro = 'Informe ao menos 2 partes.';
+  else if (_ajPartes.some(p => !p.valor)) erro = 'Preencha o valor de todas as partes (maior que zero).';
+  else if (new Set(_ajPartes.map(p => p.tipo)).size < 2) erro = 'Todas as partes têm o mesmo tipo — use "Reclassificar".';
+  else if (Math.abs(dif) > 0.009) erro = dif > 0 ? `Faltam ${_fmtFull(dif)} para fechar o total.` : `As partes excedem o total em ${_fmtFull(-dif)}.`;
+  return { total, soma, dif, erro };
+}
+function _atualizarTotaisRateio() {
+  const v = _validarRateio();
+  const corDif = Math.abs(v.dif) <= 0.009 ? 'var(--green)' : 'var(--warn)';
+  const tot = document.getElementById('rtTot');
+  if (tot) tot.innerHTML = `
+    <div><span>Valor original</span><b>${_fmtFull(v.total)}</b></div>
+    <div><span>Soma das partes</span><b>${_fmtFull(v.soma)}</b></div>
+    <div><span>Diferença</span><b style="color:${corDif}">${_fmtFull(v.dif)}</b></div>`;
+  const hint = document.getElementById('rtHint');
+  if (hint) { hint.textContent = v.erro || '✓ Rateio fecha com o valor original.'; hint.style.color = v.erro ? 'var(--muted)' : 'var(--green)'; }
+  const btn = document.getElementById('ajBtnSalvar'); if (btn && _ajModo === 'partes') btn.disabled = !!v.erro;
+  _atualizarWarnAF();
+}
+
 function _pinAtual() { return document.getElementById('ajPin').value.trim() || localStorage.getItem(_PIN_KEY) || ''; }
 function _tratarErroPin(j) {
   if (j.codigo === 'PIN') { localStorage.removeItem(_PIN_KEY); document.getElementById('ajPinWrap').style.display = ''; }
@@ -1244,32 +1456,52 @@ function _tratarErroPin(j) {
 function _setBusy(b) {
   ['ajBtnSalvar','ajBtnRemover'].forEach(id => { const e = document.getElementById(id); if (e) e.disabled = b; });
   document.getElementById('ajBtnSalvar').textContent = b ? 'Salvando…' : 'Salvar';
+  if (!b && _ajAtual && _ajModo === 'partes') _atualizarTotaisRateio();
 }
 
 async function salvarAjuste() {
-  const l = _ajAtual; if (!l) return;
+  const o = _ajAtual, e = _ajEstado; if (!o) return;
   const motivo = document.getElementById('ajMotivo').value.trim();
   const erroEl = document.getElementById('ajErro');
-  if (_ajTipoSel === l.tipoAuto && l.manual) return removerAjuste();
-  if (_ajTipoSel === l.tipoAuto) { erroEl.textContent = 'Esse já é o tipo automático — nada a ajustar.'; return; }
-  if (_ajTipoSel === l.tipo && motivo === (l.motivoAjuste||'')) { erroEl.textContent = 'Nenhuma alteração.'; return; }
+  let partes = null, tipoManual = _ajTipoSel;
+
+  if (_ajModo === 'partes') {
+    const v = _validarRateio();
+    if (v.erro) { erroEl.textContent = v.erro; return; }
+    const sinal = o.valor < 0 ? -1 : 1;
+    partes = _ajPartes.map(p => ({ valor: _r2(sinal * p.valor), tipo: p.tipo }));
+    tipoManual = partes[0].tipo;
+    if (e.modo === 'partes' && _sigEstado({ modo:'partes', partes }) === _sigEstado(e) && motivo === (e.motivo||'')) { erroEl.textContent = 'Nenhuma alteração.'; return; }
+  } else {
+    if (_ajTipoSel === o.tipoAuto && e.modo !== 'auto') return removerAjuste();
+    if (_ajTipoSel === o.tipoAuto) { erroEl.textContent = 'Esse já é o tipo automático — nada a ajustar.'; return; }
+    if (e.modo === 'tipo' && _ajTipoSel === e.tipo && motivo === (e.motivo||'')) { erroEl.textContent = 'Nenhuma alteração.'; return; }
+  }
   if (motivo.length < 3) { erroEl.textContent = 'Informe o motivo do ajuste.'; return; }
   const pin = _pinAtual();
   if (!pin) { erroEl.textContent = 'Informe o PIN.'; document.getElementById('ajPinWrap').style.display = ''; return; }
 
   _setBusy(true); erroEl.textContent = '';
   try {
-    const j = await _postAS({
-      action: 'salvarAjuste', pin, id: l.id, tipoManual: _ajTipoSel, motivo,
-      lancamento: { data: l.data, empresa: l.empresa, banco: l.banco, historico: l.historico, nomeRS: l.nomeRS, valor: l.valor, tipoAuto: l.tipoAuto }
-    });
+    const payload = {
+      action: 'salvarAjuste', pin, id: o.id, tipoManual, motivo,
+      lancamento: { data: o.data, empresa: o.empresa, banco: o.banco, historico: o.historico, nomeRS: o.nomeRS, valor: o.valor, tipoAuto: o.tipoAuto }
+    };
+    if (partes) payload.partes = partes;
+    const j = await _postAS(payload);
     if (!j.ok) { _tratarErroPin(j); erroEl.textContent = j.erro || 'Falha ao salvar.'; return; }
     localStorage.setItem(_PIN_KEY, pin);
     _garantirMapaAjustes();
-    if (j.ajuste) ajustesServidor[l.id] = j.ajuste; else delete ajustesServidor[l.id];
+    if (j.ajuste) ajustesServidor[o.id] = j.ajuste; else delete ajustesServidor[o.id];
+    // Backend antigo ignora "partes" e grava só o tipo → avisa em vez de mascarar
+    if (partes && !(j.ajuste && _partesDe(j.ajuste.partes))) {
+      sincronizarAjustes(); render();
+      erroEl.textContent = 'O Apps Script publicado ainda não suporta rateio: foi gravado apenas como reclassificação para "' + tipoManual + '". Publique o novo Ajustes_Manuais.gs (nova versão da implantação) e refaça o rateio.';
+      return;
+    }
     sincronizarAjustes(); fecharAjuste(); render();
-  } catch (e) {
-    erroEl.textContent = 'Erro de comunicação: ' + e.message;
+  } catch (err) {
+    erroEl.textContent = 'Erro de comunicação: ' + err.message;
   } finally { _setBusy(false); }
 }
 

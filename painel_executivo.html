@@ -88,6 +88,9 @@
   }
   .kpi-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
   .kpi-grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: .7rem; }
+  .kpi-grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: .7rem; }
+  @media (max-width: 1400px) { .kpi-grid-4 { grid-template-columns: repeat(2,1fr); } }
+  .kc-rt { --kc:#f472b6; background:rgba(244,114,182,.06); border:1px solid rgba(244,114,182,.18); }
 
   .kpi-card {
     border-radius: 9px; padding: .85rem 1rem;
@@ -321,7 +324,7 @@ function formatMes(m) {
 function calcKPIs() {
   if (!dadosGlobais) return null;
   const mesesAtivos = filtros.meses.length>0 ? filtros.meses : dadosGlobais.mesesDisponiveis;
-  let entradasCaixa=0,saidasCaixa=0,entOp=0,saiOp=0,transInternas=0,intercompany=0,aplicacoes=0;
+  let entradasCaixa=0,saidasCaixa=0,entOp=0,saiOp=0,transInternas=0,intercompany=0,aplicacoes=0,terceiros=0;
   for (const mes of mesesAtivos) {
     const km = dadosGlobais.kpisPorMesEmpresaBanco?.[mes];
     if (!km) continue;
@@ -329,7 +332,7 @@ function calcKPIs() {
       const k=km?.[emp]?.[bc]; if (!k) continue;
       entradasCaixa+=k.entradasCaixa||0; saidasCaixa+=k.saidasCaixa||0;
       entOp+=k.entOp||0; saiOp+=k.saiOp||0;
-      transInternas+=k.transInternas||0; intercompany+=k.intercompany||0; aplicacoes+=k.aplicacoes||0;
+      transInternas+=k.transInternas||0; intercompany+=k.intercompany||0; aplicacoes+=k.aplicacoes||0; terceiros+=k.terceiros||0;
     }
   }
   const mesLimite=[...mesesAtivos].sort().pop()||dadosGlobais.mesesDisponiveis.slice(-1)[0];
@@ -340,7 +343,7 @@ function calcKPIs() {
   }
   return { entradasCaixa, saidasCaixa, resultadoBancario:entradasCaixa+saidasCaixa,
            entOp, saiOp, resultadoOp:entOp+saiOp,
-           transInternas, intercompany, aplicacoes,
+           transInternas, intercompany, aplicacoes, terceiros,
            disponivel, investimentos, totalPatrimonio:disponivel+investimentos };
 }
 
@@ -376,10 +379,11 @@ function renderKPIs() {
       </div>
       <div class="kpi-section">
         <div class="section-label">Ajustes</div>
-        <div class="kpi-grid-3">
+        <div class="kpi-grid-4">
           <div class="kpi-card ${adjCls(k.transInternas)}"><div class="kc-label">Transf. Internas<span class="tip-icon" data-title="Transferências Internas" data-tip="Movimentações entre contas do próprio grupo (ex: SIGMA → MD). Não representam receita nem despesa real — são neutras no consolidado." data-meta="Valor líquido no período">i</span></div><div class="kc-value">${fmtBRL(k.transInternas)}</div></div>
           <div class="kpi-card ${adjCls(k.intercompany)}"><div class="kc-label">Intercompany<span class="tip-icon" data-title="Intercompany" data-tip="Transações financeiras entre as empresas do grupo (MD, SEL, SIGMA). Valor positivo = o grupo recebeu mais do que pagou entre si." data-meta="Valor líquido no período">i</span></div><div class="kc-value">${fmtBRL(k.intercompany)}</div></div>
           <div class="kpi-card ${adjCls(k.aplicacoes)}"><div class="kc-label">Aplicações Fin.<span class="tip-icon" data-title="Aplicações Financeiras" data-tip="Entradas e saídas em CDB e outros investimentos. Valor negativo = mais recursos foram aplicados do que resgatados." data-meta="CDB / aplicações no período">i</span></div><div class="kc-value">${fmtBRL(k.aplicacoes)}</div></div>
+          <div class="kpi-card ${Math.abs(k.terceiros)<0.005?'kc-muted':'kc-rt'}"><div class="kc-label">Rec. Terceiros<span class="tip-icon" data-title="Recursos de Terceiros" data-tip="Valores de terceiros que entraram na conta e devem ser repassados (ex.: parte de um empréstimo que não pertence ao grupo). Não entram no operacional. Zerado = tudo repassado; positivo = ainda a repassar." data-meta="Valor líquido no período">i</span></div><div class="kc-value">${fmtBRL(k.terceiros)}</div></div>
         </div>
       </div>
     </div>
@@ -462,6 +466,13 @@ function gerarAlertas(k, mesesAtivos) {
   const ratioInv = k.investimentos / (k.totalPatrimonio || 1) * 100;
   if (ratioInv > 60) {
     items.push({ cls: 'info', txt: `<strong>${ratioInv.toFixed(0)}%</strong> do patrimônio financeiro está em investimentos. O saldo disponível em conta é <strong>${fmtBRL(k.disponivel)}</strong>.` });
+  }
+
+  // Recursos de terceiros ainda não repassados
+  if (Math.abs(k.terceiros) > 1) {
+    items.push({ cls: 'warn', txt: k.terceiros > 0
+      ? `Recursos de terceiros com <strong>${fmtBRL(k.terceiros)}</strong> ainda a repassar no período.`
+      : `Repasses a terceiros superam os valores recebidos em <strong>${fmtBRL(Math.abs(k.terceiros))}</strong>. Verificar se o crédito correspondente está em outro período.` });
   }
 
   // Intercompany desequilibrado
