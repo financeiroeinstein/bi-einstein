@@ -6,6 +6,9 @@
    • Cache local (IndexedDB) de 10 min: navegar entre páginas não
      rebaixa o JSON; se o Apps Script falhar, exibe o último JSON bom
    • BIData.meta(): lê só "geradoEm" (polling leve)
+   • TTL vencido → revalida por meta(); só rebaixa se o JSON mudou
+   • BIData.regenerar(): disparo + acompanhamento do reprocessamento
+     (lê status do servidor: agendado / rodando / ok / erro)
    ════════════════════════════════════════════════════════════════ */
 (function () {
   const AS_EXEC  = 'https://script.google.com/macros/s/AKfycbxb6AWl5weYzZjR9uveLtUG8HhLYIIw3GasBSZZpGbcUnv6vKK792GD4nDBDqk3yF43/exec';
@@ -95,7 +98,14 @@
     if (emVoo && !force) return emVoo;
     emVoo = (async () => {
       const cache = await cacheGet();
-      if (!force && cache && Date.now() - cache.salvoEm < TTL) return cache.data;
+      if (!force && cache) {
+        if (Date.now() - cache.salvoEm < TTL) return cache.data;
+        // TTL vencido: revalidação leve — só baixa o JSON inteiro se geradoEm mudou
+        try {
+          const g = await meta(10000);
+          if (g && g === cache.data.geradoEm) { await cacheSet(cache.data); return cache.data; }
+        } catch (_) { /* meta falhou → segue para o download normal */ }
+      }
       try {
         const d = await fetchRemoto();
         await cacheSet(d);
@@ -110,10 +120,38 @@
 
   // Só o carimbo "geradoEm" — backend novo responde com payload mínimo;
   // backend antigo ignora "meta=1" e devolve o JSON completo (também funciona).
-  async function meta() {
-    const d = await getJSON(AS_EXEC + '?action=json&meta=1&_=' + Date.now(), TIMEOUT);
-    return (d && d.geradoEm) || null;
+  async function metaStatus(ms) {
+    const d = await getJSON(AS_EXEC + '?action=json&meta=1&_=' + Date.now(), ms || TIMEOUT);
+    return { geradoEm: (d && d.geradoEm) || null, status: (d && d.status) || '', info: (d && d.info) || '' };
+  }
+  async function meta(ms) { return (await metaStatus(ms)).geradoEm; }
+
+  // ── Reprocessamento completo (botão "Atualizar dados" e fallback do Ajustes)
+  //   onProgresso({ segundos, status }) é chamado a cada consulta.
+  //   Resolve com { geradoEm } ou lança Error com a mensagem do servidor.
+  const esperar = ms => new Promise(r => setTimeout(r, ms));
+  async function regenerar(onProgresso) {
+    let antes = null;
+    try { antes = await meta(10000); } catch (_) {}
+
+    // Disparo com CORS (o Web App já responde CORS — é assim que load() funciona)
+    const disparo = await getJSON(AS_EXEC + '?_=' + Date.now(), 30000);
+    if (disparo && disparo.ok === false) throw new Error(disparo.erro || 'Falha ao disparar o processamento');
+
+    const inicio = Date.now(), LIMITE = 8 * 60 * 1000, PASSO = 10000;
+    while (Date.now() - inicio < LIMITE) {
+      await esperar(PASSO);
+      let m = null;
+      try { m = await metaStatus(10000); } catch (_) { continue; }      // erro de rede pontual: tenta de novo
+      if (onProgresso) onProgresso({ segundos: Math.round((Date.now() - inicio) / 1000), status: m.status });
+      if (m.status === 'erro') throw new Error(m.info || 'Erro no processamento');
+      if (m.geradoEm && m.geradoEm !== antes && m.status !== 'rodando' && m.status !== 'agendado') {
+        await cacheClear();
+        return { geradoEm: m.geradoEm };
+      }
+    }
+    throw new Error('Tempo esgotado (8 min) — verifique as execuções do Apps Script');
   }
 
-  window.BIData = { load, meta, clear: cacheClear, AS_EXEC };
+  window.BIData = { load, meta, metaStatus, regenerar, clear: cacheClear, AS_EXEC };
 })();

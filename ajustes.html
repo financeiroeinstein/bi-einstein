@@ -1547,24 +1547,30 @@ async function removerAjuste() {
   } finally { _setBusy(false); }
 }
 
-// ── Reprocessamento (mesmo gatilho do botão "Atualizar dados" do Menu) ─────
+// ── Reprocessamento ──────────────────────────────────────────────────────
+//   1º) LEVE: servidor reaplica os ajustes sobre o JSON já publicado (segundos,
+//       sem OneDrive nem conversão de xlsx) — action 'reaplicarAjustes'
+//   2º) COMPLETO (fallback): mesmo fluxo do botão "Atualizar dados" do Menu
 async function reprocessarAgora() {
-  const btn = document.getElementById('ajBtnReproc');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Iniciando…'; }
-  const geradoAntes = dadosGlobais?.geradoEm;
-  try { await fetch(_AS_EXEC, { method: 'GET', mode: 'no-cors' }); } catch(_) {}
-  const inicio = Date.now(), LIMITE = 8 * 60 * 1000;
-  const tick = async () => {
-    const b = document.getElementById('ajBtnReproc');
-    if (b) b.textContent = `⏳ Processando… ${Math.round((Date.now()-inicio)/1000)}s`;
-    try {
-      const g = await BIData.meta();
-      if (g && g !== geradoAntes) { await BIData.clear(); location.reload(); return; }
-    } catch(_) {}
-    if (Date.now() - inicio < LIMITE) setTimeout(tick, 15000);
-    else if (b) { b.disabled = false; b.textContent = '⟳ Tentar novamente'; }
-  };
-  setTimeout(tick, 20000);
+  const rotulo = t => { const b = document.getElementById('ajBtnReproc'); if (b) { b.disabled = true; b.textContent = t; } };
+  const liberar = t => { const b = document.getElementById('ajBtnReproc'); if (b) { b.disabled = false; b.textContent = t; } };
+  rotulo('⏳ Aplicando ajustes…');
+  try {
+    const j = await _postAS({ action: 'reaplicarAjustes' });
+    if (j && j.ok) { await BIData.clear(); location.reload(); return; }
+    console.warn('Reaplicação leve indisponível → ' + (j && j.erro) + ' — usando reprocessamento completo');
+  } catch (e) {
+    console.warn('Reaplicação leve falhou → ' + e.message + ' — usando reprocessamento completo');
+  }
+  rotulo('⏳ Reprocessamento completo…');
+  try {
+    await BIData.regenerar(({ segundos }) => rotulo(`⏳ Processando… ${segundos}s`));
+    location.reload();
+  } catch (e) {
+    liberar('⚠ Falhou — tentar novamente');
+    const b = document.getElementById('ajBtnReproc'); if (b) b.title = e.message;
+    console.error('Reprocessamento falhou: ' + e.message);
+  }
 }
 
 document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharAjuste(); });

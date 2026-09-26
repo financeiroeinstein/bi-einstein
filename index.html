@@ -569,80 +569,30 @@ function showToast(msg, tipo='') {
   toastTimer = setTimeout(() => { el.className = ''; }, 4000);
 }
 
-// ─── POLLING ─────────────────────────────────────────────────────
-// Verifica a cada 15s se geradoEm mudou; para após 8 min ou quando detectar mudança
-async function iniciarPolling(geradoEmAntes) {
-  const INTERVALO  = 15000;  // 15 segundos
-  const MAX_ITER   = 32;     // ~8 minutos no total
-  let tentativas = 0;
-
-  return new Promise((resolve) => {
-    const intervalo = setInterval(async () => {
-      tentativas++;
-      try {
-        const novoGeradoEm = await lerGeradoEm();
-        if (novoGeradoEm && novoGeradoEm !== geradoEmAntes) {
-          clearInterval(intervalo);
-          resolve({ ok: true, geradoEm: novoGeradoEm });
-          return;
-        }
-      } catch(_) { /* ignora erros de rede no polling */ }
-
-      if (tentativas >= MAX_ITER) {
-        clearInterval(intervalo);
-        resolve({ ok: false });
-      }
-    }, INTERVALO);
-  });
-}
-
-// ─── DISPARO PRINCIPAL ───────────────────────────────────────────
+// ─── ATUALIZAÇÃO (lógica centralizada em BIData.regenerar) ────────
+const _ROTULO_STATUS = { agendado: 'Na fila', rodando: 'Processando' };
 async function dispararAtualizacao() {
-  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'COLE_AQUI_A_URL_DO_WEB_APP') {
-    showToast('⚠ URL do Web App não configurada', 'err');
-    return;
-  }
-
   const btn   = document.getElementById('btnUpdate');
   const label = document.getElementById('btnLabel');
-
-  // Captura geradoEm atual antes de disparar
-  let geradoEmAntes = null;
-  try { geradoEmAntes = await lerGeradoEm(); } catch(_) {}
-
-  // Estado: carregando
   btn.disabled = true;
   btn.classList.add('loading');
   label.textContent = 'Iniciando...';
   showToast('⏳ Disparando atualização...', '');
 
-  // Chama o Web App (no-cors porque Apps Script não envia CORS headers no exec)
   try {
-    await fetch(APPS_SCRIPT_URL, { method: 'GET', mode: 'no-cors' });
-  } catch(_) {
-    // no-cors sempre "falha" do ponto de vista do fetch — ignora
-  }
-
-  // Aguarda trigger ser criado (~2s) e inicia polling
-  label.textContent = 'Processando...';
-  showToast('⚙ Apps Script iniciado — aguardando conclusão (~3 min)...', '');
-
-  const resultado = await iniciarPolling(geradoEmAntes);
-
-  // Restaura botão
-  btn.disabled = false;
-  btn.classList.remove('loading');
-  label.textContent = 'Atualizar dados';
-
-  if (resultado.ok) {
-    await verificarJSON(); // atualiza status bar
-    showToast('✓ Dados atualizados com sucesso!', 'ok');
-    // Recarrega após 1.5s para todos os painéis puxarem o JSON novo
-    await BIData.clear();
-    setTimeout(() => location.reload(), 1500);
-  } else {
-    showToast('⚠ Tempo esgotado — verifique o Apps Script', 'err');
+    await BIData.regenerar(({ segundos, status }) => {
+      label.textContent = (_ROTULO_STATUS[status] || 'Processando') + '... ' + segundos + 's';
+    });
     await verificarJSON();
+    showToast('✓ Dados atualizados com sucesso!', 'ok');
+    setTimeout(() => location.reload(), 1500);
+  } catch (e) {
+    showToast('⚠ ' + e.message, 'err');
+    await verificarJSON();
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('loading');
+    label.textContent = 'Atualizar dados';
   }
 }
 </script>
