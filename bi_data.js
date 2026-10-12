@@ -3,10 +3,13 @@
    ────────────────────────────────────────────────────────────────
    • Fonte única: Web App do Apps Script (proxies públicos removidos)
    • Timeout de 45 s + 1 nova tentativa
-   • Cache local (IndexedDB) de 10 min: navegar entre páginas não
-     rebaixa o JSON; se o Apps Script falhar, exibe o último JSON bom
+   • Cache local (IndexedDB): a página abre NA HORA com a cópia local
+     e, em segundo plano, confere o "geradoEm" no servidor (meta=1).
+     Se o JSON mudou, baixa a versão nova e mostra a barra
+     "Dados novos disponíveis → Recarregar" (sem esperar TTL).
+   • ?fresh=1 na URL → ignora o cache e baixa direto do servidor
+   • Se o Apps Script falhar, exibe o último JSON bom
    • BIData.meta(): lê só "geradoEm" (polling leve)
-   • TTL vencido → revalida por meta(); só rebaixa se o JSON mudou
    • BIData.regenerar(): disparo + acompanhamento do reprocessamento
      (lê status do servidor: agendado / rodando / ok / erro)
    ════════════════════════════════════════════════════════════════ */
@@ -14,7 +17,7 @@
   const AS_EXEC  = 'https://script.google.com/macros/s/AKfycbxb6AWl5weYzZjR9uveLtUG8HhLYIIw3GasBSZZpGbcUnv6vKK792GD4nDBDqk3yF43/exec';
   const TIMEOUT  = 45000;           // ms por tentativa
   const RETRY_MS = 3000;            // espera antes da 2ª tentativa
-  const TTL      = 10 * 60 * 1000;  // validade do cache
+  const META_MS  = 10000;           // timeout da conferência leve (geradoEm)
   const DB = 'bi_einstein', STORE = 'json', KEY = 'payload';
 
   // ── IndexedDB (sem limite prático de tamanho, ao contrário do localStorage)
@@ -91,20 +94,50 @@
     (document.body || document.documentElement).appendChild(div);
   }
 
+  // Barra fixa avisando que há dados novos (a página atual continua com os antigos)
+  function avisoNovos(geradoEm) {
+    if (document.getElementById('biNovosDados')) return;
+    const div = document.createElement('div');
+    div.id = 'biNovosDados';
+    const dt = geradoEm ? new Date(geradoEm).toLocaleString('pt-BR') : '';
+    div.innerHTML = '↻ Dados novos disponíveis' + (dt ? ' (gerados em ' + dt + ')' : '') +
+      ' <button type="button" style="margin-left:10px;background:#00e5a0;color:#0a0c10;border:0;' +
+      'border-radius:5px;padding:4px 12px;font:600 12px system-ui,sans-serif;cursor:pointer">Recarregar</button>';
+    div.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:9999;padding:8px 16px;' +
+      'background:#0b2a20;color:#00e5a0;font:12px/1.4 system-ui,sans-serif;border-top:1px solid #00e5a0;' +
+      'display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px';
+    div.querySelector('button').onclick = () => location.reload();
+    (document.body || document.documentElement).appendChild(div);
+  }
+
+  // Confere em segundo plano se o servidor tem JSON mais novo que o cache
+  let revalidando = false;
+  async function revalidar(geradoEmCache) {
+    if (revalidando) return;
+    revalidando = true;
+    try {
+      const g = await meta(META_MS);
+      if (!g || g === geradoEmCache) return;           // nada mudou
+      const d = await fetchRemoto();                     // baixa a versão nova
+      await cacheSet(d);
+      if (d.geradoEm !== geradoEmCache) avisoNovos(d.geradoEm);
+    } catch (e) {
+      console.warn('[BIData] revalidação em segundo plano falhou: ' + e.message);
+    } finally { revalidando = false; }
+  }
+
+  const FRESH_URL = /[?&]fresh=1\b/.test(location.search);
   let emVoo = null; // evita buscas duplicadas na mesma página
 
   async function load(opts) {
-    const force = opts && opts.force;
+    const force = (opts && opts.force) || FRESH_URL;
     if (emVoo && !force) return emVoo;
     emVoo = (async () => {
       const cache = await cacheGet();
       if (!force && cache) {
-        if (Date.now() - cache.salvoEm < TTL) return cache.data;
-        // TTL vencido: revalidação leve — só baixa o JSON inteiro se geradoEm mudou
-        try {
-          const g = await meta(10000);
-          if (g && g === cache.data.geradoEm) { await cacheSet(cache.data); return cache.data; }
-        } catch (_) { /* meta falhou → segue para o download normal */ }
+        // Abre na hora com a cópia local e confere o servidor em segundo plano
+        revalidar(cache.data.geradoEm);
+        return cache.data;
       }
       try {
         const d = await fetchRemoto();
