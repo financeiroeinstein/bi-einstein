@@ -515,7 +515,7 @@
   </div>
 </div>
 
-<script src="bi_data.js"></script>
+<script src="bi_data.js?v=2026101201"></script>
 <script>
 const DRIVE_FILE_ID = '1uHgfvF8CU2qJSbYjv_MtmgRxJFJzJR-Z';
 // ─── FONTE DE DADOS ────────────────────────────────────────────────────────
@@ -976,6 +976,7 @@ function fetchT(url, ms=8000) {
 }
 async function carregarDados() {
   try {
+    if (typeof BIData.marcarEstornos !== 'function') throw new Error('bi_data.js desatualizado no servidor: suba a versão nova do bi_data.js para o GitHub e recarregue com Ctrl+F5');
     dadosGlobais = await _fetchJSON();
     const dt = new Date(dadosGlobais.geradoEm);
     document.getElementById('lastUpdate').textContent =
