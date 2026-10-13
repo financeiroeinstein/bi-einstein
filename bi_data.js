@@ -12,6 +12,7 @@
    • BIData.meta(): lê só "geradoEm" (polling leve)
    • BIData.regenerar(): disparo + acompanhamento do reprocessamento
      (lê status do servidor: agendado / rodando / ok / erro)
+   • Regras compartilhadas: empréstimo e pares débito/estorno (ver abaixo)
    ════════════════════════════════════════════════════════════════ */
 (function () {
   const AS_EXEC  = 'https://script.google.com/macros/s/AKfycbxb6AWl5weYzZjR9uveLtUG8HhLYIIw3GasBSZZpGbcUnv6vKK792GD4nDBDqk3yF43/exec';
@@ -186,5 +187,78 @@
     throw new Error('Tempo esgotado (8 min) — verifique as execuções do Apps Script');
   }
 
-  window.BIData = { load, meta, metaStatus, regenerar, clear: cacheClear, AS_EXEC };
+  /* ── REGRAS DE NEGÓCIO COMPARTILHADAS (Painel, Fluxo, Ajustes) ──────────
+     Uma única fonte para as regras abaixo — alterar aqui vale para todas
+     as páginas.
+
+     1) EMPRÉSTIMO: entrada Operacional (valor > 0) cujo histórico é
+        EXATAMENTE um dos itens de HIST_EMPRESTIMO. A comparação ignora
+        acentos, maiúsculas e espaços extras.
+
+     2) PAR DÉBITO/ESTORNO: crédito cujo histórico é "ESTORNO <X>" anula um
+        débito "<X>" da mesma empresa, banco e tipo, com o mesmo valor, até
+        ESTORNO_JANELA_DIAS dias antes. Os dois lados recebem _estornoPar e
+        saem dos totais de entradas/saídas (o líquido não muda).        */
+  const HIST_EMPRESTIMO = [
+    'CREDITO EMPRESTIMO SIEMP',   // Caixa
+    'CRED.EMPRESTIMO'             // Sicoob (no extrato: "CRÉD.EMPRÉSTIMO")
+  ];
+  const ESTORNO_JANELA_DIAS = 5;
+
+  const normHist = h => String(h || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, ' ').trim().toUpperCase();
+  const _empSet = new Set(HIST_EMPRESTIMO.map(normHist));
+  const ehHistEmprestimo   = h => _empSet.has(normHist(h));
+  const ehEntradaEmprestimo = l => l.tipo === 'Operacional' && l.valor > 0 && ehHistEmprestimo(l.historico);
+
+  const _chaveHist = h => normHist(h).replace(/[^A-Z0-9]/g, '');
+  const _cent = v => Math.round(Math.abs(Number(v) || 0) * 100);
+  const _dias = (a, b) => Math.round((new Date(a + 'T00:00:00') - new Date(b + 'T00:00:00')) / 86400000);
+
+  // Marca os pares no próprio array (idempotente). Retorna a quantidade de pares.
+  function marcarEstornos(lancs) {
+    if (!Array.isArray(lancs)) return 0;
+    lancs.forEach(l => { delete l._estornoPar; });
+    const debitos = {};   // chave → débitos candidatos
+    lancs.forEach(l => {
+      if (!(l.valor < 0)) return;
+      const k = [l.empresa, l.banco, l.tipo, _cent(l.valor), _chaveHist(l.historico)].join('|');
+      (debitos[k] = debitos[k] || []).push(l);
+    });
+    const creditos = lancs
+      .filter(l => l.valor > 0 && _chaveHist(l.historico).startsWith('ESTORNO'))
+      .sort((a, b) => (a.data || '').localeCompare(b.data || ''));
+    let n = 0;
+    for (const c of creditos) {
+      const base = _chaveHist(c.historico).slice('ESTORNO'.length);
+      if (!base) continue;
+      const k = [c.empresa, c.banco, c.tipo, _cent(c.valor), base].join('|');
+      const cands = (debitos[k] || []).filter(d => !d._estornoPar && d.data && c.data &&
+        d.data <= c.data && _dias(c.data, d.data) <= ESTORNO_JANELA_DIAS);
+      if (!cands.length) continue;
+      cands.sort((a, b) => (b.data || '').localeCompare(a.data || ''));   // débito mais próximo
+      const d = cands[0];
+      n++;
+      const id = 'E' + n;
+      c._estornoPar = id; d._estornoPar = id;
+    }
+    return n;
+  }
+
+  // Soma os lados dos pares que passam no filtro. Valores sempre positivos.
+  function somarEstornos(lancs, pred) {
+    const r = { pares: 0, cred: 0, deb: 0, credOp: 0, debOp: 0 };
+    for (const l of (lancs || [])) {
+      if (!l._estornoPar || (pred && !pred(l))) continue;
+      const v = Math.abs(l.valor || 0), op = l.tipo === 'Operacional';
+      if (l.valor > 0) { r.pares++; r.cred += v; if (op) r.credOp += v; }
+      else             { r.deb += v; if (op) r.debOp += v; }
+    }
+    ['cred', 'deb', 'credOp', 'debOp'].forEach(k => r[k] = Math.round(r[k] * 100) / 100);
+    return r;
+  }
+
+  window.BIData = { load, meta, metaStatus, regenerar, clear: cacheClear, AS_EXEC,
+    HIST_EMPRESTIMO, ehHistEmprestimo, ehEntradaEmprestimo, normHist,
+    ESTORNO_JANELA_DIAS, marcarEstornos, somarEstornos };
 })();

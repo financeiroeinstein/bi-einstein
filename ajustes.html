@@ -222,6 +222,10 @@
   .ts-emp { margin-top: .45rem; font-size: .64rem; color: var(--warn); background: rgba(255,181,71,.08); border: 1px dashed rgba(255,181,71,.35);
     border-radius: 6px; padding: .22rem .5rem; cursor: pointer; font-family: var(--font-m); display: inline-block; }
   .ts-emp:hover { background: rgba(255,181,71,.16); }
+  .ts-est { margin-top: .45rem; font-size: .64rem; color: #93c5fd; background: rgba(79,143,255,.08); border: 1px dashed rgba(79,143,255,.35);
+    border-radius: 6px; padding: .22rem .5rem; cursor: pointer; font-family: var(--font-m); display: inline-block; }
+  .ts-est:hover { background: rgba(79,143,255,.16); }
+  .tb-est { font-family: var(--font-m); font-size: .58rem; color: #93c5fd; background: rgba(79,143,255,.12); border-radius: 4px; padding: .05rem .35rem; margin-left: .3rem; }
   .ts-chip.sai.sel { background: rgba(248,113,113,.28); border-color: var(--red);  font-weight:700; }
 
   .loading { text-align: center; padding: 3rem; color: var(--muted); font-size: .85rem; }
@@ -543,17 +547,9 @@ const _BASE = `https://drive.google.com/uc?export=download&id=${DRIVE_FILE_ID}&_
 
 
 const EMP_COLORS = { MD: '#4f8fff', SEL: '#00e5a0', SIGMA: '#ffb547' };
-// Entradas operacionais vindas de empréstimo: histórico EXATO do extrato.
-// Para incluir outro empréstimo no futuro, acrescente o histórico exato na lista.
-// Comparação ignora acentos, maiúsculas/minúsculas e espaços extras.
-const HIST_EMPRESTIMO = [
-  'CREDITO EMPRESTIMO SIEMP',   // Caixa
-  'CRED.EMPRESTIMO'             // Sicoob (no extrato: "CRÉD.EMPRÉSTIMO")
-];
-const _normHist = h => String(h || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-  .replace(/\s+/g, ' ').trim().toUpperCase();
-const _HIST_EMP_SET = new Set(HIST_EMPRESTIMO.map(_normHist));
-const RE_EMPRESTIMO = { test: h => _HIST_EMP_SET.has(_normHist(h)) };
+// Regra de empréstimo: definida em bi_data.js (BIData.HIST_EMPRESTIMO) — vale para todas as páginas.
+const HIST_EMPRESTIMO = BIData.HIST_EMPRESTIMO;
+const RE_EMPRESTIMO = { test: BIData.ehHistEmprestimo };
 const ehEntradaEmprestimo = l => l.tipo === 'Operacional' && l.valor > 0 && RE_EMPRESTIMO.test(l.historico || '');
 
 const TIPO_CSS   = {
@@ -685,7 +681,7 @@ function getLancamentosFiltrados() {
     const sf = sinalFiltro[l.tipo];
     const sinalOk = !sf || (sf === 'pos' ? l.valor > 0 : l.valor < 0);
     const manualOk = !soManuais || l.manual || l.pendente;
-    const emprestimoOk = !soEmprestimo || ehEntradaEmprestimo(l);
+    const emprestimoOk = (!soEmprestimo || ehEntradaEmprestimo(l)) && (!soEstornos || !!l._estornoPar);
     return mesOk && empOk && bcOk && tipoOk && buscaOk && sinalOk && sinalGlobalOk && manualOk && emprestimoOk;
   });
 }
@@ -704,6 +700,7 @@ function renderKPIs() {
     for (const l of lancs) {
       if (!mesesAtivos.includes((l.data||'').substring(0,7))) continue;
       if (!filtros.empresas.includes(l.empresa) || !filtros.bancos.includes(l.banco)) continue;
+      if (l._estornoPar) continue;   // par débito/estorno: se anula, fica fora dos totais
       const v = l.valor||0;
       if (v > 0) entCaixa += v; else saiCaixa += v;
       if (l.tipo === 'Operacional') { if (v > 0) entOp += v; else saiOp += v; }
@@ -802,7 +799,8 @@ function renderSummary(itens) {
   });
 
   document.getElementById('tipoSummary').innerHTML = tipos.map(t => {
-    const sub    = todosLanc.filter(l => l.tipo === t);
+    const sub    = todosLanc.filter(l => l.tipo === t && !l._estornoPar);
+    const estT   = BIData.somarEstornos(todosLanc, l => l.tipo === t);
     const total  = sub.reduce((s,l)=>s+l.valor,0);
     const entradas = sub.filter(l=>l.valor>0);
     const saidas   = sub.filter(l=>l.valor<0);
@@ -833,6 +831,7 @@ function renderSummary(itens) {
         </span>
       </div>
       ${t === 'Operacional' ? _linhaEmprestimo(sub) : ''}
+      ${estT.pares ? `<div class="ts-est" title="Débitos que o banco estornou: os dois lados se anulam e ficam fora dos totais. Clique para listar." onclick="filtrarEstornos()">⇄ ${estT.pares} par${estT.pares>1?'es':''} débito/estorno fora dos totais · ${fmtBRL(estT.cred)}${soEstornos ? ' · <b>✕ mostrar tudo</b>' : ''}</div>` : ''}
     </div>`;
   }).join('');
 }
@@ -847,8 +846,16 @@ function _linhaEmprestimo(sub) {
 }
 // Clique no aviso ⚑: lista só as entradas de empréstimo (Caixa + Sicoob). Clique de novo: volta tudo.
 let soEmprestimo = false;
+// Clique no aviso ⇄: lista só os pares débito/estorno. Clique de novo: volta tudo.
+let soEstornos = false;
+function filtrarEstornos() {
+  soEstornos = !soEstornos;
+  if (soEstornos) { soEmprestimo = false; const el = document.getElementById('searchInput'); if (el) el.value = ''; }
+  page = 0; render();
+}
 function filtrarEmprestimo() {
   soEmprestimo = !soEmprestimo;
+  if (soEmprestimo) soEstornos = false;
   const el = document.getElementById('searchInput');
   if (el && soEmprestimo) el.value = '';
   page = 0; render();
@@ -901,7 +908,7 @@ function renderTable() {
       <td><span style="font-size:.7rem;color:var(--muted)">${l.banco}</span></td>
       <td>${badgeTipo(l, tipoCss)}</td>
       <td style="max-width:320px;overflow:hidden;text-overflow:ellipsis;font-family:var(--font-h);font-size:.76rem" title="${(l.historico||'').replace(/"/g,"'")}">
-        ${l.historico||'—'}
+        ${l.historico||'—'}${l._estornoPar ? ' <span class="tb-est" title="Par débito/estorno — fora dos totais de entradas e saídas">⇄ estorno</span>' : ''}
       </td>
       <td style="text-align:left;font-size:.72rem;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis" title="${(l.nomeRS||'').replace(/"/g,"'")}">
         ${l.nomeRS||'—'}
@@ -1261,6 +1268,7 @@ function _montarExibicao() {
     }
   }
   dadosGlobais._lancamentosCaixa = out;
+  BIData.marcarEstornos(out);   // pares débito/estorno (regra em bi_data.js)
 }
 
 // Se a listagem do servidor falhou, parte do que já veio aplicado no JSON

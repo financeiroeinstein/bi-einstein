@@ -314,17 +314,9 @@ function formatMes(m) {
   return ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][parseInt(mes)-1]+'/'+ano;
 }
 
-// Entradas operacionais vindas de empréstimo: histórico EXATO do extrato.
-// Para incluir outro empréstimo no futuro, acrescente o histórico exato na lista.
-// Comparação ignora acentos, maiúsculas/minúsculas e espaços extras.
-const HIST_EMPRESTIMO = [
-  'CREDITO EMPRESTIMO SIEMP',   // Caixa
-  'CRED.EMPRESTIMO'             // Sicoob (no extrato: "CRÉD.EMPRÉSTIMO")
-];
-const _normHist = h => String(h || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-  .replace(/\s+/g, ' ').trim().toUpperCase();
-const _HIST_EMP_SET = new Set(HIST_EMPRESTIMO.map(_normHist));
-const RE_EMPRESTIMO = { test: h => _HIST_EMP_SET.has(_normHist(h)) };
+// Regra de empréstimo: definida em bi_data.js (BIData.HIST_EMPRESTIMO) — vale para todas as páginas.
+const HIST_EMPRESTIMO = BIData.HIST_EMPRESTIMO;
+const RE_EMPRESTIMO = { test: BIData.ehHistEmprestimo };
 function calcEmprestimo(mesesAtivos) {
   const lancs = dadosGlobais?._lancamentosCaixa || [];
   let valor = 0, qtd = 0;
@@ -336,6 +328,11 @@ function calcEmprestimo(mesesAtivos) {
     valor += l.valor; qtd++;
   }
   return { valor: Math.round(valor*100)/100, qtd };
+}
+function calcEstornos(mesesAtivos) {
+  return BIData.somarEstornos(dadosGlobais?._lancamentosCaixa, l =>
+    mesesAtivos.includes((l.data||'').substring(0,7)) &&
+    filtros.empresas.includes(l.empresa) && filtros.bancos.includes(l.banco));
 }
 function _attr(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -360,7 +357,11 @@ function calcKPIs() {
     investimentos += dadosGlobais.investimentos?.[mesLimite]?.[emp]?.[bc] || 0;
   }
   const emp = calcEmprestimo(mesesAtivos);
-  return { entradasCaixa, saidasCaixa, resultadoBancario:entradasCaixa+saidasCaixa,
+  // Pares débito/estorno se anulam: saem dos totais brutos (líquido não muda)
+  const est = calcEstornos(mesesAtivos);
+  entradasCaixa -= est.cred; saidasCaixa += est.deb;
+  entOp -= est.credOp;       saiOp += est.debOp;
+  return { est, entradasCaixa, saidasCaixa, resultadoBancario:entradasCaixa+saidasCaixa,
            entOpEmprestimo: emp.valor, qtdEmprestimo: emp.qtd,
            entOp, saiOp, resultadoOp:entOp+saiOp,
            transInternas, intercompany, aplicacoes, terceiros,
@@ -457,6 +458,7 @@ function fetchT(url,ms=8000) {
 async function carregarDados() {
   try {
     dadosGlobais = await _fetchJSON();
+    BIData.marcarEstornos(dadosGlobais._lancamentosCaixa);
     const dt=new Date(dadosGlobais.geradoEm);
     document.getElementById('lastUpdate').textContent=
       'Atualizado em '+dt.toLocaleDateString('pt-BR')+' às '+dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
@@ -482,6 +484,11 @@ function gerarAlertas(k, mesesAtivos) {
   if (k.entOpEmprestimo > 0) {
     const sem = k.resultadoOp - k.entOpEmprestimo;
     items.push({ cls: 'warn', txt: `O operacional inclui <strong>${fmtBRL(k.entOpEmprestimo)}</strong> de empréstimo. Sem ele, o resultado operacional seria <strong>${fmtBRL(sem)}</strong>${sem < 0 ? ' (negativo)' : ''}.` });
+  }
+
+  // Pares débito/estorno desconsiderados
+  if (k.est && k.est.pares > 0) {
+    items.push({ cls: 'neutral', txt: `<strong>${k.est.pares}</strong> par${k.est.pares>1?'es':''} de débito + estorno (<strong>${fmtBRL(k.est.cred)}</strong>) ${k.est.pares>1?'foram desconsiderados':'foi desconsiderado'} nas entradas e saídas. Eles se anulam e só inflavam os totais.` });
   }
 
   // Transferências internas

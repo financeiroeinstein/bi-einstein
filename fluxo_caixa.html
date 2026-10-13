@@ -81,7 +81,7 @@
   /* KPI STRIP */
   .kpi-strip {
     display: grid;
-    grid-template-columns: repeat(6, minmax(130px,1fr));
+    grid-template-columns: repeat(4, minmax(150px,1fr));
     gap: 1px; background: var(--border);
     border-bottom: 1px solid var(--border);
   }
@@ -96,6 +96,13 @@
   .kpi-mini::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:var(--kc, transparent); }
   .kpi-mini .km-label { font-size: .6rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
   .kpi-mini .km-value { font-size: 1.05rem; font-weight: 700; font-family: var(--font-m); color: var(--kc, var(--text)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kpi-mini .km-sub { font-size: .66rem; color: var(--muted); font-family: var(--font-m); }
+  .table-scroll { overflow-x: auto; }
+  .ylw-soft { color: #fbbf24; }
+  .est-mark { color: #93c5fd; font-size: .7rem; margin-left: .3rem; cursor: help; }
+  .nota-est { font-size: .74rem; color: #93c5fd; background: rgba(79,143,255,.07); border: 1px dashed rgba(79,143,255,.35);
+    border-radius: 8px; padding: .55rem .85rem; line-height: 1.5; }
+  .nota-est b { color: #e8eaf0; }
 
   /* CONTENT */
   .content { padding: 1.5rem 2rem 2rem; display: flex; flex-direction: column; gap: 1.25rem; }
@@ -234,6 +241,7 @@
 </div>
 
 <div class="content">
+  <div class="nota-est" id="notaEstornos" style="display:none"></div>
   <div class="card">
     <div class="card-title">
       <strong>Evolução do Fluxo de Caixa Mensal</strong>
@@ -244,7 +252,7 @@
 
   <div class="card">
     <div class="card-title"><strong>Detalhamento por Mês</strong></div>
-    <div id="tableWrap"><div class="state-msg">Carregando...</div></div>
+    <div id="tableWrap" class="table-scroll"><div class="state-msg">Carregando...</div></div>
   </div>
 </div>
 
@@ -334,8 +342,22 @@ function updateMetric(radio) {
 }
 
 // ── Cálculo ───────────────────────────────────────────────────────────────
+// Base: KPIs do servidor (entOp/saiOp). Sobre eles, a partir dos lançamentos:
+//   • Empréstimo: entradas operacionais com histórico de empréstimo (regra em bi_data.js)
+//   • Pares débito/estorno: os dois lados saem de entradas e saídas (o resultado não muda)
 function calcMensal() {
   if (!dadosGlobais) return [];
+  const extra = {};
+  for (const l of (dadosGlobais._lancamentosCaixa || [])) {
+    if (!filtros.empresas.includes(l.empresa) || !filtros.bancos.includes(l.banco)) continue;
+    const m = (l.data || '').substring(0, 7);
+    const a = extra[m] || (extra[m] = { emprestimo: 0, qtdEmp: 0, estCredOp: 0, estDebOp: 0, estPares: 0 });
+    if (l._estornoPar) {
+      if (l.tipo === 'Operacional') { if (l.valor > 0) { a.estCredOp += l.valor; a.estPares++; } else a.estDebOp += -l.valor; }
+      continue;
+    }
+    if (BIData.ehEntradaEmprestimo(l)) { a.emprestimo += l.valor; a.qtdEmp++; }
+  }
   return dadosGlobais.mesesDisponiveis.map(mes => {
     let entradas=0,saidas=0,disponivel=0,investimentos=0;
     for (const emp of filtros.empresas) for (const bc of filtros.bancos) {
@@ -346,31 +368,55 @@ function calcMensal() {
       disponivel   += dadosGlobais.disponivel?.[mes]?.[emp]?.[bc]    || 0;
       investimentos += Math.abs(dadosGlobais.investimentos?.[mes]?.[emp]?.[bc] || 0);
     }
-    return { mes, entradas, saidas, resultado:entradas+saidas, disponivel, investimentos, totalCaixa:disponivel+investimentos };
+    const x = extra[mes] || { emprestimo: 0, qtdEmp: 0, estCredOp: 0, estDebOp: 0, estPares: 0 };
+    entradas -= x.estCredOp;
+    saidas   += x.estDebOp;
+    const r2 = v => Math.round(v * 100) / 100;
+    const emprestimo = r2(x.emprestimo);
+    const resultado  = r2(entradas + saidas);
+    return { mes, entradas: r2(entradas), saidas: r2(saidas), resultado,
+             emprestimo, qtdEmp: x.qtdEmp, proprias: r2(entradas - emprestimo),
+             resultadoSemEmp: r2(resultado - emprestimo),
+             estPares: x.estPares, estValor: r2(x.estCredOp),
+             disponivel, investimentos, totalCaixa:disponivel+investimentos };
   });
 }
 
 // ── KPI strip ─────────────────────────────────────────────────────────────
 function renderKPIs(dados) {
   if (!dados.length) return;
-  const totEnt=dados.reduce((s,d)=>s+d.entradas,0);
-  const totSai=dados.reduce((s,d)=>s+d.saidas,0);
-  const totRes=dados.reduce((s,d)=>s+d.resultado,0);
+  const sum = k => dados.reduce((s,d)=>s+d[k],0);
+  const totEnt=sum('entradas'), totSai=sum('saidas'), totRes=sum('resultado');
+  const totEmp=sum('emprestimo'), totProp=sum('proprias'), totResSem=sum('resultadoSemEmp');
   const last=dados[dados.length-1];
+  const pct = totEnt ? (totEmp/totEnt*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'% das entradas' : '';
 
   const items = [
-    { label:'Total Entradas',        value:fmtBRL(totEnt),        kc:'#4ade80' },
-    { label:'Total Saídas',          value:fmtBRL(totSai),        kc:'#f87171' },
-    { label:'Resultado Acum.',       value:fmtBRL(totRes),        kc:totRes>=0?'#4ade80':'#f87171' },
-    { label:'Disponível em Conta',   value:fmtBRL(last.disponivel), kc:last.disponivel>=0?'var(--accent2)':'#f87171' },
-    { label:'Investimentos',         value:fmtBRL(last.investimentos), kc:'var(--warn)' },
-    { label:'Total (Conta + Invest)',value:fmtBRL(last.totalCaixa),  kc:last.totalCaixa>=0?'var(--accent)':'#f87171' },
+    { label:'Entradas Próprias',     value:fmtBRL(totProp),  kc:'#4ade80', sub:'Sem empréstimo' },
+    { label:'Entradas de Empréstimo',value:fmtBRL(totEmp),   kc:'#fbbf24', sub: totEmp ? pct : 'Nenhuma no período' },
+    { label:'Total Entradas',        value:fmtBRL(totEnt),   kc:'#86efac', sub:'Próprias + empréstimo' },
+    { label:'Total Saídas',          value:fmtBRL(totSai),   kc:'#f87171', sub:'Operacionais' },
+    { label:'Resultado Acum.',       value:fmtBRL(totRes),   kc:totRes>=0?'#4ade80':'#f87171', sub:'Sem empréstimo: '+fmtBRL(totResSem) },
+    { label:'Disponível em Conta',   value:fmtBRL(last.disponivel), kc:last.disponivel>=0?'var(--accent2)':'#f87171', sub:'Fim de '+formatMes(last.mes) },
+    { label:'Investimentos',         value:fmtBRL(last.investimentos), kc:'var(--warn)', sub:'Fim de '+formatMes(last.mes) },
+    { label:'Total (Conta + Invest)',value:fmtBRL(last.totalCaixa),  kc:last.totalCaixa>=0?'var(--accent)':'#f87171', sub:'Fim de '+formatMes(last.mes) },
   ];
   document.getElementById('kpiStrip').innerHTML = items.map(i=>`
     <div class="kpi-mini" style="--kc:${i.kc}">
       <div class="km-label">${i.label}</div>
       <div class="km-value">${i.value}</div>
+      <div class="km-sub">${i.sub}</div>
     </div>`).join('');
+
+  // Aviso dos pares débito/estorno desconsiderados
+  const comEst = dados.filter(d => d.estPares > 0);
+  const nota = document.getElementById('notaEstornos');
+  if (comEst.length) {
+    nota.innerHTML = '⇄ <b>Pares débito + estorno desconsiderados</b> nas entradas e saídas (se anulam; o resultado não muda): ' +
+      comEst.map(d => `${formatMes(d.mes)} — <b>${d.estPares}</b> par${d.estPares>1?'es':''} · ${fmtBRL(d.estValor)}`).join(' &nbsp;|&nbsp; ') +
+      '. Para conferir, veja a página Ajustes (marcados com ⇄ estorno).';
+    nota.style.display = '';
+  } else { nota.style.display = 'none'; nota.innerHTML = ''; }
 }
 
 // ── Chart ─────────────────────────────────────────────────────────────────
@@ -386,15 +432,19 @@ function renderChart(dados) {
   if (chartInstance) { chartInstance.destroy(); chartInstance=null; }
 
   const datasets=[], legendItems=[];
+  const empilhar = activeMetric !== 'result';
 
   if (activeMetric==='all'||activeMetric==='entrada') {
-    datasets.push({ label:'Entradas', data:dados.map(d=>d.entradas/1000),
+    datasets.push({ label:'Entradas próprias', data:dados.map(d=>d.proprias/1000), stack:'ent',
       backgroundColor:'rgba(74,222,128,.6)', borderColor:'rgba(74,222,128,1)',
       borderWidth:1, borderRadius:4, type:'bar', yAxisID:'y' });
-    legendItems.push({label:'Entradas',color:'#4ade80'});
+    datasets.push({ label:'Empréstimo', data:dados.map(d=>d.emprestimo/1000), stack:'ent',
+      backgroundColor:'rgba(251,191,36,.65)', borderColor:'rgba(251,191,36,1)',
+      borderWidth:1, borderRadius:4, type:'bar', yAxisID:'y' });
+    legendItems.push({label:'Entradas próprias',color:'#4ade80'},{label:'Empréstimo',color:'#fbbf24'});
   }
   if (activeMetric==='all'||activeMetric==='saida') {
-    datasets.push({ label:'Saídas', data:dados.map(d=>Math.abs(d.saidas)/1000),
+    datasets.push({ label:'Saídas', data:dados.map(d=>Math.abs(d.saidas)/1000), stack:'sai',
       backgroundColor:'rgba(241,113,113,.6)', borderColor:'rgba(241,113,113,1)',
       borderWidth:1, borderRadius:4, type:'bar', yAxisID:'y' });
     legendItems.push({label:'Saídas',color:'#f87171'});
@@ -404,7 +454,10 @@ function renderChart(dados) {
       backgroundColor:dados.map(d=>d.resultado>=0?'rgba(74,222,128,.6)':'rgba(241,113,113,.6)'),
       borderColor:dados.map(d=>d.resultado>=0?'rgba(74,222,128,1)':'rgba(241,113,113,1)'),
       borderWidth:1, borderRadius:4, type:'bar', yAxisID:'y' });
-    legendItems.push({label:'Resultado ≥ 0',color:'#4ade80'},{label:'Resultado < 0',color:'#f87171'});
+    datasets.push({ label:'Resultado sem empréstimo', data:dados.map(d=>d.resultadoSemEmp/1000),
+      type:'line', borderColor:'#fbbf24', backgroundColor:'transparent', borderDash:[5,4],
+      borderWidth:2, pointRadius:4, pointBackgroundColor:'#fbbf24', tension:.3, yAxisID:'y' });
+    legendItems.push({label:'Resultado ≥ 0',color:'#4ade80'},{label:'Resultado < 0',color:'#f87171'},{label:'Sem empréstimo',color:'#fbbf24'});
   }
   if (activeMetric==='all') {
     datasets.push({ label:'Total (Conta+Invest)', data:dados.map(d=>d.totalCaixa/1000),
@@ -426,8 +479,8 @@ function renderChart(dados) {
       interaction:{mode:'index',intersect:false},
       plugins:{ legend:{display:false}, tooltip:TOOLTIP_OPTS },
       scales:{
-        x:{ grid:{color:gridColor}, ticks:{color:tickColor,font:{family:'JetBrains Mono',size:11}} },
-        y:{ position:'left', grid:{color:gridColor},
+        x:{ stacked:empilhar, grid:{color:gridColor}, ticks:{color:tickColor,font:{family:'JetBrains Mono',size:11}} },
+        y:{ stacked:empilhar, position:'left', grid:{color:gridColor},
             ticks:{color:tickColor,font:{family:'JetBrains Mono',size:11},callback:v=>'R$'+v.toLocaleString('pt-BR',{minimumFractionDigits:0})+'k'} },
         y2:{ display:activeMetric==='all', position:'right', grid:{drawOnChartArea:false},
              ticks:{color:'rgba(0,229,160,.7)',font:{family:'JetBrains Mono',size:11},callback:v=>'R$'+v.toLocaleString('pt-BR',{minimumFractionDigits:0})+'k'} }
@@ -443,35 +496,43 @@ function cls(v, posClass='pos', negClass='neg', zeroClass='zero') {
 
 function renderTable(dados) {
   if (!dados.length) { document.getElementById('tableWrap').innerHTML='<div class="state-msg">Sem dados.</div>'; return; }
-  const totEnt=dados.reduce((s,d)=>s+d.entradas,0);
-  const totSai=dados.reduce((s,d)=>s+d.saidas,0);
-  const totRes=dados.reduce((s,d)=>s+d.resultado,0);
+  const sum = k => dados.reduce((s,d)=>s+d[k],0);
   const last=dados[dados.length-1];
+  const estMark = d => d.estPares
+    ? `<span class="est-mark" title="${d.estPares} par${d.estPares>1?'es':''} débito/estorno (${fmtBRL(d.estValor)}) desconsiderado${d.estPares>1?'s':''} em entradas e saídas">⇄</span>` : '';
 
   const rows=dados.map(d=>`
     <tr>
-      <td>${formatMes(d.mes)}</td>
+      <td>${formatMes(d.mes)}${estMark(d)}</td>
+      <td class="pos">${fmtBRL(d.proprias)}</td>
+      <td class="${d.emprestimo?'ylw-soft':'zero'}" title="${d.qtdEmp?d.qtdEmp+' lançamento(s) de empréstimo':''}">${d.emprestimo?fmtBRL(d.emprestimo):'—'}</td>
       <td class="pos">${fmtBRL(d.entradas)}</td>
       <td class="neg">${fmtBRL(d.saidas)}</td>
       <td class="${cls(d.resultado)}">${fmtBRL(d.resultado)}</td>
+      <td class="${cls(d.resultadoSemEmp)}">${fmtBRL(d.resultadoSemEmp)}</td>
       <td class="${d.disponivel>=0?'blu':'neg'}">${fmtBRL(d.disponivel)}</td>
       <td class="ylw">${fmtBRL(d.investimentos)}</td>
       <td class="${d.totalCaixa>=0?'acc':'neg'}">${fmtBRL(d.totalCaixa)}</td>
     </tr>`).join('');
 
+  const totEmp=sum('emprestimo'), totRes=sum('resultado'), totResSem=sum('resultadoSemEmp');
   document.getElementById('tableWrap').innerHTML=`
     <table>
       <thead><tr>
         <th style="text-align:left">Mês</th>
-        <th>Entradas</th><th>Saídas</th><th>Resultado Op.</th>
+        <th>Entradas Próprias</th><th>Empréstimo</th><th>Entradas Total</th><th>Saídas</th>
+        <th>Resultado Op.</th><th>Result. s/ Empréstimo</th>
         <th>Disponível</th><th>Investimentos</th><th>Total (Conta+Invest)</th>
       </tr></thead>
       <tbody>${rows}</tbody>
       <tfoot><tr>
         <td>Total acumulado</td>
-        <td class="pos">${fmtBRL(totEnt)}</td>
-        <td class="neg">${fmtBRL(totSai)}</td>
+        <td class="pos">${fmtBRL(sum('proprias'))}</td>
+        <td class="${totEmp?'ylw-soft':'zero'}">${totEmp?fmtBRL(totEmp):'—'}</td>
+        <td class="pos">${fmtBRL(sum('entradas'))}</td>
+        <td class="neg">${fmtBRL(sum('saidas'))}</td>
         <td class="${cls(totRes)}">${fmtBRL(totRes)}</td>
+        <td class="${cls(totResSem)}">${fmtBRL(totResSem)}</td>
         <td class="${last.disponivel>=0?'blu':'neg'}">${fmtBRL(last.disponivel)}</td>
         <td class="ylw">${fmtBRL(last.investimentos)}</td>
         <td class="${last.totalCaixa>=0?'acc':'neg'}">${fmtBRL(last.totalCaixa)}</td>
@@ -497,6 +558,7 @@ function fetchT(url,ms=8000) {
 async function carregarDados() {
   try {
     dadosGlobais = await _fetchJSON();
+    BIData.marcarEstornos(dadosGlobais._lancamentosCaixa);   // pares débito/estorno (regra em bi_data.js)
     const dt=new Date(dadosGlobais.geradoEm);
     document.getElementById('lastUpdate').textContent=
       'Atualizado em '+dt.toLocaleDateString('pt-BR')+' às '+dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
