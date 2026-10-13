@@ -545,8 +545,15 @@ const _BASE = `https://drive.google.com/uc?export=download&id=${DRIVE_FILE_ID}&_
 const EMP_COLORS = { MD: '#4f8fff', SEL: '#00e5a0', SIGMA: '#ffb547' };
 // Entradas operacionais vindas de empréstimo: histórico EXATO do extrato.
 // Para incluir outro empréstimo no futuro, acrescente o histórico exato na lista.
-const HIST_EMPRESTIMO = ['CREDITO EMPRESTIMO SIEMP'];
-const RE_EMPRESTIMO = { test: h => HIST_EMPRESTIMO.includes(String(h || '').trim().toUpperCase()) };
+// Comparação ignora acentos, maiúsculas/minúsculas e espaços extras.
+const HIST_EMPRESTIMO = [
+  'CREDITO EMPRESTIMO SIEMP',   // Caixa
+  'CRED.EMPRESTIMO'             // Sicoob (no extrato: "CRÉD.EMPRÉSTIMO")
+];
+const _normHist = h => String(h || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .replace(/\s+/g, ' ').trim().toUpperCase();
+const _HIST_EMP_SET = new Set(HIST_EMPRESTIMO.map(_normHist));
+const RE_EMPRESTIMO = { test: h => _HIST_EMP_SET.has(_normHist(h)) };
 const ehEntradaEmprestimo = l => l.tipo === 'Operacional' && l.valor > 0 && RE_EMPRESTIMO.test(l.historico || '');
 
 const TIPO_CSS   = {
@@ -678,7 +685,8 @@ function getLancamentosFiltrados() {
     const sf = sinalFiltro[l.tipo];
     const sinalOk = !sf || (sf === 'pos' ? l.valor > 0 : l.valor < 0);
     const manualOk = !soManuais || l.manual || l.pendente;
-    return mesOk && empOk && bcOk && tipoOk && buscaOk && sinalOk && sinalGlobalOk && manualOk;
+    const emprestimoOk = !soEmprestimo || ehEntradaEmprestimo(l);
+    return mesOk && empOk && bcOk && tipoOk && buscaOk && sinalOk && sinalGlobalOk && manualOk && emprestimoOk;
   });
 }
 
@@ -835,11 +843,14 @@ function _linhaEmprestimo(sub) {
   const v = emp.reduce((s,l)=>s+l.valor,0);
   const ops = sub.reduce((s,l)=>s+l.valor,0);
   const tip = `Entradas operacionais vindas de empréstimo: ${fmtBRL(v)} (${emp.length} lançamento${emp.length>1?'s':''}).\nSem elas, o operacional líquido seria ${fmtBRL(ops - v)}.\nClique para listar.`;
-  return `<div class="ts-emp" title="${tip}" onclick="filtrarEmprestimo()">⚑ inclui ${fmtBRL(v)} de empréstimo · sem ele: ${fmtBRL(ops - v)}</div>`;
+  return `<div class="ts-emp" title="${tip}" onclick="filtrarEmprestimo()">⚑ inclui ${fmtBRL(v)} de empréstimo · sem ele: ${fmtBRL(ops - v)}${soEmprestimo ? ' · <b>✕ mostrar tudo</b>' : ''}</div>`;
 }
+// Clique no aviso ⚑: lista só as entradas de empréstimo (Caixa + Sicoob). Clique de novo: volta tudo.
+let soEmprestimo = false;
 function filtrarEmprestimo() {
+  soEmprestimo = !soEmprestimo;
   const el = document.getElementById('searchInput');
-  if (el) el.value = HIST_EMPRESTIMO[0];
+  if (el && soEmprestimo) el.value = '';
   page = 0; render();
 }
 

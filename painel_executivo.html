@@ -316,8 +316,15 @@ function formatMes(m) {
 
 // Entradas operacionais vindas de empréstimo: histórico EXATO do extrato.
 // Para incluir outro empréstimo no futuro, acrescente o histórico exato na lista.
-const HIST_EMPRESTIMO = ['CREDITO EMPRESTIMO SIEMP'];
-const RE_EMPRESTIMO = { test: h => HIST_EMPRESTIMO.includes(String(h || '').trim().toUpperCase()) };
+// Comparação ignora acentos, maiúsculas/minúsculas e espaços extras.
+const HIST_EMPRESTIMO = [
+  'CREDITO EMPRESTIMO SIEMP',   // Caixa
+  'CRED.EMPRESTIMO'             // Sicoob (no extrato: "CRÉD.EMPRÉSTIMO")
+];
+const _normHist = h => String(h || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .replace(/\s+/g, ' ').trim().toUpperCase();
+const _HIST_EMP_SET = new Set(HIST_EMPRESTIMO.map(_normHist));
+const RE_EMPRESTIMO = { test: h => _HIST_EMP_SET.has(_normHist(h)) };
 function calcEmprestimo(mesesAtivos) {
   const lancs = dadosGlobais?._lancamentosCaixa || [];
   let valor = 0, qtd = 0;
