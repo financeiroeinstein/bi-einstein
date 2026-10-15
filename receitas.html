@@ -214,7 +214,7 @@
   .loading   { text-align: center; padding: 3rem; color: var(--muted); }
   .empty     { text-align: center; padding: 2rem; color: var(--muted); font-size: .85rem; }
 
-  /* AGENDA empresa dot */
+  /* empresa dot (Detalhamento consolidado) */
   .emp-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: .35rem; vertical-align: middle; }
 
   /* ── TOOLTIP CONTEXTUAL ── */
@@ -314,7 +314,6 @@
     <button class="tab-btn active" data-tab="tab-visao">Visão Geral</button>
     <button class="tab-btn" data-tab="tab-evolucao">Evolução Mensal</button>
     <button class="tab-btn" data-tab="tab-detalhe">Detalhamento</button>
-    <button class="tab-btn" data-tab="tab-agenda">Agenda Futura</button>
   </div>
 
   <!-- TAB 1: VISÃO GERAL -->
@@ -345,26 +344,26 @@
   <div id="tab-evolucao" class="tab-panel">
     <div class="grid-2">
       <div class="card">
-        <div class="card-title"><strong>% Realização Mensal</strong><span class="tip-icon" data-title="Realização Mensal" data-tip="Percentual mensal de conversão previsto→recebido. Linha acima de 95% é saudável. Queda acentuada pode indicar evento de crise de pagamento.">i</span></div>
+        <div class="card-title"><strong>% Realização Mensal</strong><span class="tip-icon" data-title="Realização Mensal" data-tip="Quanto do previsto de cada mês de vencimento já foi recebido até hoje. Considera só parcelas já vencidas. Mês corrente (*) aparece vazado e tracejado: é parcial, com as parcelas vencidas até hoje. Meses futuros não aparecem.">i</span> <span style="font-size:.68rem;color:var(--muted)">* mês corrente = parcial</span></div>
         <div class="chart-wrap"><canvas id="chartRealizacao"></canvas></div>
       </div>
       <div class="card">
-        <div class="card-title"><strong>% Inadimplência Mensal</strong><span class="tip-icon" data-title="Inadimplência Mensal" data-tip="Evolução da inadimplência mês a mês. Permite ver se o problema está crescendo ou sendo controlado.">i</span></div>
+        <div class="card-title"><strong>% Inadimplência Atual por Mês</strong><span class="tip-icon" data-title="Inadimplência Atual" data-tip="Para cada mês de vencimento: quanto ainda está em aberto HOJE ÷ previsto já vencido daquele mês. Ex.: março mostra quanto de março continua sem pagamento hoje. Mês corrente (*) é parcial: só parcelas vencidas até hoje. Meses futuros não aparecem.">i</span> <span style="font-size:.68rem;color:var(--muted)">em aberto hoje · * parcial</span></div>
         <div class="chart-wrap"><canvas id="chartInad"></canvas></div>
       </div>
     </div>
     <div class="grid-2">
       <div class="card">
         <div class="card-title">
-          <strong>% Pagaram no Prazo</strong>
-          <span style="font-size:.68rem;color:var(--muted)">dataPag ≤ dataVenc</span>
+          <strong>% Pagaram no Prazo<span class="tip-icon" data-title="Pagaram no Prazo" data-tip="Valor pago até a data de vencimento ÷ previsto do mês. Só meses já encerrados.">i</span></strong>
+          <span style="font-size:.68rem;color:var(--muted)">pago até o vencimento · meses fechados</span>
         </div>
         <div class="chart-wrap"><canvas id="chartPrazo"></canvas></div>
       </div>
       <div class="card">
         <div class="card-title">
-          <strong>% Inadimplência no Fechamento</strong>
-          <span style="font-size:.68rem;color:var(--muted)">em aberto no último dia do mês</span>
+          <strong>% Inadimplência no Fechamento<span class="tip-icon" data-title="Fechamento × Atual" data-tip="Linha cheia: quanto do mês estava em aberto no último dia do mês de vencimento (foto da virada do mês). Linha tracejada: quanto do mesmo mês continua em aberto hoje. A distância entre as duas é o que foi recuperado depois do mês. Só meses já encerrados.">i</span></strong>
+          <span style="font-size:.68rem;color:var(--muted)">virada do mês × hoje · meses fechados</span>
         </div>
         <div class="chart-wrap"><canvas id="chartFechamento"></canvas></div>
       </div>
@@ -397,19 +396,6 @@
     </div>
   </div>
 
-  <!-- TAB 4: AGENDA FUTURA -->
-  <div id="tab-agenda" class="tab-panel">
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-title"><strong>Receita Futura (Agenda)</strong> <span style="font-size:.68rem;color:var(--muted)">Educbank: apenas repasses futuros</span></div>
-        <div class="chart-wrap"><canvas id="chartAgenda"></canvas></div>
-      </div>
-      <div class="card">
-        <div class="card-title"><strong>Detalhamento da Agenda</strong></div>
-        <div id="agendaTable"></div>
-      </div>
-    </div>
-  </div>
 </div>
 
 <script src="bi_data.js"></script>
@@ -451,6 +437,32 @@ const CHARTS = {};
 
 const NOMES_MES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 const EMP_COLORS = { MD: '#4f8fff', SEL: '#00e5a0', SIGMA: '#ffb547' };
+
+// ── Datas no fuso local (evita o salto de dia do toISOString/UTC após 21h) ──
+function hojeLocal() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function mesAtualLocal() { return hojeLocal().slice(0,7); }
+function hojeDDMM() { const h = hojeLocal(); return h.slice(8,10) + '/' + h.slice(5,7); }
+// fechado = mês já encerrado | corrente = mês atual (parcial) | futuro = ainda não começou
+function statusMes(m) { const a = mesAtualLocal(); return m < a ? 'fechado' : m === a ? 'corrente' : 'futuro'; }
+
+// Inadimplência sempre medida só sobre parcelas JÁ VENCIDAS (dataVenc < hoje).
+// Para meses fechados, previstoVencido = previsto → resultado idêntico ao cálculo anterior.
+function calcVencidas(itens) {
+  const hoje = hojeLocal();
+  const venc = itens.filter(l => l.dataVenc && l.dataVenc < hoje);
+  const previstoVencido = venc.reduce((s,l) => s + l.valorLiquido, 0);
+  const recebidoVencido = venc.filter(l => l.status === 'Pago').reduce((s,l) => s + l.valorLiquido, 0);
+  const abertoVencido   = previstoVencido - recebidoVencido;
+  return {
+    previstoVencido: Math.round(previstoVencido*100)/100,
+    abertoVencido:   Math.round(abertoVencido*100)/100,
+    inadVencida:     previstoVencido !== 0 ? Math.round((abertoVencido/previstoVencido)*10000)/100 : null,
+    realizVencida:   previstoVencido !== 0 ? Math.round((recebidoVencido/previstoVencido)*10000)/100 : null
+  };
+}
 
 function formatMes(m) { const [a,mo]=m.split('-'); return NOMES_MES[parseInt(mo)-1]+'/'+a; }
 function fmtBRL(v) {
@@ -647,6 +659,7 @@ function getReceita(mes, emp) {
     inadimplencia:previsto!==0 ? Math.round((gap/previsto)*10000)/100 : 0,
     inadimplenciaFechamento,
     pagaramNoPrazo,
+    ...calcVencidas(itens),
     porTipo: porTipoFiltrado,
     lancamentos: itens
   };
@@ -719,6 +732,7 @@ function getReceitaMulti(mesesArr, emp) {
     inadimplencia:previsto !== 0 ? Math.round((gap / previsto) * 10000) / 100 : 0,
     inadimplenciaFechamento,
     pagaramNoPrazo,
+    ...calcVencidas(todosItens),
     porTipo,
     lancamentos: todosItens
   };
@@ -733,41 +747,20 @@ function render() {
   renderVisaoGeral(empresa, mesesAtivos, rMulti);
   renderEvolucao(empresa);
   renderDetalhe(mesesAtivos, rMulti);
-  renderAgenda(empresa);
 }
 
-// ── Inadimplência YTD — calculada no frontend com corte em hoje ─────────────
+// ── Inadimplência YTD — parcelas vencidas (dataVenc < hoje) de jan até hoje ──
 function calcInadYTD(empresa) {
-  const hoje = new Date();
-  hoje.setHours(23,59,59,999); // inclui tudo até o fim do dia de hoje
-  const hojeStr = hoje.toISOString().slice(0,10); // 'YYYY-MM-DD'
-  const mesAtual = hojeStr.slice(0,7); // 'YYYY-MM'
-
-  const meses = todosOsMeses();
-  let totalPrevisto = 0, totalGap = 0;
-
-  for (const m of meses) {
-    // Só considera meses até o mês atual
+  const mesAtual = mesAtualLocal();
+  let prev = 0, aberto = 0;
+  for (const m of todosOsMeses()) {
     if (m > mesAtual) continue;
-
     const r = getReceita(m, empresa);
-    if (!r?.lancamentos?.length) continue;
-
-    // Para meses passados: todos os lançamentos
-    // Para o mês atual: apenas com vencimento até hoje
-    const itens = m < mesAtual
-      ? r.lancamentos
-      : r.lancamentos.filter(l => l.dataVenc && l.dataVenc <= hojeStr);
-
-    const prev  = itens.reduce((s,l) => s + l.valorLiquido, 0);
-    const receb = itens.filter(l => l.status === 'Pago').reduce((s,l) => s + l.valorLiquido, 0);
-    totalPrevisto += prev;
-    totalGap      += (prev - receb);
+    if (!r) continue;
+    prev   += r.previstoVencido;
+    aberto += r.abertoVencido;
   }
-
-  return totalPrevisto > 0
-    ? Math.round((totalGap / totalPrevisto) * 10000) / 100
-    : 0;
+  return prev > 0 ? Math.round((aberto / prev) * 10000) / 100 : 0;
 }
 
 // ── KPI Strip ──────────────────────────────────────────────────────────────
@@ -775,6 +768,10 @@ function renderKPIs(empresa, mesesArr, r) {
   if (!r) { document.getElementById('kpiStrip').innerHTML='<div class="loading" style="grid-column:1/-1">Sem dados</div>'; return; }
 
   const inadYTD = calcInadYTD(empresa);
+  const periodoFechado = mesesArr.every(m => statusMes(m) === 'fechado');
+  const inadPer = r.inadVencida ?? 0;
+  const inadPerSub = periodoFechado ? 'No período selecionado'
+    : (r.previstoVencido > 0 ? 'Só vencidos até ' + hojeDDMM() : 'Nenhuma parcela vencida no período');
   const periodoSub = mesesArr.length === 1
     ? (filtros.tipo === 'TODOS' ? 'Todos os tipos' : filtros.tipo + ' no mês')
     : mesesArr.length + ' meses acumulados';
@@ -784,8 +781,8 @@ function renderKPIs(empresa, mesesArr, r) {
     { label:'Receita Recebida',        value: fmtBRL(r.recebido),      kc:'var(--green)',    sub: 'Pago no período' },
     { label:'Gap Previsto × Recebido', value: fmtBRL(r.gap),           kc: r.gap>0?'var(--warn)':'var(--accent)', sub: 'Diferença período' },
     { label:'% Realização',            value: fmtPct(r.realizacao),    kc: r.realizacao>=95?'var(--accent)':r.realizacao>=85?'var(--warn)':'var(--red)', sub: 'Meta: 100%' },
-    { label:'% Inadimplência Período', value: fmtPct(r.inadimplencia), kc: r.inadimplencia<=3?'var(--accent)':r.inadimplencia<=8?'var(--warn)':'var(--red)', sub: 'No período selecionado' },
-    { label:'% Inadimplência YTD',     value: fmtPct(inadYTD), kc: inadYTD<=3?'var(--accent)':inadYTD<=8?'var(--warn)':'var(--red)', sub: 'Vencidos até '+new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) },
+    { label:'% Inadimplência Período', value: fmtPct(inadPer), kc: inadPer<=3?'var(--accent)':inadPer<=8?'var(--warn)':'var(--red)', sub: inadPerSub },
+    { label:'% Inadimplência YTD',     value: fmtPct(inadYTD), kc: inadYTD<=3?'var(--accent)':inadYTD<=8?'var(--warn)':'var(--red)', sub: 'Vencidos até '+hojeDDMM() },
   ];
 
   document.getElementById('kpiStrip').innerHTML = items.map(i=>`
@@ -870,72 +867,76 @@ function renderEvolucao(empresa) {
   const meses  = todosOsMeses();
   const labels = meses.map(m=>formatMes(m));
 
-  // % Realização
+  // ── Gráficos de % — só meses até o atual (mês futuro sai do eixo) ──────────
+  // Mês fechado: ponto cheio | mês corrente: ponto vazado + trecho tracejado (parcial)
+  const mesesPct  = meses.filter(m => statusMes(m) !== 'futuro');
+  const labelsPct = mesesPct.map(m => formatMes(m) + (statusMes(m) === 'corrente' ? '*' : ''));
+  const rPct      = mesesPct.map(m => getReceita(m, empresa));
+  const ehCorr    = i => statusMes(mesesPct[i]) === 'corrente';
+  const serieLinha = (label, data, cor, extra={}) => ({
+    label, data, borderColor:cor, fill:true, tension:.3, borderWidth:2,
+    pointRadius: data.map((_,i)=> ehCorr(i) ? 6 : 5),
+    pointBackgroundColor: data.map((_,i)=> ehCorr(i) ? 'transparent' : cor),
+    pointBorderColor: cor, pointBorderWidth: 2,
+    segment: { borderDash: ctx => ehCorr(ctx.p1DataIndex) ? [5,4] : undefined },
+    spanGaps: false, ...extra
+  });
+  const notaParcial = 'parcial: só parcelas vencidas até ' + hojeDDMM();
+
+  // % Realização — sobre parcelas vencidas (mês fechado = cálculo tradicional)
   const ctxR = document.getElementById('chartRealizacao');
   if (CHARTS.realizacao) CHARTS.realizacao.destroy();
   CHARTS.realizacao = new Chart(ctxR, {
     type:'line',
-    data:{ labels, datasets:[{
-      label:'% Realização', data: meses.map(m=>getReceita(m,empresa)?.realizacao||null),
-      borderColor:'#00e5a0', backgroundColor:'rgba(0,229,160,.1)', fill:true,
-      tension:.3, pointRadius:5, pointBackgroundColor:'#00e5a0', borderWidth:2
-    }]},
-    options: chartOptsPct('% Realização')
+    data:{ labels: labelsPct, datasets:[ serieLinha('% Realização', rPct.map(r => r?.realizVencida ?? null), '#00e5a0', { backgroundColor:'rgba(0,229,160,.1)' }) ]},
+    options: chartOptsPct('% Realização', mesesPct, notaParcial)
   });
 
-  // % Inadimplência
+  // % Inadimplência atual — em aberto hoje ÷ previsto vencido
   const ctxI = document.getElementById('chartInad');
   if (CHARTS.inad) CHARTS.inad.destroy();
   CHARTS.inad = new Chart(ctxI, {
     type:'line',
-    data:{ labels, datasets:[{
-      label:'% Inadimplência', data: meses.map(m=>getReceita(m,empresa)?.inadimplencia||null),
-      borderColor:'#ff4d6a', backgroundColor:'rgba(255,77,106,.08)', fill:true,
-      tension:.3, pointRadius:5, pointBackgroundColor:'#ff4d6a', borderWidth:2
-    }]},
-    options: chartOptsPct('% Inadimplência')
+    data:{ labels: labelsPct, datasets:[ serieLinha('% Inadimplência', rPct.map(r => r?.inadVencida ?? null), '#ff4d6a', { backgroundColor:'rgba(255,77,106,.08)' }) ]},
+    options: chartOptsPct('% Inadimplência', mesesPct, notaParcial)
   });
+
+  // Fechamento e Pagaram no prazo só existem para mês encerrado
+  const mesesFech  = meses.filter(m => statusMes(m) === 'fechado');
+  const labelsFech = mesesFech.map(formatMes);
+  const rFech      = mesesFech.map(m => getReceita(m, empresa));
 
   // % Pagaram no prazo (dataPag <= dataVenc)
   const ctxP = document.getElementById('chartPrazo');
   if (CHARTS.prazo) CHARTS.prazo.destroy();
   CHARTS.prazo = new Chart(ctxP, {
     type:'line',
-    data:{ labels, datasets:[{
-      label:'% Pagaram no Prazo',
-      data: meses.map(m => {
-        const r = getReceita(m, empresa);
-        return r?.pagaramNoPrazo != null ? r.pagaramNoPrazo : null;
-      }),
+    data:{ labels: labelsFech, datasets:[{
+      label:'% Pagaram no Prazo', data: rFech.map(r => r?.pagaramNoPrazo ?? null),
       borderColor:'#4ade80', backgroundColor:'rgba(74,222,128,.1)', fill:true,
       tension:.3, pointRadius:5, pointBackgroundColor:'#4ade80', borderWidth:2
     }]},
     options: chartOptsPct('% Pagaram no Prazo')
   });
 
-  // % Inadimplência no fechamento do mês
+  // % Inadimplência no fechamento (aberto no último dia do mês) × atual (hoje)
   const ctxF = document.getElementById('chartFechamento');
   if (CHARTS.fechamento) CHARTS.fechamento.destroy();
   CHARTS.fechamento = new Chart(ctxF, {
     type:'line',
-    data:{ labels, datasets:[
+    data:{ labels: labelsFech, datasets:[
       {
-        label:'Inad. Fechamento',
-        data: meses.map(m => {
-          const r = getReceita(m, empresa);
-          return r?.inadimplenciaFechamento != null ? r.inadimplenciaFechamento : null;
-        }),
+        label:'Inad. no fechamento', data: rFech.map(r => r?.inadimplenciaFechamento ?? null),
         borderColor:'#ffb547', backgroundColor:'rgba(255,181,71,.08)', fill:true,
         tension:.3, pointRadius:5, pointBackgroundColor:'#ffb547', borderWidth:2
       },
       {
-        label:'Inad. Atual (hoje)',
-        data: meses.map(m => getReceita(m, empresa)?.inadimplencia || null),
+        label:'Inad. atual (hoje)', data: rFech.map(r => r?.inadimplencia ?? null),
         borderColor:'#ff4d6a', backgroundColor:'transparent',
         borderDash:[5,4], tension:.3, pointRadius:4, pointBackgroundColor:'#ff4d6a', borderWidth:1.5
       }
     ]},
-    options: chartOptsPct('% Inadimplência Fechamento')
+    options: chartOptsPct('% Inadimplência Fechamento', null, null, true)
   });
 
   // Evolução receita barras
@@ -1021,161 +1022,6 @@ function renderDetalhe(mesesArr, rMulti) {
 
 function changePage(dir) { detalhePage += dir; renderDetalhe(); }
 
-// ── Agenda Futura ──────────────────────────────────────────────────────────
-function renderAgenda(empresa) {
-  const agenda  = DATA?.agendaFutura || {};
-  const hojeStr = new Date().toISOString().slice(0,10); // 'YYYY-MM-DD'
-
-  // Filtra itens da agenda:
-  // - Educbank (SIGMA): só datas >= hoje (meses passados já foram antecipados)
-  // - SEL/MD: todos (são vencimentos a receber)
-  function filtrarItens(itens) {
-    return itens.filter(i => {
-      const isEducbank = i.tipoPrevisao && i.tipoPrevisao.includes('EDUCBANK');
-      if (isEducbank) return i.data >= hojeStr;
-      return true;
-    });
-  }
-
-  const meses = Object.keys(agenda).sort();
-
-  // Totais por mês para o gráfico (já com filtro de data)
-  function totalMesFiltrado(m, emp) {
-    const itens = filtrarItens(agenda[m]||[]).filter(i => emp==='CONSOLIDADO' || i.empresa===emp);
-    return itens.reduce((s,i)=>s+i.valorLiquido,0);
-  }
-
-  // Gráfico
-  const ctxA = document.getElementById('chartAgenda');
-  if (CHARTS.agenda) CHARTS.agenda.destroy();
-  const labelsGraf = meses.map(m=>formatMes(m));
-
-  if (empresa === 'CONSOLIDADO') {
-    CHARTS.agenda = new Chart(ctxA, {
-      type:'line',
-      data:{ labels:labelsGraf, datasets: Object.entries(EMP_COLORS).map(([emp,cor])=>({
-        label: emp,
-        data: meses.map(m=>totalMesFiltrado(m,emp)),
-        borderColor:cor, backgroundColor:cor+'22', fill:false, tension:.3, pointRadius:5, borderWidth:2
-      }))},
-      options: chartOpts()
-    });
-  } else {
-    CHARTS.agenda = new Chart(ctxA, {
-      type:'line',
-      data:{ labels:labelsGraf, datasets:[{
-        label: empresa,
-        data: meses.map(m=>totalMesFiltrado(m,empresa)),
-        borderColor: EMP_COLORS[empresa]||'#4f8fff',
-        backgroundColor:(EMP_COLORS[empresa]||'#4f8fff')+'22',
-        fill:true, tension:.3, pointRadius:5, borderWidth:2
-      }]},
-      options: chartOpts()
-    });
-  }
-
-  // ── Detalhamento: tabela única agrupada por DATA ───────────────────────────
-  // Expande Educbank com a data real (dia 05 = DIA05, dia 15 = DIA15)
-  // e coleta todos os demais itens filtrados
-  const todosExpandidos = [];
-
-  meses.forEach(m => {
-    const itens = filtrarItens(agenda[m]||[])
-      .filter(i => empresa==='CONSOLIDADO' || i.empresa===empresa);
-
-    itens.forEach(i => {
-      const isEducbank = i.tipoPrevisao && i.tipoPrevisao.includes('EDUCBANK');
-      if (isEducbank) {
-        // Determina a data real: DIA05 → dia 05 do mês, DIA15 → dia 15
-        const dia = i.tipoPrevisao.includes('DIA15') ? '15' : '05';
-        const dataReal = `${m}-${dia}`;
-        todosExpandidos.push({ ...i, dataReal, isEducbank:true });
-      } else {
-        todosExpandidos.push({ ...i, dataReal: i.data, isEducbank:false });
-      }
-    });
-  });
-
-  // Agrupa por dataReal + empresa + isEducbank
-  // Cada linha = (data + empresa + origem) → soma dos valores do dia
-  const groupMap = {};
-  todosExpandidos.forEach(i => {
-    const chave = `${i.dataReal}|${i.empresa}|${i.isEducbank?'eb':'out'}`;
-    if (!groupMap[chave]) groupMap[chave] = {
-      dataReal: i.dataReal,
-      empresa: i.empresa,
-      isEducbank: i.isEducbank,
-      tipoReceita: i.tipoReceita,
-      total: 0
-    };
-    groupMap[chave].total += i.valorLiquido;
-  });
-
-  // Ordena por data, depois empresa
-  const grupos = Object.values(groupMap).sort((a,b) => {
-    if (a.dataReal !== b.dataReal) return a.dataReal < b.dataReal ? -1 : 1;
-    return a.empresa < b.empresa ? -1 : 1;
-  });
-
-  // Monta linhas — agrupa visualmente por data (mostra data só na 1ª linha do dia)
-  let rows = '';
-  let dataAnterior = null;
-  let totalGeral = grupos.reduce((s,g)=>s+g.total,0);
-
-  grupos.forEach(g => {
-    const isHoje    = g.dataReal === hojeStr;
-    const mudouData = g.dataReal !== dataAnterior;
-    dataAnterior    = g.dataReal;
-
-    // Linha separadora de data
-    if (mudouData) {
-      const bgSep = isHoje ? 'background:rgba(0,229,160,.08)' : 'background:var(--surface3)';
-      const corData = isHoje ? 'color:var(--accent);font-weight:700' : 'color:var(--text)';
-      const hojeBadge = isHoje ? ' <span style="font-size:.6rem;background:rgba(0,229,160,.2);color:var(--accent);padding:.1rem .35rem;border-radius:3px;vertical-align:middle">HOJE</span>' : '';
-      rows += `<tr style="${bgSep}">
-        <td colspan="4" style="text-align:left;font-family:var(--font-m);font-size:.78rem;${corData};padding:.4rem .85rem">
-          ${fmtDate(g.dataReal)}${hojeBadge}
-        </td>
-        <td style="text-align:right;font-size:.72rem;color:var(--muted);padding:.4rem .85rem"></td>
-      </tr>`;
-    }
-
-    const empDot = `<span class="emp-dot" style="background:${EMP_COLORS[g.empresa]||'#888'}"></span>`;
-    const rowBg  = isHoje ? 'background:rgba(0,229,160,.04)' : '';
-    const corVal = g.isEducbank ? 'warn' : 'acc';
-    const origem = g.isEducbank
-      ? `<span style="font-size:.68rem;color:var(--warn);background:rgba(255,181,71,.1);padding:.1rem .35rem;border-radius:3px">Educbank</span>`
-      : `<span style="font-size:.68rem;color:var(--muted)">${g.tipoReceita}</span>`;
-
-    rows += `<tr style="${rowBg}">
-      <td style="padding-left:1.5rem;color:var(--muted);font-size:.72rem">—</td>
-      <td style="text-align:left">${empDot}${g.empresa}</td>
-      <td style="text-align:left">${origem}</td>
-      <td></td>
-      <td class="${corVal}">${fmtBRL(g.total)}</td>
-    </tr>`;
-  });
-
-  if (!grupos.length) {
-    rows = `<tr><td colspan="5" class="empty">Sem eventos futuros.</td></tr>`;
-  }
-
-  document.getElementById('agendaTable').innerHTML = `<table>
-    <thead><tr>
-      <th style="text-align:left">Data</th>
-      <th style="text-align:left">Empresa</th>
-      <th style="text-align:left">Origem</th>
-      <th></th>
-      <th>Total do Dia</th>
-    </tr></thead>
-    <tbody>${rows}</tbody>
-    <tfoot><tr>
-      <td colspan="4">Total agenda</td>
-      <td class="acc">${fmtBRL(totalGeral)}</td>
-    </tfoot>
-  </table>`;
-}
-
 // ── Chart helpers ──────────────────────────────────────────────────────────
 const TOOLTIP = {
   backgroundColor:'#1a1e2a', borderColor:'#252b3b', borderWidth:1,
@@ -1192,10 +1038,19 @@ function chartOpts() {
     }
   };
 }
-function chartOptsPct(label) {
+function chartOptsPct(label, mesesRef, notaParcial, legenda) {
   return {
     responsive:true, maintainAspectRatio:false,
-    plugins:{ legend:{display:false}, tooltip:TOOLTIP },
+    interaction:{mode:'index',intersect:false},
+    plugins:{
+      legend: legenda
+        ? { display:true, labels:{color:'#9ca3af',font:{family:'Syne',size:11},boxWidth:12,padding:12} }
+        : { display:false },
+      tooltip:{ ...TOOLTIP, callbacks:{
+        label: ctx => ' ' + ctx.dataset.label + ': ' + fmtPct(ctx.parsed.y),
+        afterBody: items => (mesesRef && notaParcial && items.length && statusMes(mesesRef[items[0].dataIndex]) === 'corrente') ? notaParcial : ''
+      }}
+    },
     scales:{
       x:{ grid:{color:'#1c202e'}, ticks:{color:'#6b7280',font:{family:'JetBrains Mono',size:11}} },
       y:{ grid:{color:'#1c202e'}, ticks:{color:'#6b7280',font:{family:'JetBrains Mono',size:11},callback:v=>v+'%'}, min:0, max:100 }
@@ -1215,7 +1070,6 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     const rMulti = getReceitaMulti(mesesAtivos, empresa);
     if (btn.dataset.tab==='tab-visao')    { renderKPIs(empresa, mesesAtivos, rMulti); renderVisaoGeral(empresa, mesesAtivos, rMulti); }
     if (btn.dataset.tab==='tab-evolucao') renderEvolucao(empresa);
-    if (btn.dataset.tab==='tab-agenda')   renderAgenda(empresa);
     if (btn.dataset.tab==='tab-detalhe')  renderDetalhe(mesesAtivos, rMulti);
   });
 });
